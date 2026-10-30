@@ -31,6 +31,9 @@ type App struct {
 
 	swapMu sync.Mutex // held while the data folder is being swapped
 	notice string     // shown once in the UI after startup
+
+	lockMu       sync.Mutex
+	screenLocked bool // locked while running; the data key stays in memory
 }
 
 func NewApp() *App { return &App{} }
@@ -46,9 +49,84 @@ func (a *App) startup(ctx context.Context) {
 		runtime.MessageDialog(ctx, runtime.MessageDialogOptions{Type: runtime.ErrorDialog, Title: "SwitchDesk", Message: "Can't open data folder: " + err.Error()})
 		os.Exit(1)
 	}
+	if !a.st.Locked() {
+		a.mgr = core.New(a.st, a.emit)
+		a.mgr.Start()
+	}
+	// with an app password nothing is read or polled until it's entered
+	go a.updateLoop()
+}
+
+// ---- optional app password (issue #13) ----
+
+type LockInfo struct {
+	Enabled   bool `json:"enabled"`   // an app password is set
+	Locked    bool `json:"locked"`    // the password has to be entered now
+	Starting  bool `json:"starting"`  // locked since start: nothing has been read yet
+	LockAfter int  `json:"lockAfter"` // idle minutes before the window locks; 0 never
+}
+
+func (a *App) AppLock() LockInfo {
+	a.lockMu.Lock()
+	defer a.lockMu.Unlock()
+	starting := a.st.Locked()
+	return LockInfo{Enabled: a.st.HasPassword(), Locked: starting || a.screenLocked, Starting: starting, LockAfter: a.st.Settings().LockAfter}
+}
+
+// Unlock checks the app password. At startup it opens the data and starts
+// polling; later it only unlocks the window.
+func (a *App) Unlock(pass string) error {
+	a.lockMu.Lock()
+	defer a.lockMu.Unlock()
+	if a.st.Locked() {
+		if err := a.st.Unlock(pass); err != nil {
+			time.Sleep(time.Second) // slow down guessing
+			return err
+		}
+		a.mgr = core.New(a.st, a.emit)
+		a.mgr.Start()
+		a.screenLocked = false
+		return nil
+	}
+	if a.screenLocked && !a.st.CheckPassword(pass) {
+		time.Sleep(time.Second)
+		return store.ErrWrongPassword
+	}
+	a.screenLocked = false
+	return nil
+}
+
+// LockNow locks the window. Polling goes on in the background.
+func (a *App) LockNow() {
+	a.lockMu.Lock()
+	defer a.lockMu.Unlock()
+	if a.st.HasPassword() {
+		a.screenLocked = true
+	}
+}
+
+// SetAppPassword sets, changes or (with next empty) removes the app password.
+func (a *App) SetAppPassword(current, next string) error {
+	a.lockMu.Lock()
+	defer a.lockMu.Unlock()
+	return a.st.SetPassword(current, next)
+}
+
+// ForgetAppPassword starts over without the password, keeping switches and
+// history but clearing every saved switch password. Only offered while the
+// app is locked at startup.
+func (a *App) ForgetAppPassword() error {
+	a.lockMu.Lock()
+	defer a.lockMu.Unlock()
+	if !a.st.Locked() {
+		return errors.New("SwitchDesk isn't locked")
+	}
+	if err := a.st.ForgetPassword(); err != nil {
+		return err
+	}
 	a.mgr = core.New(a.st, a.emit)
 	a.mgr.Start()
-	go a.updateLoop()
+	return nil
 }
 
 func (a *App) shutdown(ctx context.Context) {

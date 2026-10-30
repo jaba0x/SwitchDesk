@@ -150,6 +150,10 @@ password manager`;
   const detail = (id) => ({ ...views.find((v) => v.id === id), snapshot: id === "acc4" || id === "io3" ? null : id === "io1" ? ioSnap : id === "io2" ? webSnap : snap, backups: [{ name: "20261023-210400.cfg", at: mins(4), size: 2400 }, { name: "20261019-081200.cfg", at: mins(6000), size: 2300 }] });
   window.go = { main: { App: {
     Platform: async () => "darwin", Version: async () => "0.3.0",
+    // add ?locked to the preview URL to see the lock screen
+    AppLock: async () => ({ enabled: /locked|pw/.test(location.search), locked: /locked/.test(location.search) && !window.__unlocked, starting: true, lockAfter: 15 }),
+    Unlock: async (p) => { if (p !== "password") { await new Promise((r) => setTimeout(r, 400)); throw "wrong password"; } window.__unlocked = true; },
+    LockNow: async () => { window.__unlocked = false; }, SetAppPassword: async () => {}, ForgetAppPassword: async () => { window.__unlocked = true; },
     GetDashboard: async () => dash, GetSwitch: async (id) => detail(id), GetTopology: async () => topo, SaveLayout: async () => {},
     GetSettings: async () => ({ checkMethod: "port", firmwareAuto: "install", windowStart: "02:00", windowEnd: "05:00", pingInterval: 30, collectInterval: 15, parallel: 4, keepBackups: 20, cpuWarn: 80, memWarn: 90 }),
     Credentials: async () => [{ id: "c1", name: "Network admins", username: "admin" }, { id: "c2", name: "noc@example.ge", username: "noc@example.ge", kind: "instanton" }],

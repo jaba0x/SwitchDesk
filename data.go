@@ -78,6 +78,11 @@ func (a *App) ChangeDataFolder(dir, mode string) error {
 		if err != nil {
 			return nil, err
 		}
+		if next.Locked() {
+			if err := next.UnlockLike(a.st); err != nil {
+				return nil, err
+			}
+		}
 		if err := store.SetLocation(dir); err != nil {
 			return nil, err
 		}
@@ -92,6 +97,9 @@ func (a *App) ChangeDataFolder(dir, mode string) error {
 func (a *App) swap(fn func() (*store.Store, error)) error {
 	a.swapMu.Lock()
 	defer a.swapMu.Unlock()
+	if a.mgr == nil {
+		return store.ErrLocked
+	}
 	a.mgr.Stop()
 	next, err := fn()
 	if err != nil {
@@ -165,7 +173,11 @@ func (a *App) ImportData(path, pass, mode string) (store.ImportResult, error) {
 		if err != nil {
 			return nil, err
 		}
-		return store.Open(a.st.Dir()) // reload snapshots and settings from disk
+		next, err := store.Open(a.st.Dir()) // reload snapshots and settings from disk
+		if err == nil && next.Locked() {
+			err = next.UnlockLike(a.st)
+		}
+		return next, err
 	})
 	return res, err
 }

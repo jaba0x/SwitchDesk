@@ -101,7 +101,7 @@ func InspectDir(dir, current string) DirInfo {
 }
 
 // dataEntries are the files and folders that make up a data folder.
-var dataEntries = []string{"inventory.json", "secret.key", "snapshots", "backups", "firmware"}
+var dataEntries = []string{"inventory.json", "secret.key", "secret.lock", "snapshots", "backups", "firmware"}
 
 // CopyData copies this store's files into dst (overwriting what's there).
 func (s *Store) CopyData(dst string) error {
@@ -113,6 +113,9 @@ func (s *Store) CopyData(dst string) error {
 	for _, e := range dataEntries {
 		src := filepath.Join(s.dir, e)
 		if _, err := os.Stat(src); errors.Is(err, os.ErrNotExist) {
+			if e == "secret.key" || e == "secret.lock" {
+				os.Remove(filepath.Join(dst, e)) // the key goes over exactly as it is here
+			}
 			continue
 		}
 		os.RemoveAll(filepath.Join(dst, e))

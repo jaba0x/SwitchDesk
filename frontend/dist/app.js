@@ -1871,6 +1871,7 @@ async function renderSettings() {
   const set = S.settings;
   const ver = await call("Version");
   const df = await call("DataFolder");
+  const lk = await call("AppLock");
   $("#main").innerHTML = `<div class="page" style="max-width:900px"><div class="head"><h1>Settings</h1></div>
     <section class="panel" style="margin-bottom:18px"><h2>Credentials<span class="grow"></span><button class="btn small" onclick="editCred()">${ICON.plus}Add</button></h2>
       ${S.creds.length ? `<table><tbody>${S.creds.map((c) => `<tr><td>${esc(c.name)}${c.kind === "instanton" ? ' <span class="faint">Instant On account</span>' : ""}</td><td class="mono">${esc(c.username)}</td><td style="text-align:right"><button class="btn small" onclick="editCred('${c.id}')">Edit</button> <button class="btn small danger" onclick="delCred('${c.id}')">Remove</button></td></tr>`).join("")}</tbody></table>` : `<div class="empty">No credentials yet. They're added when you add your first switch.</div>`}
@@ -1896,6 +1897,13 @@ async function renderSettings() {
         <div class="row" style="max-width:360px"><label class="f"><span>Window starts</span><input type="text" id="ws" class="mono" value="${esc(set.windowStart)}" placeholder="02:00"></label>
           <label class="f"><span>Window ends</span><input type="text" id="we" class="mono" value="${esc(set.windowEnd)}" placeholder="05:00"></label></div></div>
       <button class="btn primary" onclick="saveSettings()">Save settings</button></div></section>
+    <section class="panel" style="margin-top:18px"><h2>App password<span class="grow"></span>${lk.enabled ? `<span class="okchip sev" style="font-weight:400">On</span>` : `<span class="faint" style="font-weight:400;font-size:13px">Off</span>`}</h2><div class="body">
+      <p class="muted" style="font-size:13px;margin:0 0 12px">Optional. With a password, SwitchDesk asks for it when it starts, and the saved switch passwords can't be read without it, not even from the data folder. Without one, anyone who can use this computer account can open SwitchDesk.</p>
+      ${lk.enabled ? `<div class="row" style="align-items:flex-end;max-width:560px"><label class="f"><span>Lock the window after</span><select id="la" onchange="saveLockAfter()">
+          ${[0, 5, 15, 30, 60, 240].map((n) => `<option value="${n}" ${n === (lk.lockAfter || 0) ? "selected" : ""}>${n ? (n < 60 ? n + " minutes idle" : n / 60 + (n === 60 ? " hour" : " hours") + " idle") : "Never while running"}</option>`).join("")}</select></label>
+          <span style="flex:none;display:flex;gap:6px;margin-bottom:14px"><button class="btn" onclick="lockNow()">Lock now</button></span></div>
+        <div style="display:flex;gap:8px"><button class="btn" onclick="openAppPassword('change')">Change password…</button><button class="btn danger" onclick="openAppPassword('remove')">Turn off…</button></div>`
+      : `<button class="btn primary" onclick="openAppPassword('set')">Set a password…</button>`}</div></section>
     <section class="panel" style="margin-top:18px"><h2>Data</h2><div class="body">
       <label class="f"><span>Data folder${df.custom ? "" : ' <span class="faint">(default)</span>'}</span>
         <div class="row" style="align-items:center"><input type="text" class="mono" readonly value="${esc(df.path)}"><span style="flex:none;display:flex;gap:6px">
@@ -1917,6 +1925,113 @@ async function renderSettings() {
         <div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button class="btn small" onclick="checkUpdate(this)">${ICON.refresh}Check for updates</button><span id="updres" class="muted" style="font-size:13px"></span></div></div>
     </div></section></div>`;
 }
+
+// ---------- optional app password (#13) ----------
+function openAppPassword(mode) {
+  const title = { set: "Set an app password", change: "Change the app password", remove: "Turn off the app password" }[mode];
+  const m = modal(`<h2>${title}</h2><div class="body">
+    ${mode !== "set" ? `<label class="f"><span>Current password</span><input type="password" id="ap0" autocomplete="current-password"></label>` : ""}
+    ${mode !== "remove" ? `<div class="row"><label class="f"><span>New password</span><input type="password" id="ap1" autocomplete="new-password"></label>
+      <label class="f"><span>Repeat it</span><input type="password" id="ap2" autocomplete="new-password"></label></div>
+      <p class="faint" style="font-size:12.5px;margin:-4px 0 0">At least 8 characters. There's no way to recover it: if it's forgotten, the saved switch passwords have to be entered again.</p>`
+    : `<p class="muted" style="margin:0">SwitchDesk will open without asking, and the key for the saved switch passwords goes back to being protected only by your computer account.</p>`}
+    <div id="apmsg"></div></div>
+    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn ${mode === "remove" ? "danger" : "primary"}" id="apgo">${mode === "remove" ? "Turn off" : "Save password"}</button></div>`);
+  setTimeout(() => $("input", m)?.focus(), 30);
+  $("#apgo", m).onclick = async () => {
+    const err = (t) => ($("#apmsg", m).innerHTML = `<div class="msg err">${esc(t)}</div>`);
+    const cur = $("#ap0", m)?.value || "";
+    let next = "";
+    if (mode !== "remove") {
+      next = $("#ap1", m).value;
+      if (next.length < 8) return err("Use at least 8 characters.");
+      if (next !== $("#ap2", m).value) return err("The passwords don't match.");
+    }
+    try {
+      await call("SetAppPassword", cur, next);
+      closeModal();
+      toast(mode === "remove" ? "App password turned off" : "App password saved");
+      setupIdleLock();
+      renderSettings();
+    } catch (e) { err(e.message); }
+  };
+}
+
+async function saveLockAfter() {
+  try {
+    await call("SaveSettings", { ...S.settings, lockAfter: +$("#la").value });
+    S.settings = await call("GetSettings");
+    setupIdleLock();
+    toast("Saved");
+  } catch (e) { toast(e.message, true); }
+}
+
+async function lockNow() {
+  await call("LockNow");
+  await showLock(await call("AppLock"));
+}
+
+// Shows the lock screen and resolves once the right password is entered.
+function showLock(info) {
+  return new Promise((resolve) => {
+    closeModal();
+    $("#lockscreen")?.remove();
+    const v = document.createElement("div");
+    v.id = "lockscreen";
+    v.className = "lockscreen";
+    v.innerHTML = `<form class="lockbox" autocomplete="off">
+      <img src="clihero-logo-white.png" alt="" style="width:120px;opacity:.85;margin-bottom:6px">
+      <h2>SwitchDesk is locked</h2>
+      <p class="muted">${info.starting ? "Enter the app password to open your switches." : "Enter the app password to continue."}</p>
+      <input type="password" id="lkp" placeholder="App password" autocomplete="current-password">
+      <div id="lkmsg"></div>
+      <button class="btn primary" id="lkgo" type="submit">Unlock</button>
+      ${info.starting ? `<a class="faint" id="lkforgot" style="font-size:12.5px;margin-top:6px;cursor:pointer">Forgot the password?</a>` : ""}
+    </form>`;
+    document.body.appendChild(v);
+    const inp = $("#lkp", v);
+    setTimeout(() => inp.focus(), 30);
+    $("form", v).onsubmit = async (e) => {
+      e.preventDefault();
+      const b = $("#lkgo", v);
+      b.disabled = true; b.textContent = "Checking…";
+      try {
+        await call("Unlock", inp.value);
+        v.remove();
+        resolve();
+      } catch (err) {
+        $("#lkmsg", v).innerHTML = `<div class="msg err">${esc(err.message === "wrong password" ? "That's not the password." : err.message)}</div>`;
+        inp.value = ""; inp.focus();
+        b.disabled = false; b.textContent = "Unlock";
+      }
+    };
+    const f = $("#lkforgot", v);
+    if (f) f.onclick = () => {
+      $("#lkmsg", v).innerHTML = `<div class="msg warnm" style="text-align:left">Without the password, the saved switch passwords can't be read. SwitchDesk can start over without it: your switches, settings, config copies and map stay, but every saved password is cleared and has to be entered again under Settings → Credentials.
+        <div style="margin-top:10px"><button class="btn danger small" type="button" id="lkreset">Clear saved passwords and open</button></div></div>`;
+      $("#lkreset", v).onclick = async () => {
+        try { await call("ForgetAppPassword"); v.remove(); toast("App password removed. Enter the switch passwords again under Settings → Credentials.", true); resolve(); }
+        catch (err) { toast(err.message, true); }
+      };
+    };
+  });
+}
+
+// Locks the window after the idle time set in Settings.
+let idleTimer = null;
+function setupIdleLock() {
+  clearTimeout(idleTimer);
+  call("AppLock").then((info) => {
+    S.lockAfter = info.enabled ? info.lockAfter : 0;
+    bumpIdle();
+  }).catch(() => {});
+}
+function bumpIdle() {
+  clearTimeout(idleTimer);
+  if (!S.lockAfter || $("#lockscreen")) return;
+  idleTimer = setTimeout(() => lockNow().then(bumpIdle), S.lockAfter * 60000);
+}
+for (const ev of ["mousemove", "keydown", "mousedown", "wheel"]) document.addEventListener(ev, () => { if (S.lockAfter) bumpIdle(); }, { passive: true });
 
 // ---------- data folder, export, import ----------
 async function pickDataFolder() {
@@ -2025,7 +2140,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim() });
+    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0 });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }
@@ -2133,6 +2248,9 @@ async function start() {
     $("#main").innerHTML = `<div class="page"><div class="empty"><h3>Can't reach the SwitchDesk backend</h3><p>Open this page through the SwitchDesk app.</p></div></div>`;
     return;
   }
+  // optional app password: nothing is loaded before it's entered
+  const lock = await call("AppLock").catch(() => null);
+  if (lock?.locked) await showLock(lock);
   S.version = await call("Version").catch(() => "");
   const plat = await call("Platform");
   if (plat === "darwin") document.documentElement.style.setProperty("--top", "22px");
@@ -2148,6 +2266,7 @@ async function start() {
   if (notice) toast(notice, true);
   // keep relative times fresh even when nothing changes
   setInterval(() => { if (!S.modalOpen && (S.route[0] || "dashboard") === "dashboard") renderDashboard(); }, 30000);
+  setupIdleLock();
   route();
 }
 boot();

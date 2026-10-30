@@ -87,6 +87,9 @@ type Settings struct {
 	FirmwareAuto string `json:"firmwareAuto"`
 	WindowStart  string `json:"windowStart"` // "02:00"
 	WindowEnd    string `json:"windowEnd"`   // "05:00"
+	// LockAfter locks the window after this many idle minutes when an app
+	// password is set; 0 never locks it while running.
+	LockAfter int `json:"lockAfter"`
 }
 
 func DefaultSettings() Settings {
@@ -107,7 +110,8 @@ type data struct {
 
 type Store struct {
 	dir string
-	key []byte
+	key []byte // nil while an app password hasn't been entered
+	kek []byte // key derived from the app password, when there is one
 	mu  sync.Mutex
 	d   data
 }
@@ -128,7 +132,11 @@ func Open(dir string) (*Store, error) {
 	s := &Store{dir: dir}
 	keyPath := filepath.Join(dir, "secret.key")
 	key, err := os.ReadFile(keyPath)
-	if errors.Is(err, os.ErrNotExist) {
+	if _, lerr := readLock(dir); lerr == nil {
+		key, err = nil, nil // protected by an app password: Unlock fills the key
+	} else if !errors.Is(lerr, os.ErrNotExist) {
+		return nil, lerr
+	} else if errors.Is(err, os.ErrNotExist) {
 		key = make([]byte, 32)
 		if _, err := rand.Read(key); err != nil {
 			return nil, err
@@ -139,7 +147,7 @@ func Open(dir string) (*Store, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	if len(key) != 32 {
+	if key != nil && len(key) != 32 {
 		return nil, fmt.Errorf("%s is corrupt", keyPath)
 	}
 	s.key = key
@@ -217,6 +225,9 @@ func (s *Store) encrypt(plain string) (string, error) {
 	if plain == "" {
 		return "", nil
 	}
+	if s.key == nil {
+		return "", ErrLocked
+	}
 	blk, _ := aes.NewCipher(s.key)
 	gcm, _ := cipher.NewGCM(blk)
 	nonce := make([]byte, gcm.NonceSize())
@@ -231,6 +242,9 @@ func (s *Store) decrypt(v string) (string, error) {
 	raw, err := base64.StdEncoding.DecodeString(v[4:])
 	if err != nil {
 		return "", err
+	}
+	if s.key == nil {
+		return "", ErrLocked
 	}
 	blk, _ := aes.NewCipher(s.key)
 	gcm, _ := cipher.NewGCM(blk)
@@ -584,6 +598,9 @@ func normSettings(v Settings) Settings {
 	case "off", "stage", "install":
 	default:
 		v.FirmwareAuto = "off"
+	}
+	if v.LockAfter < 0 || v.LockAfter > 1440 {
+		v.LockAfter = 0
 	}
 	_, e1 := time.Parse("15:04", v.WindowStart)
 	_, e2 := time.Parse("15:04", v.WindowEnd)

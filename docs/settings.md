@@ -29,6 +29,20 @@ Shared username and password sets. Add as many as you need and pick one per swit
 
 Off, copy only, or install inside a maintenance window. See [Firmware updates](firmware.md#automatic-updates).
 
+## App password
+
+Optional, and off unless you turn it on. Useful when other people can use the same computer account, or the data folder sits on a shared or synced drive.
+
+With an app password:
+
+- SwitchDesk asks for it when it starts. Until it's entered, nothing is read or checked.
+- The saved switch passwords can't be read without it, not even from the data folder. The key that encrypts them (`secret.key`) is replaced by `secret.lock`, the same key encrypted with your password (Argon2id + AES-GCM).
+- **Lock the window after** locks SwitchDesk after the idle time you pick. **Lock now** locks it straight away. While the window is locked, checks and reads keep running in the background.
+
+There's no way to recover a forgotten password. The lock screen offers **Forgot the password?**, which opens SwitchDesk without it: your switches, settings, config copies and map stay, but every saved password is cleared and has to be entered again under **Credentials**.
+
+**Change password** and **Turn off** both ask for the current password. Moving or copying the data folder keeps the password, and an `.sdbak` export has its own passphrase as before.
+
 ## Data
 
 The data folder, export and import. See [Your data](data.md).

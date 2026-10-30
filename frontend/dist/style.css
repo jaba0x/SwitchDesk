@@ -381,3 +381,12 @@ dl.kv dd { margin: 0; user-select: text; word-break: break-word; }
 .copyv button svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
 tr:hover .copyv button, .copyv button:focus-visible { opacity: 1; }
 .copyv button:hover { background: var(--panel-2); color: var(--text); }
+
+/* app password lock screen */
+.lockscreen { position: fixed; inset: 0; z-index: 1000; background: var(--base); display: flex; align-items: center; justify-content: center; }
+.lockbox { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 340px; max-width: calc(100% - 32px); text-align: center; }
+.lockbox h2 { margin: 0; font-size: 20px; }
+.lockbox p { margin: 0 0 6px; }
+.lockbox input { width: 100%; }
+.lockbox .btn { width: 100%; justify-content: center; }
+.lockbox .msg { width: 100%; }
