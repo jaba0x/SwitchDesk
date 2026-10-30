@@ -1187,7 +1187,8 @@ function commonName(data, id) {
 }
 
 async function renderVLANs(soft) {
-  const data = await call("VLANOverview");
+  const data = (await call("VLANOverview")) || [];
+  data.forEach((s) => { s.vlans ||= []; });
   S.vlanData = data;
   if (soft && (S.modalOpen || S.route[0] !== "vlans")) return;
   if (!data.length) {
