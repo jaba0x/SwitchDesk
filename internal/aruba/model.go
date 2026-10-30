@@ -148,6 +148,8 @@ type Snapshot struct {
 	// such as a wrong clock reported by the switch's web interface.
 	Notes  []Note  `json:"notes,omitempty"`
 	Optics []Optic `json:"optics,omitempty"` // transceivers with their optical levels
+	// PortAccess is 802.1X / MAC authentication read from the config; nil where SwitchDesk can't manage it.
+	PortAccess *PortAccess `json:"portAccess,omitempty"`
 	Web    bool    `json:"web,omitempty"`    // read through the switch's web interface
 }
 

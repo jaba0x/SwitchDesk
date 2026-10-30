@@ -59,6 +59,9 @@ Create, rename and delete VLANs, and set port membership by clicking ports throu
 
 A network-wide matrix shows which switch carries which VLAN and flags names that don't match between switches. From there you can rename, add or remove a VLAN on many switches at once, and review every switch's commands before anything is sent.
 
+### Port access (802.1X and MAC authentication)
+On AOS-S and AOS-CX, add or remove RADIUS servers and turn 802.1X and MAC authentication on or off per port, with the client limit and re-authentication period. On AOS-S you pick the VLAN for clients that don't log in. On AOS-CX you create local roles with their VLAN and choose per port which role a client gets after a login, after a rejected login, while RADIUS can't be reached and before a login. AOS-CX also lists the connected clients from `show port-access clients detail`: port, MAC address, user, IP address, login method, status, role and the VLAN the client was put in, read at each collection or with Refresh. Ports that link to another switch or an access point are marked, and you're warned before turning on a login there. Shared secrets never appear on screen, in the command preview or in the transcript.
+
 ### Network map
 
 <p align="center">
@@ -173,7 +176,7 @@ The UI is plain HTML, CSS and JavaScript in `frontend/dist` with no build step. 
 
 ```
 internal/sshx    SSH shell sessions (prompts, paging, escape codes, legacy ciphers) and SFTP/SCP uploads
-internal/aruba   command sets per family, output parsers, VLAN change builder
+internal/aruba   command sets per family, output parsers, VLAN and port-access change builders
 internal/core    polling, problem rules, network map
 internal/store     inventory, encrypted credentials, snapshots, config copies
 internal/firmware  image library, version matching, built-in TFTP server

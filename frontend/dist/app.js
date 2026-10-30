@@ -34,7 +34,23 @@ const ICON = {
   chip: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+  copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
 };
+
+// copyText prefers the Wails clipboard: the web view's own clipboard API
+// isn't available on every platform.
+async function copyText(text) {
+  try {
+    if (window.runtime?.ClipboardSetText) {
+      if (!(await window.runtime.ClipboardSetText(text))) throw new Error();
+    } else await navigator.clipboard.writeText(text);
+    toast(`Copied ${text}`);
+  } catch {
+    toast("Couldn't copy to the clipboard", true);
+  }
+}
+// a value with a copy button; the click doesn't reach the row behind it
+const copyable = (v) => `<span class="copyv"><span>${esc(v)}</span><button type="button" title="Copy ${esc(v)}" onclick="event.stopPropagation();copyText('${esc(v)}')">${ICON.copy}</button></span>`;
 
 function toast(text, err) {
   const t = document.createElement("div");
@@ -162,8 +178,15 @@ async function refreshData() {
   const page = S.route[0] || "dashboard";
   if (page === "dashboard") renderDashboard();
   if (page === "switches") renderSwitches(true);
-  if (page === "switch" && ["overview", "stp", "ports", "neighbors", "logs"].includes(S.tab)) loadDetail(S.route[1], true);
-  if (page === "switch" && S.detail) updateDetailHead();
+  if (page === "switch" && S.detail) {
+    // these tabs follow every change; the others reload once a collection brings new data,
+    // except where a redraw would throw away what the user is doing
+    const live = ["overview", "stp", "ports", "neighbors", "logs"].includes(S.tab);
+    const v = S.dash?.switches.find((x) => x.id === S.detail.id);
+    const fresh = v?.summary?.collectedAt && v.summary.collectedAt !== S.detail.summary?.collectedAt;
+    if (live || (fresh && !["console", "config"].includes(S.tab))) loadDetail(S.route[1], true);
+    updateDetailHead();
+  }
   if (page === "map") SDMap.reload();
   if (page === "firmware") renderFirmware(true);
   if (page === "vlans") renderVLANs(true);
@@ -414,7 +437,7 @@ function detailStatus(v) {
   return v.status.online ? `<span class="ok">Online</span> <span class="faint">${v.status.latencyMs} ms</span>` : `<span class="bad">Offline since ${new Date(v.status.since).toLocaleString()}</span>`;
 }
 
-const TABS = [["overview", "Overview"], ["stp", "Spanning tree"], ["ports", "Ports"], ["vlans", "VLANs"], ["neighbors", "Neighbors"], ["config", "Config"], ["logs", "Logs"], ["console", "Console"], ["raw", "Raw output"]];
+const TABS = [["overview", "Overview"], ["stp", "Spanning tree"], ["ports", "Ports"], ["vlans", "VLANs"], ["access", "Port access"], ["neighbors", "Neighbors"], ["config", "Config"], ["logs", "Logs"], ["console", "Console"], ["raw", "Raw output"]];
 // Instant On cloud switches: only what the portal provides
 const CLOUD_TABS = ["overview", "ports", "neighbors"];
 // Instant On in local management: everything the web interface reports
@@ -424,12 +447,14 @@ const tabsFor = (d) => (d.cloud ? TABS.filter(([k]) => CLOUD_TABS.includes(k)) :
 function renderDetail(soft) {
   const d = S.detail, snap = d.snapshot, s = d.summary;
   const name = d.name || s?.hostname || d.host;
-  const counts = { vlans: snap?.vlans?.length, neighbors: snap?.neighbors?.length, ports: snap?.ports?.length };
+  const counts = { vlans: snap?.vlans?.length, access: snap?.portAccess?.ports?.length, neighbors: snap?.neighbors?.length, ports: snap?.ports?.length };
   if ((d.cloud && !CLOUD_TABS.includes(S.tab)) || (d.web && !WEB_TABS.includes(S.tab))) S.tab = "overview";
   const body = snap ? tabBody(S.tab, d, snap) : noDataYet(d);
+  const tabs = tabsFor(d).map(([k, l]) => `<button class="tab${S.tab === k ? " on" : ""}" data-go="#/switch/${d.id}/${k}">${l}${counts[k] ? `<span class="n">${counts[k]}</span>` : ""}</button>`).join("");
   if (soft && $("#tabbody")) {
     $("#tabbody").innerHTML = body;
     $("#detail-status").innerHTML = detailStatus(d);
+    $(".tabs").innerHTML = tabs;
     return;
   }
   const banners = [];
@@ -451,7 +476,7 @@ function renderDetail(soft) {
       ${d.site ? `<span>Site <b>${esc(d.site)}</b></span>` : ""}
       ${s ? `<span class="faint">Collected ${ago(s.collectedAt)}${snap?.duration ? ` in ${snap.duration}` : ""}</span>` : ""}</div>
     ${banners.join("")}
-    <div class="tabs">${tabsFor(d).map(([k, l]) => `<button class="tab${S.tab === k ? " on" : ""}" data-go="#/switch/${d.id}/${k}">${l}${counts[k] ? `<span class="n">${counts[k]}</span>` : ""}</button>`).join("")}</div>
+    <div class="tabs">${tabs}</div>
     <div id="tabbody">${body}</div></div>`;
   afterTab();
 }
@@ -501,6 +526,7 @@ function tabBody(tab, d, snap) {
     case "stp": return tabSTP(snap);
     case "ports": return tabPorts(snap);
     case "vlans": return tabVLANs(d, snap);
+    case "access": return tabAccess(d, snap);
     case "neighbors": return tabNeighbors(snap);
     case "config": return tabConfig(d, snap);
     case "logs": return tabLogs(snap);
@@ -861,20 +887,28 @@ function deleteVLAN(id) {
   call("PreviewVLAN", S.detail.id, ch).then((cmds) => confirmCommands(ch, cmds)).catch((e) => toast(e.message, true));
 }
 
-function confirmCommands(ch, cmds) {
+// note is optional HTML shown as a warning above the commands.
+function confirmCommands(ch, cmds, method = "ApplyVLAN", note = "") {
   const name = S.detail.name || S.detail.summary?.hostname || S.detail.host;
-  const m = modal(`<h2>${ch.action === "delete" ? `Delete VLAN ${ch.id}` : "Review changes"}</h2><div class="body">
+  const glob = ch.globalDot1x ?? ch.globalMacAuth;
+  const apply = ch.action === "delete" ? "Delete VLAN" : ch.removeServer ? "Remove server" : ch.deleteRole ? "Delete role" : glob !== undefined ? (glob ? "Turn on" : "Turn off") : "Apply to switch";
+  const title = ch.action === "delete" ? `Delete VLAN ${ch.id}` : ch.removeServer ? `Remove RADIUS server ${esc(ch.removeServer)}` : ch.deleteRole ? `Delete role ${esc(ch.deleteRole)}`
+    : glob !== undefined ? `Turn ${ch.globalDot1x !== undefined ? "802.1X" : "MAC authentication"} ${glob ? "on" : "off"} for the switch` : "Review changes";
+  const m = modal(`<h2>${title}</h2><div class="body">
     <p class="muted" style="margin-top:0">These lines will be sent to <b style="color:var(--text)">${esc(name)}</b>. Sending stops at the first line the switch rejects${ch.save ? ", and nothing is saved to startup config in that case" : ""}.</p>
+    ${note ? `<div class="msg warnm" style="margin-bottom:10px">${note}</div>` : ""}
     <pre class="code mono" id="vtx">${esc(cmds.join("\n"))}</pre><div id="vres"></div></div>
-    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="vapply">${ch.action === "delete" ? "Delete VLAN" : "Apply to switch"}</button></div>`, true);
+    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="vapply">${apply}</button></div>`, true);
   $("#vapply", m).onclick = async () => {
     const b = $("#vapply", m);
     b.disabled = true;
     b.textContent = "Sending…";
     try {
-      const r = await call("ApplyVLAN", S.detail.id, ch);
+      const r = await call(method, S.detail.id, ch);
       $("#vtx", m).textContent = r.transcript.join("\n");
       $("#vres", m).innerHTML = r.ok ? `<div class="msg okm">Done. The switch is being re-read.</div>` : `<div class="msg err">${esc(r.error)}</div>`;
+      // show the accepted change behind the dialog now; the re-read confirms it later
+      if (r.ok) loadDetail(S.detail.id, true);
       b.remove();
       $("[data-close]", m).textContent = "Close";
     } catch (e) {
@@ -883,6 +917,435 @@ function confirmCommands(ch, cmds) {
       b.textContent = "Try again";
     }
   };
+}
+
+// ---------- port access (802.1X / MAC authentication) ----------
+function paPorts(snap) {
+  const names = (snap.ports || []).map((p) => p.name);
+  for (const a of snap.portAccess?.ports || []) if (!names.includes(a.port)) names.push(a.port);
+  return names;
+}
+// ports that lead to other network gear: a login there can cut the link
+function paInfra(snap) {
+  const m = {};
+  for (const n of snap.neighbors || []) if (/bridge|router|wlan|access.?point/i.test(n.capabilities || "")) m[n.localPort] = n.sysName || n.chassisId || "a neighbor";
+  return m;
+}
+const reauthText = (s) => (!s ? "Off" : s % 3600 === 0 ? `${s / 3600} h` : s % 60 === 0 ? `${s / 60} min` : `${s} s`);
+// AOS-CX role slots on a port: [config name, label, short tag]
+const ROLE_SLOTS = [["auth-role", "After login", "Auth"], ["reject-role", "Login rejected", "Reject"], ["critical-role", "RADIUS unreachable", "Critical"], ["preauth-role", "Before login", "Pre-auth"]];
+const roleTags = (a) => ROLE_SLOTS.filter(([k]) => a.roles?.[k]).map(([k, l, s]) => `<span class="rtag" title="${l}"><i>${s}</i>${esc(a.roles[k])}</span>`).join("");
+const paClass = (a) => (a?.dot1x && a?.macAuth ? "ab" : a?.dot1x ? "a1" : a?.macAuth ? "am" : "");
+const paBadge = (a) => (a?.dot1x && a?.macAuth ? "1X+M" : a?.dot1x ? "1X" : a?.macAuth ? "MAC" : "");
+
+function tabAccess(d, snap) {
+  const pa = snap.portAccess;
+  if (!pa) return `<section class="panel"><div class="empty"><h3>Port access isn't available here</h3><p>802.1X and MAC authentication are managed on AOS-S and AOS-CX switches over SSH.${snap.family === "aos-s" || snap.family === "aos-cx" ? " Collect this switch again to read its setup." : ""}</p></div></section>`;
+  const cx = snap.family === "aos-cx";
+  const all = paPorts(snap);
+  if (S.paFor !== d.id) { S.paFor = d.id; S.paSel = new Set(); S.paq = ""; }
+  for (const p of S.paSel) if (!all.includes(p)) S.paSel.delete(p);
+  const by = Object.fromEntries((pa.ports || []).map((a) => [a.port, a]));
+  const info = Object.fromEntries((snap.ports || []).map((p) => [p.name, p]));
+  const infra = paInfra(snap);
+  const servers = pa.servers || [];
+  const n1x = pa.ports.filter((a) => a.dot1x).length, nmac = pa.ports.filter((a) => a.macAuth).length;
+  const open = all.length - pa.ports.length;
+  const glob = (on, kind) => `${on ? `<span class="sev okchip">On for the switch</span>` : `<span class="sev warning">Off for the switch</span>`}
+    <button class="btn small" onclick="paGlobal('${kind}', ${!on})">${on ? "Turn off" : "Turn on"}</button>`;
+  const stat = (v, l, sub, cls = "") => `<div class="pastat"><div class="v ${cls}">${v}</div><div class="l">${l}</div><div class="s">${sub}</div></div>`;
+  const onPort = {};
+  for (const c of pa.clients || []) onPort[c.port] = (onPort[c.port] || 0) + 1;
+  const tile = (p) => {
+    const a = by[p], up = info[p]?.up;
+    const tip = `Port ${p}${a ? `: ${[a.dot1x && "802.1X", a.macAuth && "MAC authentication"].filter(Boolean).join(" + ")}` : ": no login asked"}${onPort[p] ? `, ${plural(onPort[p], "client")}` : ""}${infra[p] ? `, connects to ${infra[p]}` : ""}${info[p] && !up ? ", link down" : ""}${info[p]?.description ? " (" + info[p].description + ")" : ""}`;
+    return `<button type="button" class="pp pa ${paClass(a)}${S.paSel.has(p) ? " sel" : ""}${infra[p] ? " infra" : ""}${info[p] && !up ? " down" : ""}" data-p="${esc(p)}" title="${esc(tip)}">${esc(p)}<sup>${paBadge(a) || "&nbsp;"}</sup></button>`;
+  };
+  const onoff = (v) => (v ? `<span class="sev okchip">On</span>` : `<span class="faint">–</span>`);
+  return `<div class="pastats">
+      ${stat(servers.length, plural(servers.length, "RADIUS server").replace(/^\d+ /, ""), servers.length ? `<span class="faint">${esc(servers.map((s) => s.host).join(", "))}</span>` : `<span class="warnc">Nobody can log in without one</span>`, servers.length ? "" : "warnc")}
+      ${stat(n1x, "Ports with 802.1X", glob(pa.dot1xOn, "dot1x"))}
+      ${stat(nmac, "Ports with MAC authentication", cx ? glob(pa.macAuthOn, "mac") : `<span class="faint">Turned on per port</span>`)}
+      ${stat(open, "Open ports", `<span class="faint">No login asked</span>`)}
+    </div>
+    <section class="panel" style="margin-bottom:16px"><h2>RADIUS servers<span class="grow"></span><button class="btn small primary" onclick="openRadiusEditor()">${ICON.plus}Add server</button></h2>
+    ${servers.length ? `<table><thead><tr><th>Server</th>${cx ? "<th>VRF</th>" : ""}<th>Shared secret</th><th></th></tr></thead><tbody>
+      ${servers.map((s) => `<tr><td class="mono">${esc(s.host)}</td>${cx ? `<td class="mono">${esc(s.vrf || "default")}</td>` : ""}<td>${s.hasKey ? `<span class="ok">Set</span>` : `<span class="warnc">Not set</span>`}</td>
+        <td style="text-align:right"><button class="btn small danger" onclick="removeRadius('${esc(s.host)}')">Remove</button></td></tr>`).join("")}</tbody></table>`
+    : `<div class="empty" style="padding:22px"><h3>No RADIUS server</h3><p>802.1X and MAC authentication check every login with a RADIUS server, such as ClearPass or Microsoft NPS. Add one before turning them on.</p></div>`}</section>
+    ${cx ? rolesPanel(snap, pa) : ""}
+    <section class="panel"><h2>Ports<span class="grow"></span>
+      <span class="chips" style="font-weight:400"><button class="chip" onclick="paSelect('all')">All</button><button class="chip" onclick="paSelect('open')">Open edge ports</button><button class="chip" onclick="paSelect('auth')">With login</button><button class="chip" onclick="paSelect('none')">None</button></span>
+      <button class="btn small primary" id="paedit" onclick="openPortAccessEditor()" ${S.paSel.size ? "" : "disabled"}>${S.paSel.size ? `Edit ${plural(S.paSel.size, "port")}` : "Select ports to edit"}</button></h2>
+      <div class="body">
+        <div class="legend" style="margin-top:0"><span><i style="background:rgba(76,195,138,.55)"></i>802.1X</span><span><i style="background:rgba(110,168,254,.55)"></i>MAC authentication</span><span><i style="background:linear-gradient(135deg,rgba(76,195,138,.7) 50%,rgba(110,168,254,.7) 50%)"></i>Both</span><span><i style="background:var(--warn);border-radius:50%;width:7px;height:7px"></i>Links to a switch or AP</span><span class="faint">Click ports to select, Shift-click for a range</span></div>
+        <div class="portpick" id="pagrid" onclick="paClick(event)">${all.map(tile).join("")}</div>
+      </div>
+      ${pa.ports.length ? `<table><thead><tr><th>Port</th><th>802.1X</th><th>MAC auth</th><th class="num">Client limit</th><th>Re-authentication</th>${cx ? "<th>Roles</th>" : "<th>Unauth VLAN</th>"}<th>Link</th><th>Description</th></tr></thead><tbody>
+        ${pa.ports.map((a) => `<tr class="click" onclick="paEditOne('${esc(a.port)}')"><td class="mono">${esc(a.port)}</td><td>${onoff(a.dot1x)}</td><td>${onoff(a.macAuth)}</td>
+          <td class="num">${a.clientLimit || `<span class="faint">default</span>`}</td><td>${a.reauthPeriod ? "Every " + reauthText(a.reauthPeriod) : `<span class="faint">Off</span>`}</td>
+          ${cx ? `<td>${roleTags(a) || `<span class="faint">–</span>`}</td>` : `<td class="mono">${a.unauthVlan || `<span class="faint">–</span>`}</td>`}
+          <td class="${info[a.port]?.up ? "ok" : "faint"}">${info[a.port] ? (info[a.port].up ? "Up" : "Down") : ""}</td><td>${esc(info[a.port]?.description || "")}</td></tr>`).join("")}</tbody></table>`
+      : `<div class="empty" style="padding:18px;border-top:1px solid var(--line-soft)">No port asks for a login yet. Select ports above and turn on 802.1X or MAC authentication.</div>`}
+    </section>
+    ${cx ? clientsPanel(snap, pa) : ""}`;
+}
+
+// ---------- connected clients (AOS-CX show port-access clients) ----------
+const METHOD = { dot1x: "802.1X", "mac-auth": "MAC auth", "device-profile": "Device profile", "port-security": "Port security" };
+function clientStatus(s) {
+  const t = (s || "").toLowerCase();
+  const cls = /success|authenticated|authorized|applied/.test(t) && !/unauth|not /.test(t) ? "okchip" : /progress|pending|held|connecting/.test(t) ? "info" : t ? "critical" : "";
+  return t ? `<span class="sev ${cls}">${esc(s)}</span>` : `<span class="faint">–</span>`;
+}
+function clientVLAN(c, snap) {
+  if (!c.vlan && !c.tagged) return `<span class="faint">–</span>`;
+  const name = (snap.vlans || []).find((v) => String(v.id) === c.vlan)?.name || "";
+  return `${c.vlan ? `<span class="mono">${esc(c.vlan)}</span>${name ? ` <span class="faint">${esc(name)}</span>` : ""}` : ""}${c.tagged ? `<span class="vlk">Tagged</span><span class="mono">${esc(c.tagged)}</span>` : ""}`;
+}
+function clientsPanel(snap, pa) {
+  const cs = pa.clients || [];
+  const t = cs.length > 5 ? (S.paq || "").trim().toLowerCase() : ""; // the filter box only shows above 5
+  const head = `<h2>Connected clients&nbsp;<span class="faint" style="font-weight:400">${cs.length}</span><span class="grow"></span>
+    <span class="faint" style="font-size:12.5px;font-weight:400">Read ${ago(pa.clientsAt)}</span>
+    ${cs.length > 5 ? `<span class="searchbox" style="font-weight:400">${ICON.search}<input type="text" id="paq" placeholder="Filter clients" value="${esc(S.paq || "")}" oninput="paFilter(this.value)" style="width:200px"></span>` : ""}
+    <button class="btn small" id="pacref" onclick="refreshPortClients()">${ICON.refresh}Refresh</button></h2>`;
+  if (!pa.clientsRead) return `<section class="panel" style="margin-top:16px">${head}<div class="empty" style="padding:22px"><h3>Clients weren't read</h3><p>The switch didn't answer <span class="mono">show port-access clients</span> at the last collection. Click Refresh to try again.</p></div></section>`;
+  if (!cs.length) return `<section class="panel" style="margin-top:16px">${head}<div class="empty" style="padding:22px"><h3>No clients</h3><p>Nobody is logged in on a port with 802.1X or MAC authentication right now.</p></div></section>`;
+  const rows = [...cs].sort((a, b) => a.port.localeCompare(b.port, undefined, { numeric: true }) || a.mac.localeCompare(b.mac))
+    .map((c) => [c, [c.port, c.mac, c.user, c.ip, METHOD[c.method] || c.method, c.status, c.role, c.vlan].join(" ").toLowerCase()]);
+  const hit = (q) => !t || q.includes(t);
+  return `<section class="panel" style="margin-top:16px">${head}
+    <table id="pactab"><thead><tr><th>Port</th><th>Device</th><th>IP address</th><th>Login</th><th>Status</th><th>Role</th><th>VLAN</th><th>Connected</th></tr></thead><tbody>
+    ${rows.map(([c, q]) => `<tr data-q="${esc(q)}"${hit(q) ? "" : ` style="display:none"`}>
+      <td class="mono">${esc(c.port)}</td>
+      <td><span class="mono">${copyable(c.mac)}</span>${c.user && c.user !== c.mac ? `<div class="faint" style="font-size:12.5px">${esc(c.user)}</div>` : ""}</td>
+      <td class="mono">${esc(c.ip || "")}</td>
+      <td>${esc(METHOD[c.method] || c.method || "")}</td>
+      <td>${clientStatus(c.status)}</td>
+      <td>${c.role ? `<span class="mono">${esc(c.role)}</span>${c.roleStatus && !/applied/i.test(c.roleStatus) ? ` <span class="sev warning" title="Role status">${esc(c.roleStatus)}</span>` : ""}` : `<span class="faint">–</span>`}</td>
+      <td>${clientVLAN(c, snap)}</td>
+      <td class="faint">${esc(c.session || "")}</td></tr>`).join("")}</tbody></table>
+    <div class="empty" id="pacnone" style="padding:14px;${rows.some(([, q]) => hit(q)) ? "display:none" : ""}">No client matches the filter.</div></section>`;
+}
+// filters rows in place, so typing doesn't re-render the page and lose focus
+function paFilter(q) {
+  S.paq = q;
+  const t = q.trim().toLowerCase();
+  let shown = 0;
+  for (const r of $$("#pactab tbody tr")) {
+    const on = !t || r.dataset.q.includes(t);
+    r.style.display = on ? "" : "none";
+    shown += on;
+  }
+  const none = $("#pacnone");
+  if (none) none.style.display = shown ? "none" : "";
+}
+async function refreshPortClients() {
+  const b = $("#pacref");
+  if (b) { b.disabled = true; b.lastChild.textContent = "Reading…"; }
+  try {
+    await call("RefreshPortClients", S.detail.id);
+    await loadDetail(S.detail.id, true);
+  } catch (e) {
+    toast(e.message, true);
+    if (b) { b.disabled = false; b.lastChild.textContent = "Refresh"; }
+  }
+}
+
+// A role's VLANs as the switch knows them. The access or native VLAN may be
+// given by number, by name, or both; a trunk role adds tagged VLANs.
+function roleVLAN(r, snap) {
+  const id = r.vlan || (snap.vlans || []).find((v) => v.name === r.vlanName)?.id || 0;
+  const name = r.vlanName || (snap.vlans || []).find((v) => v.id === id)?.name || "";
+  const mode = r.vlanMode === "trunk" || r.vlanMode === "native" ? "trunk" : "access";
+  // the untagged VLAN is in the allowed list too; it's shown once, as untagged
+  const tagged = (r.tagged || []).filter((t) => t !== id);
+  return { id, name, mode, tagged, set: !!(r.vlan || r.vlanName || tagged.length) };
+}
+const roleVLANText = (r, snap) => {
+  const v = roleVLAN(r, snap), u = [v.id, v.name].filter(Boolean).join(" ");
+  if (!v.set) return "";
+  if (v.mode === "access") return "VLAN " + u;
+  return [u && "untagged " + u, v.tagged.length && "tagged " + compress(v.tagged.map(String))].filter(Boolean).join(", ");
+};
+function roleVLANCell(r, snap) {
+  const v = roleVLAN(r, snap);
+  if (!v.set) return `<span class="faint">–</span>`;
+  const u = v.id || v.name ? `<span class="mono">${v.id || ""}</span> <span class="faint">${esc(v.name)}</span>` : "";
+  if (v.mode === "access") return `<span class="tag" title="vlan access">Single VLAN</span> ${u}`;
+  return `<span class="tag" title="vlan trunk native / vlan trunk allowed">Trunk</span>
+    ${u ? `<span class="vlk">Untagged</span>${u}` : ""}${v.tagged.length ? `<span class="vlk">Tagged</span><span class="mono">${esc(compress(v.tagged.map(String)))}</span>` : ""}`;
+}
+
+function rolesPanel(snap, pa) {
+  const roles = pa.roles || [];
+  const used = (name) => (pa.ports || []).filter((a) => Object.values(a.roles || {}).includes(name)).map((a) => a.port);
+  return `<section class="panel" style="margin-bottom:16px"><h2>Roles<span class="grow"></span><button class="btn small primary" onclick="openRoleEditor()">${ICON.plus}New role</button></h2>
+    ${roles.length ? `<table><thead><tr><th>Role</th><th>VLAN</th><th>Description</th><th>Used on</th><th></th></tr></thead><tbody>
+      ${roles.map((r) => {
+        const u = used(r.name);
+        return `<tr><td class="mono">${esc(r.name)}</td><td>${roleVLANCell(r, snap)}</td>
+          <td>${esc(r.description || "")}</td><td class="mono">${u.length ? esc(compress(u)) : `<span class="faint" style="font-family:var(--sans)">Not used</span>`}</td>
+          <td style="text-align:right;white-space:nowrap"><button class="btn small" onclick="openRoleEditor('${esc(r.name)}')">Edit</button>
+          <button class="btn small danger" onclick="deleteRole('${esc(r.name)}')" ${u.length ? `disabled title="Used on ports ${esc(compress(u))}"` : ""}>Delete</button></td></tr>`;
+      }).join("")}</tbody></table>`
+    : `<div class="empty" style="padding:22px"><h3>No roles yet</h3><p>A role decides which VLAN a client lands in: after it logs in, when its login is rejected, while the RADIUS server can't be reached, or before it logs in. AOS-CX has none by default. Create one, then assign it to ports.</p></div>`}</section>`;
+}
+
+function openRoleEditor(name) {
+  const snap = S.detail.snapshot, existing = name ? (snap.portAccess.roles || []).find((r) => r.name === name) : null;
+  const was = existing ? roleVLAN(existing, snap) : { id: 0, mode: "access", tagged: [] };
+  const vlans = snap.vlans || [];
+  const opts = (sel) => `<option value="0">None</option>${vlans.map((v) => `<option value="${v.id}" ${sel === v.id ? "selected" : ""}>${v.id}${v.name ? " · " + esc(v.name) : ""}</option>`).join("")}`;
+  const tagged = new Set(was.tagged);
+  const m = modal(`<h2>${existing ? `Edit role ${esc(name)}` : "New role"}</h2><div class="body">
+    <div class="row"><label class="f"><span>Name</span><input type="text" id="rlname" maxlength="64" value="${esc(name || "")}" ${existing ? "disabled" : ""} placeholder="RoleLan" spellcheck="false"></label>
+      <label class="f"><span>Description</span><input type="text" id="rldesc" maxlength="64" value="${esc(existing?.description || "")}" placeholder="Optional"></label></div>
+    <div class="pafield" style="grid-template-columns:150px auto 1fr;border-top:1px solid var(--line-soft)"><b>VLANs</b>
+      <div class="seg" id="rlmode"><button type="button" data-v="access" class="${was.mode === "access" ? "on" : ""}">Single VLAN</button><button type="button" data-v="trunk" class="${was.mode === "trunk" ? "on" : ""}">Trunk</button></div>
+      <span class="now" id="rlhint"></span></div>
+    <div id="rlacc" style="margin-top:14px"><label class="f" style="max-width:320px"><span>VLAN (untagged)</span><select id="rlvlan">${opts(was.mode === "access" ? was.id : 0)}</select></label></div>
+    <div id="rltrk" style="margin-top:14px">
+      <label class="f" style="max-width:320px"><span>Untagged VLAN (native)</span><select id="rlnative">${opts(was.mode === "trunk" ? was.id : 0)}</select></label>
+      <div class="muted" style="font-size:13px;margin-bottom:6px">Tagged VLANs <span class="faint">· click to add or remove. The untagged VLAN (green, marked U) is always allowed on the trunk too.</span></div>
+      <div class="portpick" id="rltag">${vlans.map((v) => `<button type="button" class="pp vl${tagged.has(v.id) ? " T" : ""}" data-v="${v.id}" title="${esc(v.name || "")}">${v.id}${v.name ? `<small>${esc(v.name)}</small>` : ""}</button>`).join("")}</div>
+      ${was.tagged.filter((id) => !vlans.some((v) => v.id === id)).length ? `<div class="faint" style="font-size:12.5px;margin-top:6px">Also tagged, but not on this switch: ${esc(compress(was.tagged.filter((id) => !vlans.some((v) => v.id === id)).map(String)))}</div>` : ""}
+    </div>
+    <div style="height:12px"></div><label class="check"><input type="checkbox" id="rlsave" checked> Save to startup config (write memory)</label>
+    <div id="rlerr"></div></div>
+    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="rlprev">Review changes</button></div>`, true);
+  const mode = () => $("#rlmode .on", m).dataset.v;
+  const show = () => {
+    $("#rlacc", m).style.display = mode() === "access" ? "" : "none";
+    $("#rltrk", m).style.display = mode() === "trunk" ? "" : "none";
+    $("#rlhint", m).textContent = mode() === "access"
+      ? "The port gets one VLAN, untagged (vlan access). For a PC or printer."
+      : "The port gets an untagged VLAN plus tagged VLANs (vlan trunk native / allowed). For a phone with a PC behind it, or an AP.";
+  };
+  // the untagged VLAN is always allowed on the trunk, so its tile shows as tagged and stays on
+  const paintNative = () => {
+    const native = +$("#rlnative", m).value;
+    $$("#rltag .pp", m).forEach((b) => {
+      const id = +b.dataset.v;
+      b.classList.toggle("N", id === native);
+      b.classList.toggle("T", id === native || tagged.has(id));
+      b.title = id === native ? "Untagged VLAN: always allowed on the trunk" : b.dataset.name;
+    });
+  };
+  $$("#rltag .pp", m).forEach((b) => { b.dataset.name = b.title; });
+  paintNative();
+  $("#rlnative", m).addEventListener("change", paintNative);
+  show();
+  $("#rlmode", m).addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    $$("#rlmode button", m).forEach((x) => x.classList.toggle("on", x === b));
+    show();
+  });
+  $("#rltag", m).addEventListener("click", (e) => {
+    const b = e.target.closest(".pp");
+    if (!b || b.classList.contains("N")) return;
+    const id = +b.dataset.v;
+    tagged.has(id) ? tagged.delete(id) : tagged.add(id);
+    b.classList.toggle("T", tagged.has(id));
+  });
+  $("#rlprev", m).onclick = async () => {
+    const md = mode(), vlan = +$(md === "access" ? "#rlvlan" : "#rlnative", m).value;
+    // unchanged: send the VLAN back as the switch has it, so a VLAN given by name stays that way
+    const same = existing && vlan === was.id && md === was.mode;
+    const ch = { setRole: { name: $("#rlname", m).value.trim(), description: $("#rldesc", m).value.trim(), vlanMode: md,
+      vlan: same ? existing.vlan || 0 : vlan, vlanName: same ? existing.vlanName || "" : "",
+      // the untagged VLAN goes in the allowed list as well, or the switch drops its traffic
+      tagged: md === "trunk" ? [...new Set([...tagged, ...(vlan ? [vlan] : [])])].sort((a, b) => a - b) : [] }, save: $("#rlsave", m).checked };
+    if (!existing && (snap.portAccess.roles || []).some((r) => r.name === ch.setRole.name)) {
+      $("#rlerr", m).innerHTML = `<div class="msg err">Role ${esc(ch.setRole.name)} already exists. Edit it from the list instead.</div>`;
+      return;
+    }
+    try {
+      const cmds = await call("PreviewPortAccess", S.detail.id, ch);
+      closeModal();
+      confirmCommands(ch, cmds, "ApplyPortAccess");
+    } catch (e) {
+      $("#rlerr", m).innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    }
+  };
+}
+
+function deleteRole(name) {
+  const ch = { deleteRole: name, save: true };
+  call("PreviewPortAccess", S.detail.id, ch).then((cmds) => confirmCommands(ch, cmds, "ApplyPortAccess")).catch((e) => toast(e.message, true));
+}
+
+function paClick(e) {
+  const b = e.target.closest(".pp");
+  if (!b) return;
+  const p = b.dataset.p, all = paPorts(S.detail.snapshot);
+  if (e.shiftKey && S.paLast && all.includes(S.paLast)) {
+    const [i, j] = [all.indexOf(S.paLast), all.indexOf(p)].sort((x, y) => x - y);
+    const add = !S.paSel.has(p);
+    for (const q of all.slice(i, j + 1)) add ? S.paSel.add(q) : S.paSel.delete(q);
+  } else {
+    S.paSel.has(p) ? S.paSel.delete(p) : S.paSel.add(p);
+  }
+  S.paLast = p;
+  $$("#pagrid .pp").forEach((x) => x.classList.toggle("sel", S.paSel.has(x.dataset.p)));
+  const ed = $("#paedit");
+  ed.disabled = !S.paSel.size;
+  ed.textContent = S.paSel.size ? `Edit ${plural(S.paSel.size, "port")}` : "Select ports to edit";
+}
+
+function paSelect(kind) {
+  const snap = S.detail.snapshot, pa = snap.portAccess, infra = paInfra(snap);
+  const auth = new Set((pa.ports || []).map((a) => a.port));
+  const all = paPorts(snap);
+  S.paSel = new Set(kind === "all" ? all : kind === "auth" ? [...auth] : kind === "open" ? all.filter((p) => !auth.has(p) && !infra[p]) : []);
+  $("#tabbody").innerHTML = tabAccess(S.detail, snap);
+}
+
+function paEditOne(p) {
+  S.paSel = new Set([p]);
+  $("#tabbody").innerHTML = tabAccess(S.detail, S.detail.snapshot);
+  openPortAccessEditor();
+}
+
+function openPortAccessEditor() {
+  const snap = S.detail.snapshot, pa = snap.portAccess, cx = snap.family === "aos-cx";
+  const all = paPorts(snap);
+  const ports = all.filter((p) => S.paSel.has(p));
+  if (!ports.length) return;
+  const by = Object.fromEntries((pa.ports || []).map((a) => [a.port, a]));
+  const infra = paInfra(snap);
+  const now = (k) => {
+    const n = ports.filter((p) => by[p]?.[k]).length;
+    return n === 0 ? "Off on all" : n === ports.length ? "On on all" : `On on ${n} of ${ports.length}`;
+  };
+  const seg = (k) => `<div class="seg" data-k="${k}"><button type="button" data-v="" class="on">Keep</button><button type="button" data-v="1">On</button><button type="button" data-v="0">Off</button></div>`;
+  const vlans = (snap.vlans || []).filter((v) => v.id !== 1);
+  const roles = pa.roles || [];
+  const keepRole = (k) => {
+    const vals = [...new Set(ports.map((p) => by[p]?.roles?.[k] || ""))];
+    return vals.length === 1 ? `Keep (${esc(vals[0] || "none")})` : "Keep (differs per port)";
+  };
+  const m = modal(`<h2>Port access on ${ports.length === 1 ? "port " + esc(ports[0]) : plural(ports.length, "port")}</h2><div class="body">
+    ${ports.length > 1 ? `<div class="mono faint" style="font-size:12.5px;margin:-4px 0 12px;user-select:text">${esc(all.length === ports.length ? "All ports" : ports.join(", "))}</div>` : ""}
+    <div class="pafield"><b>802.1X</b>${seg("dot1x")}<span class="now">${now("dot1x")}. Users and devices log in with their own account.</span></div>
+    <div class="pafield"><b>MAC authentication</b>${seg("macAuth")}<span class="now">${now("macAuth")}. The device's MAC address is checked, for printers, phones and APs.</span></div>
+    <div id="paoptsoff" class="faint" style="font-size:13px;margin-top:14px"></div>
+    <div id="paopts">
+    <div class="row" style="margin-top:16px">
+      <label class="f"><span>Client limit</span><input type="number" id="palimit" min="0" max="${cx ? 256 : 32}" placeholder="Keep"></label>
+      <label class="f"><span>Re-authentication</span><select id="pareauth"><option value="">Keep</option><option value="0">Off</option><option value="1800">Every 30 min</option><option value="3600">Every hour</option><option value="14400">Every 4 hours</option><option value="28800">Every 8 hours</option><option value="86400">Every 24 hours</option></select></label>
+      ${cx ? "" : `<label class="f"><span>Unauthenticated VLAN</span><select id="paunauth"><option value="">Keep</option><option value="0">None</option>${vlans.map((v) => `<option value="${v.id}">${v.id}${v.name ? " · " + esc(v.name) : ""}</option>`).join("")}</select></label>`}
+    </div>
+    <div class="faint" style="font-size:12.5px;margin-top:-4px">Leave a field on Keep to leave it as it is. A client limit of 0 goes back to the switch default.${cx ? "" : " Clients that fail or skip the login are placed in the unauthenticated VLAN."}</div>
+    ${cx ? `<div class="pasub">Roles<span class="faint">Which role, and so which VLAN, a client gets in each situation</span></div>
+      ${roles.length ? "" : `<div class="msg warnm" style="margin-bottom:10px">This switch has no roles yet. Create them under Roles on the Port access tab first.</div>`}
+      <div class="rolegrid">${ROLE_SLOTS.map(([k, l]) => `<label class="f"><span>${l}</span><select data-role="${k}"><option value="__keep">${keepRole(k)}</option><option value="">None</option>${roles.map((r) => `<option value="${esc(r.name)}">${esc(r.name)}${roleVLANText(r, snap) ? " · " + esc(roleVLANText(r, snap)) : ""}</option>`).join("")}</select></label>`).join("")}</div>` : ""}
+    </div>
+    <div id="pawarn" style="margin-top:12px"></div>
+    <div style="height:10px"></div><label class="check"><input type="checkbox" id="pasave" checked> Save to startup config (write memory)</label>
+    <div id="paerr"></div></div>
+    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="paprev">Review changes</button></div>`, true);
+  const val = (k) => $(`.seg[data-k="${k}"] .on`, m).dataset.v;
+  // whether a port still asks for a login once the toggles are applied
+  const willAuth = (p) => (val("dot1x") === "" ? !!by[p]?.dot1x : val("dot1x") === "1") || (val("macAuth") === "" ? !!by[p]?.macAuth : val("macAuth") === "1");
+  // options only mean something on a port with a login, so they show once every selected port has one
+  const opts = () => {
+    const open = ports.filter((p) => !willAuth(p));
+    $("#paopts", m).style.display = open.length ? "none" : "";
+    $("#paoptsoff", m).textContent = !open.length ? ""
+      : open.length === ports.length ? `Turn on 802.1X or MAC authentication to set the client limit, re-authentication${cx ? " and roles" : " and unauthenticated VLAN"}.`
+      : `${open.length === 1 ? "Port" : "Ports"} ${compress(open)} ${open.length === 1 ? "doesn't" : "don't"} ask for a login. Turn 802.1X or MAC authentication on for every selected port to change the other options.`;
+    if (open.length) {
+      // hidden fields go back to Keep, so nothing unseen is sent
+      $("#palimit", m).value = "";
+      for (const s of $$("#paopts select", m)) s.selectedIndex = 0;
+    }
+  };
+  const warn = () => {
+    const turnOn = val("dot1x") === "1" || val("macAuth") === "1";
+    const risky = ports.filter((p) => infra[p]);
+    const w = [];
+    // AOS-CX keeps these on the interface; the backend removes them with the login
+    const cleared = cx ? ports.filter((p) => !willAuth(p) && (by[p]?.dot1x || by[p]?.macAuth) && (by[p]?.clientLimit || Object.keys(by[p]?.roles || {}).length)) : [];
+    if (cleared.length) w.push(`<div class="msg warnm">${cleared.length === 1 ? "Port" : "Ports"} <b>${esc(compress(cleared))}</b> will no longer ask for a login, so the roles and client limit set there are removed too.</div>`);
+    if (turnOn && risky.length) w.push(`<div class="msg warnm"><b>${esc(risky.map((p) => `${p} (${infra[p]})`).join(", "))}</b> ${risky.length === 1 ? "links" : "link"} to another switch or access point. A login on ${risky.length === 1 ? "that port" : "those ports"} can cut the link, and with it SwitchDesk's own connection.</div>`);
+    if (turnOn && !(pa.servers || []).length) w.push(`<div class="msg warnm">No RADIUS server is set, so nobody on these ports will be able to log in. Add a server first.</div>`);
+    $("#pawarn", m).innerHTML = w.join("");
+  };
+  m.addEventListener("click", (e) => {
+    const b = e.target.closest(".seg button");
+    if (!b) return;
+    b.parentElement.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    opts();
+    warn();
+  });
+  opts();
+  $("#paprev", m).onclick = async () => {
+    const tri = (k) => (val(k) === "" ? null : val(k) === "1");
+    const num = (v) => (v === "" || v === undefined ? null : +v);
+    const ch = {
+      ports, dot1x: tri("dot1x"), macAuth: tri("macAuth"),
+      clientLimit: num($("#palimit", m).value.trim()), reauthPeriod: num($("#pareauth", m).value),
+      unauthVlan: cx ? null : num($("#paunauth", m).value), save: $("#pasave", m).checked, roles: null,
+    };
+    for (const s of $$("select[data-role]", m)) if (s.value !== "__keep") (ch.roles ||= {})[s.dataset.role] = s.value;
+    if ([ch.dot1x, ch.macAuth, ch.clientLimit, ch.reauthPeriod, ch.unauthVlan, ch.roles].every((v) => v === null)) {
+      $("#paerr", m).innerHTML = `<div class="msg err">Nothing changed.</div>`;
+      return;
+    }
+    try {
+      const cmds = await call("PreviewPortAccess", S.detail.id, ch);
+      closeModal();
+      confirmCommands(ch, cmds, "ApplyPortAccess");
+    } catch (e) {
+      $("#paerr", m).innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    }
+  };
+}
+
+function openRadiusEditor() {
+  const cx = S.detail.snapshot.family === "aos-cx";
+  const m = modal(`<h2>Add RADIUS server</h2><div class="body">
+    <p class="muted" style="margin-top:0;font-size:13px">The switch sends every 802.1X and MAC authentication login to this server, such as ClearPass or Microsoft NPS. Add the switch as a client there with the same shared secret.</p>
+    <div class="row"><label class="f"><span>Server IP address or host name</span><input type="text" id="rhost" placeholder="10.0.0.5" autocomplete="off" spellcheck="false"></label>
+      ${cx ? `<label class="f" style="flex:0 0 160px"><span>VRF</span><input type="text" id="rvrf" placeholder="default" spellcheck="false"></label>` : ""}</div>
+    <label class="f"><span>Shared secret</span><input type="password" id="rkey" maxlength="64" autocomplete="new-password"></label>
+    <label class="check"><input type="checkbox" id="rshow"> Show secret</label>
+    <div style="height:10px"></div><label class="check"><input type="checkbox" id="rsave" checked> Save to startup config (write memory)</label>
+    <div id="rerr"></div></div>
+    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="rprev">Review changes</button></div>`);
+  $("#rshow", m).onchange = (e) => { $("#rkey", m).type = e.target.checked ? "text" : "password"; };
+  $("#rprev", m).onclick = async () => {
+    const ch = { addServer: { host: $("#rhost", m).value.trim(), key: $("#rkey", m).value, vrf: cx ? $("#rvrf", m).value.trim() : "" }, save: $("#rsave", m).checked };
+    try {
+      const cmds = await call("PreviewPortAccess", S.detail.id, ch);
+      closeModal();
+      confirmCommands(ch, cmds, "ApplyPortAccess");
+    } catch (e) {
+      $("#rerr", m).innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    }
+  };
+}
+
+// paGlobal turns 802.1X or MAC authentication on or off for the whole switch.
+function paGlobal(kind, on) {
+  const pa = S.detail.snapshot.portAccess;
+  const label = kind === "dot1x" ? "802.1X" : "MAC authentication";
+  const ports = (pa.ports || []).filter((a) => (kind === "dot1x" ? a.dot1x : a.macAuth)).map((a) => a.port);
+  const ch = { [kind === "dot1x" ? "globalDot1x" : "globalMacAuth"]: on, save: true };
+  let note = "";
+  if (!on && ports.length) note = `${plural(ports.length, "port")} (${esc(compress(ports))}) stop checking logins with ${label}. Devices there may then reach the network without logging in. The port settings stay, and come back when you turn it on again.`;
+  else if (!on) note = `No port uses ${label} now, so nothing changes until a port is given it.`;
+  else if (!(pa.servers || []).length) note = `There's no RADIUS server yet, so no ${label} login can succeed. Add one first.`;
+  else if (!ports.length) note = `No port uses ${label} yet. Turn it on per port below to ask for a login.`;
+  call("PreviewPortAccess", S.detail.id, ch).then((cmds) => confirmCommands(ch, cmds, "ApplyPortAccess", note)).catch((e) => toast(e.message, true));
+}
+
+function removeRadius(host) {
+  const ch = { removeServer: host, save: true };
+  call("PreviewPortAccess", S.detail.id, ch).then((cmds) => confirmCommands(ch, cmds, "ApplyPortAccess")).catch((e) => toast(e.message, true));
 }
 
 // ---------- modals ----------

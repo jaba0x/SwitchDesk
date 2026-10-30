@@ -294,6 +294,18 @@ func (a *App) ApplyVLAN(id string, ch aruba.VLANChange) (aruba.ApplyResult, erro
 	return a.mgr.ApplyVLAN(id, ch)
 }
 
+func (a *App) PreviewPortAccess(id string, ch aruba.PortAccessChange) ([]string, error) {
+	return a.mgr.PreviewPortAccess(id, ch)
+}
+
+func (a *App) ApplyPortAccess(id string, ch aruba.PortAccessChange) (aruba.ApplyResult, error) {
+	return a.mgr.ApplyPortAccess(id, ch)
+}
+
+func (a *App) RefreshPortClients(id string) ([]aruba.PortClient, error) {
+	return a.mgr.RefreshPortClients(id)
+}
+
 func (a *App) GetBackup(id, name string) (string, error) { return a.st.ReadBackup(id, name) }
 
 // ExportText asks where to save and writes the content (configs, raw output).

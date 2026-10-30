@@ -176,6 +176,21 @@ func evaluate(sw store.Switch, st *Status, snap *aruba.Snapshot, set store.Setti
 			add(Critical, "Security", "No manager password set", "Anyone with console or network access gets full rights.")
 		}
 	}
+	if pa := snap.PortAccess; pa != nil && len(pa.Ports) > 0 {
+		var ports []string
+		dot1x := false
+		for _, a := range pa.Ports {
+			ports = append(ports, a.Port)
+			dot1x = dot1x || a.Dot1x
+		}
+		list := aruba.CompressPorts(ports)
+		if len(pa.Servers) == 0 {
+			add(Warning, "Port access", "Port authentication without a RADIUS server", "Ports "+list+" ask clients to log in, but no RADIUS server is set, so nobody can.")
+		}
+		if dot1x && !pa.Dot1xOn {
+			add(Info, "Port access", "802.1X is set on ports but turned off", "The ports are configured for 802.1X, but it isn't turned on for the switch, so they don't ask for a login.")
+		}
+	}
 	if snap.Facts.ConfigSaved != nil && !*snap.Facts.ConfigSaved {
 		add(Warning, "Config", "Unsaved configuration changes", "Running config differs from startup. Changes will be lost on reboot.")
 	}
