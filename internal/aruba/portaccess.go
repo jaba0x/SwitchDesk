@@ -470,7 +470,9 @@ func checkRadiusHost(f Family, h string) error {
 	return nil
 }
 
-var safeKey = regexp.MustCompile(`^[!#-~]{1,64}$`) // printable, no space or double quote
+// printable, no space or double quote, and no "?", which the switch CLI
+// takes as a request for help instead of typing it
+var safeKey = regexp.MustCompile(`^[!#->@-~]{1,64}$`)
 var safeVRF = regexp.MustCompile(`^[A-Za-z0-9_-]{1,32}$`)
 var safeRole = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,64}$`)
 var safeDescr = regexp.MustCompile(`^[A-Za-z0-9 _.,:/()-]{0,64}$`)
@@ -569,7 +571,7 @@ func (c PortAccessChange) validate(f Family, cur PortAccess) error {
 			return err
 		}
 		if !safeKey.MatchString(s.Key) {
-			return fmt.Errorf("the shared secret must be 1-64 characters without spaces or double quotes")
+			return fmt.Errorf("the shared secret must be 1-64 characters without spaces, double quotes or question marks")
 		}
 		if s.VRF != "" && (f != FamilyAOSCX || !safeVRF.MatchString(s.VRF)) {
 			return fmt.Errorf("a VRF can only be set on AOS-CX, using letters, digits, _ and -")

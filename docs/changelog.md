@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.10
+
+- **Port access.** A new tab on AOS-S and AOS-CX switches manages RADIUS servers, 802.1X and MAC authentication per port and switch-wide, the VLAN for clients that don't log in (AOS-S), and local roles (AOS-CX). AOS-CX switches also list their connected clients. Two new checks: port authentication with no RADIUS server, and 802.1X set on ports but off for the switch. Contributed by [Arne Naessens](https://github.com/ArneNaessens) in [#15](https://github.com/jaba0x/SwitchDesk/pull/15).
+- Fixed: the VLANs page crashed when a switch had no VLAN list, for example after a failed read. Fixed by [Arne Naessens](https://github.com/ArneNaessens) in [#16](https://github.com/jaba0x/SwitchDesk/pull/16).
+- Hardening: names read from a switch's config (RADIUS hosts, roles, ports, MAC addresses) no longer go into inline JavaScript on the Port access tab, and a RADIUS secret can't contain `?`, which the switch CLI would take as a request for help.
+
 ## 0.9.9
 
 - Fixed: with a few hundred switches, the window could stay empty after a restart once every switch had been read ([#7](https://github.com/jaba0x/SwitchDesk/issues/7)). Measured with 284 fully read switches:

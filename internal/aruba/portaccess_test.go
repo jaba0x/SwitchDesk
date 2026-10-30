@@ -414,3 +414,16 @@ func TestAfterPortAccess(t *testing.T) {
 		t.Fatalf("the current setup must not be changed: %+v", cur)
 	}
 }
+
+// A "?" typed into the switch CLI opens its help instead of being typed, so
+// a secret with one would be sent cut short.
+func TestRadiusSecretRejectsQuestionMark(t *testing.T) {
+	ch := PortAccessChange{AddServer: &RadiusServerChange{Host: "10.0.0.5", Key: "abc?def"}}
+	if _, err := BuildPortAccessCommands(FamilyAOSS, ch, PortAccess{}); err == nil {
+		t.Fatal("secret with ? accepted")
+	}
+	ch.AddServer.Key = "abc@def!#$"
+	if _, err := BuildPortAccessCommands(FamilyAOSS, ch, PortAccess{}); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -50,7 +50,7 @@ async function copyText(text) {
   }
 }
 // a value with a copy button; the click doesn't reach the row behind it
-const copyable = (v) => `<span class="copyv"><span>${esc(v)}</span><button type="button" title="Copy ${esc(v)}" onclick="event.stopPropagation();copyText('${esc(v)}')">${ICON.copy}</button></span>`;
+const copyable = (v) => `<span class="copyv"><span>${esc(v)}</span><button type="button" title="Copy ${esc(v)}" data-copy-text="${esc(v)}">${ICON.copy}</button></span>`;
 
 function toast(text, err) {
   const t = document.createElement("div");
@@ -132,6 +132,15 @@ function renderSide() {
 document.addEventListener("click", (e) => {
   const u = e.target.closest("[data-open-url]");
   if (u) openURL(u.dataset.openUrl);
+  const c = e.target.closest("[data-copy-text]");
+  if (c) { e.stopPropagation(); copyText(c.dataset.copyText); }
+  // port access actions: names read from the switch stay out of inline JavaScript
+  const a = e.target.closest("[data-pa]");
+  if (a) {
+    e.stopPropagation();
+    const fn = { removeRadius, paEditOne, openRoleEditor, deleteRole }[a.dataset.pa];
+    if (fn) fn(a.dataset.arg);
+  }
 });
 
 document.addEventListener("click", (e) => {
@@ -971,7 +980,7 @@ function tabAccess(d, snap) {
     <section class="panel" style="margin-bottom:16px"><h2>RADIUS servers<span class="grow"></span><button class="btn small primary" onclick="openRadiusEditor()">${ICON.plus}Add server</button></h2>
     ${servers.length ? `<table><thead><tr><th>Server</th>${cx ? "<th>VRF</th>" : ""}<th>Shared secret</th><th></th></tr></thead><tbody>
       ${servers.map((s) => `<tr><td class="mono">${esc(s.host)}</td>${cx ? `<td class="mono">${esc(s.vrf || "default")}</td>` : ""}<td>${s.hasKey ? `<span class="ok">Set</span>` : `<span class="warnc">Not set</span>`}</td>
-        <td style="text-align:right"><button class="btn small danger" onclick="removeRadius('${esc(s.host)}')">Remove</button></td></tr>`).join("")}</tbody></table>`
+        <td style="text-align:right"><button class="btn small danger" data-pa="removeRadius" data-arg="${esc(s.host)}">Remove</button></td></tr>`).join("")}</tbody></table>`
     : `<div class="empty" style="padding:22px"><h3>No RADIUS server</h3><p>802.1X and MAC authentication check every login with a RADIUS server, such as ClearPass or Microsoft NPS. Add one before turning them on.</p></div>`}</section>
     ${cx ? rolesPanel(snap, pa) : ""}
     <section class="panel"><h2>Ports<span class="grow"></span>
@@ -982,7 +991,7 @@ function tabAccess(d, snap) {
         <div class="portpick" id="pagrid" onclick="paClick(event)">${all.map(tile).join("")}</div>
       </div>
       ${pa.ports.length ? `<table><thead><tr><th>Port</th><th>802.1X</th><th>MAC auth</th><th class="num">Client limit</th><th>Re-authentication</th>${cx ? "<th>Roles</th>" : "<th>Unauth VLAN</th>"}<th>Link</th><th>Description</th></tr></thead><tbody>
-        ${pa.ports.map((a) => `<tr class="click" onclick="paEditOne('${esc(a.port)}')"><td class="mono">${esc(a.port)}</td><td>${onoff(a.dot1x)}</td><td>${onoff(a.macAuth)}</td>
+        ${pa.ports.map((a) => `<tr class="click" data-pa="paEditOne" data-arg="${esc(a.port)}"><td class="mono">${esc(a.port)}</td><td>${onoff(a.dot1x)}</td><td>${onoff(a.macAuth)}</td>
           <td class="num">${a.clientLimit || `<span class="faint">default</span>`}</td><td>${a.reauthPeriod ? "Every " + reauthText(a.reauthPeriod) : `<span class="faint">Off</span>`}</td>
           ${cx ? `<td>${roleTags(a) || `<span class="faint">–</span>`}</td>` : `<td class="mono">${a.unauthVlan || `<span class="faint">–</span>`}</td>`}
           <td class="${info[a.port]?.up ? "ok" : "faint"}">${info[a.port] ? (info[a.port].up ? "Up" : "Down") : ""}</td><td>${esc(info[a.port]?.description || "")}</td></tr>`).join("")}</tbody></table>`
@@ -1087,8 +1096,8 @@ function rolesPanel(snap, pa) {
         const u = used(r.name);
         return `<tr><td class="mono">${esc(r.name)}</td><td>${roleVLANCell(r, snap)}</td>
           <td>${esc(r.description || "")}</td><td class="mono">${u.length ? esc(compress(u)) : `<span class="faint" style="font-family:var(--sans)">Not used</span>`}</td>
-          <td style="text-align:right;white-space:nowrap"><button class="btn small" onclick="openRoleEditor('${esc(r.name)}')">Edit</button>
-          <button class="btn small danger" onclick="deleteRole('${esc(r.name)}')" ${u.length ? `disabled title="Used on ports ${esc(compress(u))}"` : ""}>Delete</button></td></tr>`;
+          <td style="text-align:right;white-space:nowrap"><button class="btn small" data-pa="openRoleEditor" data-arg="${esc(r.name)}">Edit</button>
+          <button class="btn small danger" data-pa="deleteRole" data-arg="${esc(r.name)}" ${u.length ? `disabled title="Used on ports ${esc(compress(u))}"` : ""}>Delete</button></td></tr>`;
       }).join("")}</tbody></table>`
     : `<div class="empty" style="padding:22px"><h3>No roles yet</h3><p>A role decides which VLAN a client lands in: after it logs in, when its login is rejected, while the RADIUS server can't be reached, or before it logs in. AOS-CX has none by default. Create one, then assign it to ports.</p></div>`}</section>`;
 }

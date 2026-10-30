@@ -45,6 +45,17 @@ Switches with transceivers also get an **Optics** table: Rx and Tx power in dBm 
 
 The switch's VLANs, with editing. See [VLANs](vlans.md).
 
+### Port access
+
+On AOS-S and AOS-CX switches, the **Port access** tab manages who may connect to a port:
+
+- **RADIUS servers:** add and remove them. The shared secret is never shown on screen, in the command preview or in the transcript. It can't contain spaces, double quotes or question marks, because the switch CLI treats a typed `?` as a request for help.
+- **802.1X and MAC authentication:** turn them on or off per port, or for the whole switch, with the client limit and re-authentication period. Shift-click selects a range of ports.
+- **Clients that don't log in:** on AOS-S you pick their VLAN. On AOS-CX you create local roles (a single VLAN, or a trunk with tagged VLANs) and choose per port which role applies after a login, after a rejected login, while RADIUS can't be reached, and before a login.
+- **Connected clients (AOS-CX):** port, MAC address, user, IP address, login method, status, role and VLAN, read at each collection or with **Refresh**.
+
+Ports that link to another switch or an access point are marked, and you're warned before turning on a login there, since that can cut the link and SwitchDesk's own connection with it. As with VLANs, you see the exact commands before anything is sent. Port access was contributed by [Arne Naessens](https://github.com/ArneNaessens).
+
 ### Neighbors
 
 ![Neighbors](images/switch-neighbors.png){ .shot }
