@@ -171,7 +171,7 @@ tr.click:hover td { background: #262e3b; }
 .plate .nm b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .plate .meta { color: var(--muted); font-size: 12.5px; text-align: right; white-space: nowrap; }
 .plate .leds { grid-column: 1 / -1; }
-.leds { display: flex; gap: 8px; padding: 6px 7px; background: #161b23; border: 1px solid #2a3240; border-radius: 4px; width: fit-content; max-width: 100%; overflow: hidden; }
+.leds { display: flex; gap: 14px; padding: 6px 7px; background: #161b23; border: 1px solid #2a3240; border-radius: 4px; width: fit-content; max-width: 100%; overflow: hidden; }
 .ledgrp { display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--r, 1), auto); gap: 3px; }
 .leds i, .ledkey i { display: block; width: 7px; height: 9px; border-radius: 1.5px; background: var(--led-off); }
 .leds i.u, .ledkey i.u { background: var(--up); }
@@ -182,7 +182,7 @@ tr.click:hover td { background: #262e3b; }
 .ledkey { display: inline-flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: 12.5px; font-weight: 400; }
 .ledkey span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .ledkey i { width: 9px; height: 11px; }
-.leds.big { gap: 14px; padding: 10px 12px; }
+.leds.big { gap: 24px; padding: 10px 12px; }
 .leds.big .ledgrp { gap: 5px; }
 .leds.big i { width: 15px; height: 17px; border-radius: 2px; }
 .leds.none { color: var(--faint); font-size: 12px; padding: 4px 8px; }
@@ -395,8 +395,8 @@ tr:hover .copyv button, .copyv button:focus-visible { opacity: 1; }
 .leds.stack { flex-direction: column; gap: 6px; }
 .leds.stack.big { gap: 10px; }
 .ledmember { display: flex; flex-direction: column; gap: 4px; }
-.ledrow { display: flex; gap: 8px; align-items: flex-start; }
-.leds.big .ledrow { gap: 14px; }
+.ledrow { display: flex; gap: 14px; align-items: flex-start; }
+.leds.big .ledrow { gap: 24px; }
 .ledmlabel { font-size: 11.5px; color: var(--muted); }
 
 /* the firmware table has no sticky action column */

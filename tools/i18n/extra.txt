@@ -29,3 +29,5 @@ Web interface (HTTP)
 Instant On VLANs are changed on the switch's web page
 Instant On: VLANs changed on the switch's web page
 Expected one root per STP domain.
+trunk
+Combo and SFP ports

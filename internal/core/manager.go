@@ -547,6 +547,7 @@ type PortLED struct {
 	Type        string `json:"type"`
 	Speed       string `json:"speed"`
 	Description string `json:"description,omitempty"` // the port's configured name
+	Trunk       string `json:"trunk,omitempty"`
 }
 
 type SwitchView struct {
@@ -590,7 +591,7 @@ func summarize(snap *aruba.Snapshot) *Summary {
 		}
 	}
 	for _, p := range snap.Ports {
-		s.Ports = append(s.Ports, PortLED{Name: p.Name, Up: p.Up, Enabled: p.Enabled, Blocking: blocking[p.Name], Type: p.Type, Speed: p.Speed, Description: p.Description})
+		s.Ports = append(s.Ports, PortLED{Name: p.Name, Up: p.Up, Enabled: p.Enabled, Blocking: blocking[p.Name], Type: p.Type, Speed: p.Speed, Description: p.Description, Trunk: p.Trunk})
 		s.PortsTotal++
 		if p.Up {
 			s.PortsUp++

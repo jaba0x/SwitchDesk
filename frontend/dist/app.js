@@ -69,7 +69,8 @@ async function call(fn, ...args) {
 }
 
 // ---------- faceplate ----------
-function isFiber(p) { return /sfp|xfp|qsfp|fiber|dac|sr|lr/i.test(p.type || "") || /^Trk|^lag/i.test(p.name); }
+// SFP+SR, SFP+DA1, 1000SX, 1000LX, 100FX, 10GbE-LR…
+function isFiber(p) { return /sfp|xfp|qsfp|fiber|dac|(sr|lr|lrm|er|sx|lx|zx|lh|bx|fx|ex)\d*$/i.test(p.type || "") || /^Trk|^lag/i.test(p.name); }
 
 function leds(ports, stp, big, optics) {
   const opt = Object.fromEntries((optics || []).map((o) => [o.port, o]));
@@ -82,21 +83,32 @@ function leds(ports, stp, big, optics) {
   const member = (n) => (n.split("/").length > 1 ? n.split("/")[0] : "");
   const members = [...new Set(phys.map((p) => member(p.name)))];
   const stacked = members.length > 1;
+  const isMod = (p) => /(^|\/)[A-Z]\d+$/i.test(p.name);
+  // Dual-personality (combo) ports, such as 21-24 on a 2930M 24G, report
+  // copper or fiber depending on what's plugged in. When fiber shows up only
+  // among a member's last four ports, those four stay one block whatever is
+  // in them, so the layout doesn't change with the media.
+  const tail = new Set();
+  for (const m of members) {
+    const ps = phys.filter((p) => member(p.name) === m && !isMod(p));
+    const first = ps.findIndex(isFiber);
+    if (ps.length > 8 && first >= 0 && first >= ps.length - 4) ps.slice(-4).forEach((p) => tail.add(p));
+  }
   const groups = [];
   for (const p of phys) {
-    const m = member(p.name), mod = /(^|\/)[A-Z]\d+$/i.test(p.name), f = isFiber(p) || mod;
+    const m = member(p.name), mod = isMod(p), t = tail.has(p), f = t || mod || isFiber(p);
     const last = groups[groups.length - 1];
-    if (!last || last.member !== m || last.fiber !== f || last.mod !== mod) groups.push({ member: m, fiber: f, mod, ports: [], first: !last || last.member !== m });
+    if (!last || last.member !== m || last.fiber !== f || last.mod !== mod || last.tail !== t) groups.push({ member: m, fiber: f, mod, tail: t, ports: [], first: !last || last.member !== m });
     groups[groups.length - 1].ports.push(p);
   }
   const html = groups.map((g) => {
     const rows = g.ports.length > 8 ? 2 : 1;
     const cells = g.ports.map((p) => {
       const cls = !p.enabled ? "x" : p.loop ? "l" : blocking.has(p.name) ? "b" : p.up ? "u" : "";
-      const tip = `Port ${p.name}${p.description ? " · " + p.description : ""}: ${!p.enabled ? "disabled" : p.up ? "up" : "down"}${p.speed ? " " + p.speed : ""}${p.vlan ? ", VLAN " + p.vlan : ""}${blocking.has(p.name) ? ", STP blocking" : ""}${p.loop ? ", loop detected" : ""}${opt[p.name]?.rx?.length ? `, Rx ${opt[p.name].rx.map(dbm).join("/")} dBm` : ""}${p.poeMw ? `, PoE ${(p.poeMw / 1000).toFixed(1)} W` : ""}${p.uplink ? ", uplink" : ""}`;
+      const tip = `Port ${p.name}${p.description ? " · " + p.description : ""}: ${!p.enabled ? "disabled" : p.up ? "up" : "down"}${p.speed ? " " + p.speed : ""}${p.vlan ? ", VLAN " + p.vlan : ""}${blocking.has(p.name) ? ", STP blocking" : ""}${p.loop ? ", loop detected" : ""}${opt[p.name]?.rx?.length ? `, Rx ${opt[p.name].rx.map(dbm).join("/")} dBm` : ""}${p.poeMw ? `, PoE ${(p.poeMw / 1000).toFixed(1)} W` : ""}${p.uplink ? ", uplink" : ""}${p.trunk ? ", " + I18N.tr("trunk") + " " + p.trunk : ""}`;
       return `<i class="${cls}" title="${esc(tip)}"></i>`;
     }).join("");
-    const grp = `<span class="ledgrp" style="--r:${rows}" title="${g.mod ? "Module ports" : g.fiber ? "SFP ports" : ""}">${cells}</span>`;
+    const grp = `<span class="ledgrp" style="--r:${rows}" title="${g.mod ? "Module ports" : g.tail ? "Combo and SFP ports" : g.fiber ? "SFP ports" : ""}">${cells}</span>`;
     return stacked && g.first ? `${groups[0] === g ? "" : "</div></div>"}<div class="ledmember">${big ? `<span class="ledmlabel">Member ${esc(g.member)}</span>` : ""}<div class="ledrow">${grp}` : grp;
   }).join("");
   return `<div class="leds${big ? " big" : ""}${stacked ? " stack" : ""}">${stacked ? html + "</div></div>" : html}</div>`;

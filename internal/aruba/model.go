@@ -96,6 +96,7 @@ type Port struct {
 	VLAN        string `json:"vlan"`
 	Description string `json:"description"`
 	Type        string `json:"type"`
+	Trunk       string `json:"trunk,omitempty"` // AOS-S trunk the port belongs to, e.g. Trk3
 	// filled from the Instant On portal
 	PoEmW  int  `json:"poeMw,omitempty"`
 	Loop   bool `json:"loop,omitempty"`

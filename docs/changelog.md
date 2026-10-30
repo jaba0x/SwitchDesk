@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1
+
+- Fixed: on AOS-S, ports that belong to a trunk (listed as `13-Trk3` or `1/A1-Trk1`) were left out of the port list and the faceplate. They're back, and the port's tooltip names its trunk.
+- Fixed: fiber ports reported as `1000SX`, `1000LX` or `100FX` were drawn as copper ports.
+- Dual-personality (combo) ports, such as 21-24 on a 2930M 24G, stay together in one block whatever is plugged in, and the gaps between the copper, SFP and module blocks are wider.
+
+Thanks to [@glepping](https://github.com/glepping) for the output from a 2930M stack ([#14](https://github.com/jaba0x/SwitchDesk/issues/14)).
+
 ## 1.0.0
 
 - **Languages.** Pick the interface language under **Settings → Language**, or let SwitchDesk follow your computer. English and a German draft come with this release, and translations are plain JSON files: put one in the data folder's `translations` folder and it shows up in the list, no building needed. Every language is welcome, see [Translating](translating.md). Asked for by [@RashbaNor](https://github.com/RashbaNor) in [discussion #5](https://github.com/jaba0x/SwitchDesk/discussions/5).

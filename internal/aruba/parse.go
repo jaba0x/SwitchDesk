@@ -293,10 +293,18 @@ func ParseInterfacesBrief(text string) []Port {
 	for _, line := range strings.Split(text, "\n") {
 		line = strings.ReplaceAll(line, "|", " ")
 		fs := strings.Fields(line)
-		if len(fs) < 3 || !portNameRe.MatchString(fs[0]) {
+		if len(fs) < 3 {
 			continue
 		}
-		p := Port{Name: fs[0]}
+		// AOS-S lists a trunk member as "13-Trk3" or "1/A1-Trk1"
+		name, trunk := fs[0], ""
+		if i := strings.Index(name, "-Trk"); i > 0 {
+			name, trunk = name[:i], name[i+1:]
+		}
+		if !portNameRe.MatchString(name) {
+			continue
+		}
+		p := Port{Name: name, Trunk: trunk}
 		idx := -1
 		for i := 1; i < len(fs)-1; i++ {
 			a, b := strings.ToLower(fs[i]), strings.ToLower(fs[i+1])
