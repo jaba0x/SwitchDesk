@@ -32,7 +32,7 @@ Every morning I want to know the same things about the switch network: is everyt
 ## Features
 
 ### Dashboard
-Online and offline counts, a problem list sorted by severity, and every switch drawn as a faceplate with one LED per port. Green is up, grey is down, a slashed outline is disabled, amber means spanning tree is blocking it.
+Online and offline counts, a problem list sorted by severity, and every switch drawn as a faceplate with one LED per port. Green is up, grey is down, a slashed outline is disabled, amber means spanning tree is blocking it. The faceplates follow the hardware: copper, SFP and module ports sit in separate blocks, and each member of a stack gets its own row.
 
 ### Problems it catches
 
@@ -41,7 +41,8 @@ Online and offline counts, a problem list sorted by severity, and every switch d
 | Reachability | Switch offline, SSH login failing, SSH host key changed |
 | Spanning tree | STP disabled, topology changes since last check, root picked by default priority, more than one root in the network |
 | Security | Telnet on, plain HTTP management on, default SNMP community, no manager password |
-| Management | No NTP, no syslog, local accounts only, unsaved config |
+| Port access | Port authentication with no RADIUS server, 802.1X set on ports but off for the switch |
+| Management | No NTP, no syslog, local accounts only, unsaved config, wrong clock (Instant On) |
 | Hardware | Fan, power supply and temperature faults, high CPU or memory |
 | Optics | SFP/QSFP receive power out of range, against the optic's own levels (AOS-CX) or its recent alarms (AOS-S) |
 | Logs | Major and error events in the recent log |
@@ -63,7 +64,7 @@ A network-wide matrix shows which switch carries which VLAN and flags names that
 On AOS-S and AOS-CX, add or remove RADIUS servers and turn 802.1X and MAC authentication on or off per port, with the client limit and re-authentication period. On AOS-S you pick the VLAN for clients that don't log in. On AOS-CX you create local roles with their VLAN and choose per port which role a client gets after a login, after a rejected login, while RADIUS can't be reached and before a login. AOS-CX also lists the connected clients from `show port-access clients detail`: port, MAC address, user, IP address, login method, status, role and the VLAN the client was put in, read at each collection or with Refresh. Ports that link to another switch or an access point are marked, and you're warned before turning on a login there. Shared secrets never appear on screen, in the command preview or in the transcript.
 
 ### Languages
-The interface comes in English and German so far, and every language is welcome. Translations are plain JSON files that anyone can write or fix without building anything: drop one into the data folder and pick it in Settings. See [Translating SwitchDesk](https://jaba0x.github.io/SwitchDesk/docs/translating/) and the [translation issue](https://github.com/jaba0x/SwitchDesk/issues?q=is%3Aissue+translate) to help.
+The interface comes in English and German so far, and every language is welcome. Translations are plain JSON files that anyone can write or fix without building anything: drop one into the data folder and pick it in Settings. See [Translating SwitchDesk](https://jaba0x.github.io/SwitchDesk/docs/translating/), and claim your language in [#17](https://github.com/jaba0x/SwitchDesk/issues/17). Even a half-finished file helps, since anything left empty stays in English.
 
 ### Optional app password
 Off by default. Turn it on in Settings and SwitchDesk asks for a password when it starts. The saved switch passwords can't be read without it, not even from the data folder. The window can also lock itself after some idle time.
@@ -100,7 +101,7 @@ HPE only offers firmware downloads after you sign in, so you fill the library yo
 | Family | Models | Support |
 |---|---|---|
 | AOS-CX | 6000, 6100, 6200, 6300, 6400, 8xxx | Full |
-| AOS-S / ProCurve | 2530 (YA/YB), 2540, 2930F/M, 3810, 5400R | Full |
+| AOS-S / ProCurve | 2530 (YA/YB), 2540, 2930F/M, 3810, 5400R, including stacks (2930M, 3810, VSF on 2930F) | Full |
 | Instant On | 1830, 1930, 1960 | Read-only. Local management: read through the switch's web interface with its admin login (ports, PoE where the model has it, spanning tree, LLDP, VLANs, hardware, logs). Cloud management: read from the Instant On portal with your Instant On account. Changes stay on the switch's web page or in the Instant On app. |
 
 AOS-CX and AOS-S switches only need SSH, plus LLDP if you want the map. Instant On switches need nothing on the switch. Locally managed ones are read through their web interface; cloud-managed ones through the Instant On portal, with an account that has two-step verification turned off (a separate view-only account works best).
@@ -157,8 +158,9 @@ Everything stays on your computer, in one folder.
 | macOS | `~/Library/Application Support/SwitchDesk` |
 | Windows | `%AppData%\SwitchDesk` |
 
-- `inventory.json` holds switches, settings and map positions. Passwords are encrypted with AES-GCM using a key in `secret.key`, readable only by your user.
+- `inventory.json` holds switches, settings and map positions. Passwords are encrypted with AES-GCM using a key in `secret.key`, readable only by your user. With an app password set, `secret.lock` replaces it: the same key, encrypted with your password.
 - `snapshots/` keeps the last reading of each switch, so the app opens with data. It loads in the background, so the window opens straight away even with hundreds of switches.
+- `translations/` is where your own translation files go (optional).
 - `backups/` keeps a copy of a switch's running config each time it changes.
 
 To use another folder, go to Settings → Data → Change. You can move the data to another disk or a synced drive, copy it there, or open a folder that already has SwitchDesk data. The key moves with the folder, so the same folder works from any computer that can reach it.
@@ -178,7 +180,9 @@ go test ./internal/...
 wails dev
 ```
 
-The UI is plain HTML, CSS and JavaScript in `frontend/dist` with no build step. To work on it in a normal browser with sample data, open `frontend/dev/preview.html`.
+The UI is plain HTML, CSS and JavaScript in `frontend/dist` with no build step. To work on it in a normal browser with sample data, open `frontend/dev/preview.html`. Add `?lang=de` to see it in German, or `?locked` for the lock screen.
+
+The interface is written in English. `frontend/dist/i18n.js` swaps in the chosen language as the page is drawn, so new code needs nothing special. After changing interface text, refresh the list translators work from with `cd tools/i18n && npm install && npm run extract`.
 
 ```
 internal/sshx    SSH shell sessions (prompts, paging, escape codes, legacy ciphers) and SFTP/SCP uploads
@@ -189,6 +193,7 @@ internal/firmware  image library, version matching, built-in TFTP server
 internal/cxrest    firmware upload to AOS-CX over its REST API
 internal/instanton Instant On portal sign-in and reads
 internal/ionlocal  Instant On web interface sign-in and reads (local management)
+tools/i18n         collects the interface text into frontend/dist/i18n/en.json
 ```
 
 The parsers are tested against sample output from AOS-S and AOS-CX. When a switch prints something they misread, the **Raw output** tab shows exactly what came back. That output makes a good test case.
@@ -206,6 +211,6 @@ Built by **Jaba Macharashvili**. More of my infra, homelab and hardware projects
 
 ## Credits
 
-Thanks to [Arne Naessens](https://github.com/ArneNaessens) for mass VLAN editing, port access, the disabled-port display and the `ntp server-name` fix, and to everyone who reports issues.
+Thanks to [Arne Naessens](https://github.com/ArneNaessens) for mass VLAN editing, port access, the disabled-port display and the `ntp server-name` fix, and to everyone who reports issues or helps translate.
 
 Built with [Wails](https://wails.io). Fonts are [IBM Plex](https://github.com/IBM/plex), under the SIL Open Font License.
