@@ -76,10 +76,17 @@ function leds(ports, stp, big, optics) {
   if (!ports || !ports.length) return `<div class="leds none">No port data yet</div>`;
   const blocking = new Set((stp?.ports || []).filter((p) => /Blocking|Discarding/.test(p.state)).map((p) => p.port));
   const phys = ports.filter((p) => !/^(Trk|lag)/i.test(p.name));
+  // Laid out like the hardware (issue #14): each stack member on its own,
+  // and within it the copper ports, the SFP ports and module ports (A1…)
+  // as separate blocks with a gap between them.
+  const member = (n) => (n.split("/").length > 1 ? n.split("/")[0] : "");
+  const members = [...new Set(phys.map((p) => member(p.name)))];
+  const stacked = members.length > 1;
   const groups = [];
   for (const p of phys) {
-    const f = isFiber(p);
-    if (!groups.length || groups[groups.length - 1].fiber !== f) groups.push({ fiber: f, ports: [] });
+    const m = member(p.name), mod = /(^|\/)[A-Z]\d+$/i.test(p.name), f = isFiber(p) || mod;
+    const last = groups[groups.length - 1];
+    if (!last || last.member !== m || last.fiber !== f || last.mod !== mod) groups.push({ member: m, fiber: f, mod, ports: [], first: !last || last.member !== m });
     groups[groups.length - 1].ports.push(p);
   }
   const html = groups.map((g) => {
@@ -89,9 +96,10 @@ function leds(ports, stp, big, optics) {
       const tip = `Port ${p.name}${p.description ? " · " + p.description : ""}: ${!p.enabled ? "disabled" : p.up ? "up" : "down"}${p.speed ? " " + p.speed : ""}${p.vlan ? ", VLAN " + p.vlan : ""}${blocking.has(p.name) ? ", STP blocking" : ""}${p.loop ? ", loop detected" : ""}${opt[p.name]?.rx?.length ? `, Rx ${opt[p.name].rx.map(dbm).join("/")} dBm` : ""}${p.poeMw ? `, PoE ${(p.poeMw / 1000).toFixed(1)} W` : ""}${p.uplink ? ", uplink" : ""}`;
       return `<i class="${cls}" title="${esc(tip)}"></i>`;
     }).join("");
-    return `<span class="ledgrp" style="--r:${rows}">${cells}</span>`;
+    const grp = `<span class="ledgrp" style="--r:${rows}" title="${g.mod ? "Module ports" : g.fiber ? "SFP ports" : ""}">${cells}</span>`;
+    return stacked && g.first ? `${groups[0] === g ? "" : "</div></div>"}<div class="ledmember">${big ? `<span class="ledmlabel">Member ${esc(g.member)}</span>` : ""}<div class="ledrow">${grp}` : grp;
   }).join("");
-  return `<div class="leds${big ? " big" : ""}">${html}</div>`;
+  return `<div class="leds${big ? " big" : ""}${stacked ? " stack" : ""}">${stacked ? html + "</div></div>" : html}</div>`;
 }
 
 // what the faceplate colours mean

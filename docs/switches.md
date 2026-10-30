@@ -37,7 +37,7 @@ Bridge and root MAC and priority, this switch's role, topology changes, and ever
 
 ![Ports](images/switch-ports.png){ .shot }
 
-A large faceplate with its colour key, and a table with each port's name, status (Up, Down or Disabled), speed, type and VLAN membership (`20u` is untagged in VLAN 20, `30t` tagged in VLAN 30). The name is the one set on the switch: `name "..."` on AOS-S, `description` on AOS-CX. Hover a port on any faceplate to see it too, for example "Port 3 · Printer-2nd-floor".
+A large faceplate laid out like the hardware: copper ports, SFP ports and module ports (`A1`…) are separate blocks, and each member of a stacked switch (2930M, 3810, VSF on 2930F and 6300) gets its own row. Then its colour key, and a table with each port's name, status (Up, Down or Disabled), speed, type and VLAN membership (`20u` is untagged in VLAN 20, `30t` tagged in VLAN 30). The name is the one set on the switch: `name "..."` on AOS-S, `description` on AOS-CX. Hover a port on any faceplate to see it too, for example "Port 3 · Printer-2nd-floor".
 
 Switches with transceivers also get an **Optics** table: Rx and Tx power in dBm (one value per lane on QSFP), temperature, model and serial. On AOS-CX it shows the optic's own warning range and judges against it. AOS-S doesn't report those levels, so its recent optical alarms are shown instead. A port that's down with no light shows as *Not connected*, and DAC cables show *No DOM*. The readings come from `show interface dom detail` on AOS-CX and `show interfaces transceiver detail` on AOS-S.
 

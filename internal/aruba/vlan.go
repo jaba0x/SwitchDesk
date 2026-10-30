@@ -21,7 +21,7 @@ type VLANChange struct {
 }
 
 var safeName = regexp.MustCompile(`^[A-Za-z0-9 _.\-]{1,32}$`)
-var safePort = regexp.MustCompile(`^([A-Za-z]{0,3}\d+(/\d+){0,2}|lag\d+|Trk\d+)$`)
+var safePort = regexp.MustCompile(`^((\d+/){0,2}[A-Za-z]{0,3}\d+|lag\d+|Trk\d+)$`)
 
 func (c VLANChange) validate(current []VLAN) error {
 	if c.ID < 1 || c.ID > 4094 {

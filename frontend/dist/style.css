@@ -390,3 +390,11 @@ tr:hover .copyv button, .copyv button:focus-visible { opacity: 1; }
 .lockbox input { width: 100%; }
 .lockbox .btn { width: 100%; justify-content: center; }
 .lockbox .msg { width: 100%; }
+
+/* stacked switches: one row per member (issue #14) */
+.leds.stack { flex-direction: column; gap: 6px; }
+.leds.stack.big { gap: 10px; }
+.ledmember { display: flex; flex-direction: column; gap: 4px; }
+.ledrow { display: flex; gap: 8px; align-items: flex-start; }
+.leds.big .ledrow { gap: 14px; }
+.ledmlabel { font-size: 11.5px; color: var(--muted); }
