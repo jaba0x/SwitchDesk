@@ -1880,7 +1880,15 @@ async function renderSettings() {
   const ver = await call("Version");
   const df = await call("DataFolder");
   const lk = await call("AppLock");
+  const langs = await I18N.languages(api);
+  const cur = S.settings.language || "";
   $("#main").innerHTML = `<div class="page" style="max-width:900px"><div class="head"><h1>Settings</h1></div>
+    <section class="panel" style="margin-bottom:18px"><h2>Language</h2><div class="body">
+      <div class="row" style="align-items:flex-end"><label class="f"><span>Interface language</span><select id="lang" onchange="setLanguage(this.value)" data-notr>
+          <option value="" ${cur === "" ? "selected" : ""}>Automatic (${esc(langName(langs, I18N.code))})</option>
+          ${langs.map((l) => `<option value="${esc(l.code)}" ${cur === l.code ? "selected" : ""}>${esc(l.name)}${l.status === "draft" ? " " + I18N.tr("· draft") : ""}${l.own ? " " + I18N.tr("· your file") : ""}</option>`).join("")}</select></label>
+        <span style="flex:none;display:flex;gap:6px;margin-bottom:14px"><button class="btn" onclick="call('OpenTranslationsFolder')">Translation files</button></span></div>
+      <p class="faint" style="font-size:12.5px;margin:-4px 0 0">Translations are made by people who use SwitchDesk. Missing a language, or found a wrong word? <a onclick="openURL('https://jaba0x.github.io/SwitchDesk/docs/translating/')">Help translate</a>. Switch output, configs and addresses always stay as the switch sends them.</p></div></section>
     <section class="panel" style="margin-bottom:18px"><h2>Credentials<span class="grow"></span><button class="btn small" onclick="editCred()">${ICON.plus}Add</button></h2>
       ${S.creds.length ? `<table><tbody>${S.creds.map((c) => `<tr><td>${esc(c.name)}${c.kind === "instanton" ? ' <span class="faint">Instant On account</span>' : ""}</td><td class="mono">${esc(c.username)}</td><td style="text-align:right"><button class="btn small" onclick="editCred('${c.id}')">Edit</button> <button class="btn small danger" onclick="delCred('${c.id}')">Remove</button></td></tr>`).join("")}</tbody></table>` : `<div class="empty">No credentials yet. They're added when you add your first switch.</div>`}
       <div class="faint" style="padding:10px 16px;font-size:12.5px">Passwords are encrypted on this computer and never shown again.</div></section>
@@ -1932,6 +1940,19 @@ async function renderSettings() {
         <div class="muted" style="font-size:13px;margin-top:2px">Built by Jaba Macharashvili · <a onclick="openURL('https://clihero.com')">clihero.com</a> · <a onclick="openURL('https://jaba0x.github.io/SwitchDesk/')">Documentation</a> · <a onclick="openURL('https://github.com/jaba0x/SwitchDesk')">GitHub</a></div>
         <div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button class="btn small" onclick="checkUpdate(this)">${ICON.refresh}Check for updates</button><span id="updres" class="muted" style="font-size:13px"></span></div></div>
     </div></section></div>`;
+}
+
+// ---------- language ----------
+function langName(list, code) { return (list.find((l) => l.code === code) || { name: "English" }).name; }
+
+async function setLanguage(code) {
+  try {
+    await call("SaveSettings", { ...S.settings, language: code });
+    S.settings = await call("GetSettings");
+    await I18N.use(code, api);
+    renderSide();
+    await renderSettings();
+  } catch (e) { toast(e.message, true); }
 }
 
 // ---------- optional app password (#13) ----------
@@ -2148,7 +2169,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0 });
+    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "" });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }
@@ -2256,6 +2277,9 @@ async function start() {
     $("#main").innerHTML = `<div class="page"><div class="empty"><h3>Can't reach the SwitchDesk backend</h3><p>Open this page through the SwitchDesk app.</p></div></div>`;
     return;
   }
+  // the language first, so even the lock screen is in it
+  S.settings = await call("GetSettings").catch(() => ({}));
+  await I18N.use(S.settings.language || "", api).catch(() => {});
   // optional app password: nothing is loaded before it's entered
   const lock = await call("AppLock").catch(() => null);
   if (lock?.locked) await showLock(lock);

@@ -92,6 +92,7 @@ nav:
       - Settings: settings.md
   - Help:
       - Troubleshooting: troubleshooting.md
+      - Translating: translating.md
       - Changelog: changelog.md
   - Development: development.md
   - About: about.md

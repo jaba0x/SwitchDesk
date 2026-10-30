@@ -90,6 +90,8 @@ type Settings struct {
 	// LockAfter locks the window after this many idle minutes when an app
 	// password is set; 0 never locks it while running.
 	LockAfter int `json:"lockAfter"`
+	// Language is the interface language ("de", "pt-BR"); empty follows the computer.
+	Language string `json:"language"`
 }
 
 func DefaultSettings() Settings {
@@ -567,12 +569,20 @@ func (s *Store) SaveSettings(v Settings) error {
 			return fmt.Errorf("maintenance window times look like 02:00")
 		}
 	}
+	if v.LockAfter < 0 || v.LockAfter > 1440 {
+		v.LockAfter = 0
+	}
+	if !langCode.MatchString(v.Language) {
+		v.Language = ""
+	}
 	s.d.Settings = v
 	return s.saveLocked()
 }
 
 // normSettings clamps settings from an import to the ranges SaveSettings
 // allows; anything unusable falls back to the default.
+var langCode = regexp.MustCompile(`^([a-z]{2,3}(-[A-Za-z]{2,4})?)?$`)
+
 func normSettings(v Settings) Settings {
 	def := DefaultSettings()
 	v.CheckMethod = normCheckMethod(v.CheckMethod)
@@ -601,6 +611,9 @@ func normSettings(v Settings) Settings {
 	}
 	if v.LockAfter < 0 || v.LockAfter > 1440 {
 		v.LockAfter = 0
+	}
+	if !langCode.MatchString(v.Language) {
+		v.Language = ""
 	}
 	_, e1 := time.Parse("15:04", v.WindowStart)
 	_, e2 := time.Parse("15:04", v.WindowEnd)

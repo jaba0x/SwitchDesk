@@ -2,6 +2,10 @@
 
 ![Settings](images/settings.png){ .shot }
 
+## Language
+
+The interface language. **Automatic** follows your computer's language when SwitchDesk has it. Languages marked *draft* still need a review by a native speaker. **Translation files** opens the folder where you can add your own; see [Translating](translating.md).
+
 ## Credentials
 
 Shared username and password sets. Add as many as you need and pick one per switch. Editing a set and leaving the password empty keeps the old one. A set that's still in use can't be removed.

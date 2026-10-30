@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0
+
+- **Languages.** Pick the interface language under **Settings → Language**, or let SwitchDesk follow your computer. English and a German draft come with this release, and translations are plain JSON files: put one in the data folder's `translations` folder and it shows up in the list, no building needed. Every language is welcome, see [Translating](translating.md). Asked for by [@RashbaNor](https://github.com/RashbaNor) in [discussion #5](https://github.com/jaba0x/SwitchDesk/discussions/5).
+- **Optional app password.** Off unless you turn it on in **Settings → App password**. SwitchDesk then asks for it at start and reads nothing until it's entered. The key for the saved switch passwords is stored encrypted with it (Argon2id + AES-GCM), so they can't be read from the data folder without the password. The window can lock after an idle time, or with **Lock now**. A forgotten password can be dropped from the lock screen, which clears the saved switch passwords but keeps everything else. Suggested by [@BarracudaGDU](https://github.com/BarracudaGDU) in [#13](https://github.com/jaba0x/SwitchDesk/issues/13).
+- **Faceplates look like the hardware.** Each member of a stacked switch gets its own row, and SFP and module ports (`A1`…) are separate blocks with a gap. Suggested by [@glepping](https://github.com/glepping) in [#14](https://github.com/jaba0x/SwitchDesk/issues/14).
+- Fixed: on stacked AOS-S switches (2930M, 3810, VSF), the module ports such as `1/A1` were missing, and port ranges like `1/1-1/24` weren't understood, so VLAN membership on stacks was read wrong ([#14](https://github.com/jaba0x/SwitchDesk/issues/14)).
+- Fixed: the firmware table's last column covered another one in a narrow window; the table now scrolls.
+
 ## 0.9.10
 
 - **Port access.** A new tab on AOS-S and AOS-CX switches manages RADIUS servers, 802.1X and MAC authentication per port and switch-wide, the VLAN for clients that don't log in (AOS-S), and local roles (AOS-CX). AOS-CX switches also list their connected clients. Two new checks: port authentication with no RADIUS server, and 802.1X set on ports but off for the switch. Contributed by [Arne Naessens](https://github.com/ArneNaessens) in [#15](https://github.com/jaba0x/SwitchDesk/pull/15).

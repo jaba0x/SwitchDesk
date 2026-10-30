@@ -74,14 +74,14 @@ function updatesPanel() {
   const all = avail.every((v) => FW.sel.has(v.id));
   return `<section class="panel" style="margin-bottom:18px"><h2>Updates available<span class="sub muted" style="font-weight:400">${avail.length}</span><span class="grow"></span>
       ${FW.sel.size ? `<button class="btn small primary" onclick="openUpgradeDialog([...FW.sel])">${ICON.up}Update ${FW.sel.size} selected</button>` : `<span class="faint" style="font-weight:400;font-size:13px">Tick switches to update them</span>`}</h2>
-    <table class="swlist"><thead><tr><th class="cb nogo"><input type="checkbox" ${all ? "checked" : ""} onchange="fwSelAll(this.checked)"></th><th>Switch</th><th>Model</th><th>Running</th><th>Available</th><th>Primary</th><th>Secondary</th><th>Status</th></tr></thead><tbody>
+    <div style="overflow-x:auto"><table class="swlist fwlist"><thead><tr><th class="cb nogo"><input type="checkbox" ${all ? "checked" : ""} onchange="fwSelAll(this.checked)"></th><th>Switch</th><th>Model</th><th>Running</th><th>Available</th><th>Primary</th><th>Secondary</th><th>Status</th></tr></thead><tbody>
     ${avail.map((v) => {
       const f = v.firmware, b = f.banks || {};
       const mark = (bank) => `${esc(b[bank] || "–")}${b.running === bank ? ' <span class="tag">running</span>' : ""}${b.default === bank && b.running !== bank ? ' <span class="tag">next boot</span>' : ""}`;
       return `<tr class="click${FW.sel.has(v.id) ? " picked" : ""}" data-go="#/switch/${v.id}"><td class="cb nogo"><input type="checkbox" ${FW.sel.has(v.id) ? "checked" : ""} onchange="fwSel('${v.id}', this.checked)"></td>
         <td title="${esc(v.host)}">${statusDot(v)} ${esc(v.name || v.summary?.hostname || v.host)}</td><td>${esc(v.summary?.model || "")}</td>
         <td class="mono">${esc(f.running)}</td><td class="mono ok">${esc(f.available)}</td><td class="mono">${mark("primary")}</td><td class="mono">${mark("secondary")}</td><td>${fwCell(v)}</td></tr>`;
-    }).join("")}</tbody></table></section>`;
+    }).join("")}</tbody></table></div></section>`;
 }
 
 function fwSel(id, on) { on ? FW.sel.add(id) : FW.sel.delete(id); $("#fw-updates").innerHTML = updatesPanel(); }

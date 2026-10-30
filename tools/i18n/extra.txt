@@ -1,0 +1,31 @@
+# Text the app puts together at run time, so the extractor can't see it whole.
+# One English string per line; {0}, {1}… stand for the parts that change.
+No answer on TCP {0}
+No answer on TCP {0} since {1}
+No answer on TCP {0} since {1} ({2})
+Last change: {0}.
+Offline since {0}
+offline {0} min ago
+offline {0} h ago
+{0} min ago
+{0} h ago
+{0} days
+Up {0} days
+Every {0} h
+Every {0} min
+updating {0}%
+staged {0}
+Updated to {0}
+Ready: {0} boots on the next restart
+Port {0}: up
+Port {0}: down
+Port {0}: disabled
+Port {0}: no login asked
+Each cell shows how many ports carry the VLAN on that switch. Click one to edit it there, or use Edit to change the VLAN on every switch at once.
+{0}: {1} untagged, {2} tagged
+{0}: {1} untagged, {2} tagged (name differs)
+Web interface (HTTPS)
+Web interface (HTTP)
+Instant On VLANs are changed on the switch's web page
+Instant On: VLANs changed on the switch's web page
+Expected one root per STP domain.

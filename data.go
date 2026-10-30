@@ -114,8 +114,9 @@ func (a *App) swap(fn func() (*store.Store, error)) error {
 	return nil
 }
 
-func (a *App) OpenDataFolder() error {
-	dir := a.st.Dir()
+func (a *App) OpenDataFolder() error { return openPath(a.st.Dir()) }
+
+func openPath(dir string) error {
 	var cmd *exec.Cmd
 	switch goruntime.GOOS {
 	case "darwin":

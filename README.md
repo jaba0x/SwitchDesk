@@ -11,7 +11,7 @@
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1b212b?style=flat-square&logo=windows&logoColor=white">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.23+-1b212b?style=flat-square&logo=go&logoColor=white">
   <img alt="Wails" src="https://img.shields.io/badge/Wails-v2-1b212b?style=flat-square">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.9.10-4cc38a?style=flat-square">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-4cc38a?style=flat-square">
 </p>
 
 <p align="center">
@@ -61,6 +61,12 @@ A network-wide matrix shows which switch carries which VLAN and flags names that
 
 ### Port access (802.1X and MAC authentication)
 On AOS-S and AOS-CX, add or remove RADIUS servers and turn 802.1X and MAC authentication on or off per port, with the client limit and re-authentication period. On AOS-S you pick the VLAN for clients that don't log in. On AOS-CX you create local roles with their VLAN and choose per port which role a client gets after a login, after a rejected login, while RADIUS can't be reached and before a login. AOS-CX also lists the connected clients from `show port-access clients detail`: port, MAC address, user, IP address, login method, status, role and the VLAN the client was put in, read at each collection or with Refresh. Ports that link to another switch or an access point are marked, and you're warned before turning on a login there. Shared secrets never appear on screen, in the command preview or in the transcript.
+
+### Languages
+The interface comes in English and German so far, and every language is welcome. Translations are plain JSON files that anyone can write or fix without building anything: drop one into the data folder and pick it in Settings. See [Translating SwitchDesk](https://jaba0x.github.io/SwitchDesk/docs/translating/) and the [translation issue](https://github.com/jaba0x/SwitchDesk/issues?q=is%3Aissue+translate) to help.
+
+### Optional app password
+Off by default. Turn it on in Settings and SwitchDesk asks for a password when it starts. The saved switch passwords can't be read without it, not even from the data folder. The window can also lock itself after some idle time.
 
 ### Network map
 

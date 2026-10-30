@@ -155,7 +155,7 @@ password manager`;
     Unlock: async (p) => { if (p !== "password") { await new Promise((r) => setTimeout(r, 400)); throw "wrong password"; } window.__unlocked = true; },
     LockNow: async () => { window.__unlocked = false; }, SetAppPassword: async () => {}, ForgetAppPassword: async () => { window.__unlocked = true; },
     GetDashboard: async () => dash, GetSwitch: async (id) => detail(id), GetTopology: async () => topo, SaveLayout: async () => {},
-    GetSettings: async () => ({ checkMethod: "port", firmwareAuto: "install", windowStart: "02:00", windowEnd: "05:00", pingInterval: 30, collectInterval: 15, parallel: 4, keepBackups: 20, cpuWarn: 80, memWarn: 90 }),
+    GetSettings: async () => ({ language: new URLSearchParams(location.search).get("lang") || "", checkMethod: "port", firmwareAuto: "install", windowStart: "02:00", windowEnd: "05:00", pingInterval: 30, collectInterval: 15, parallel: 4, keepBackups: 20, cpuWarn: 80, memWarn: 90 }),
     Credentials: async () => [{ id: "c1", name: "Network admins", username: "admin" }, { id: "c2", name: "noc@example.ge", username: "noc@example.ge", kind: "instanton" }],
     DiscoverCloud: async () => { await new Promise((r) => setTimeout(r, 400)); return [
       { id: "s1", name: "Office", switches: [{ deviceId: "94:60:d5:12:34:56", name: "office-1930", model: "JL682A", ip: "10.10.2.5", online: true, ports: 28, addedAs: "io1" }, { deviceId: "94:60:d5:12:34:57", name: "office-1930-b", model: "JL682A", ip: "10.10.2.6", online: true, ports: 28 }] },

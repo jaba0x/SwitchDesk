@@ -1,0 +1,4 @@
+[
+  { "code": "en", "name": "English" },
+  { "code": "de", "name": "Deutsch", "status": "draft" }
+]
