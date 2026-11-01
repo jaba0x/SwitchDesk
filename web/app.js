@@ -81,6 +81,67 @@
     els.forEach((el) => { el.classList.add("reveal"); io.observe(el); });
   }
 
+  // ---------- hero: the main screens in turn ----------
+  const slides = document.querySelector("[data-slides]");
+  if (slides) {
+    const label = document.querySelector(".stage .titlebar span");
+    const screens = [
+      ["switches.webp", "Switches", "Switch list with search and bulk actions"],
+      ["switch-overview.webp", "Switch", "Switch page with problems, system facts and spanning tree"],
+      ["map.webp", "Network map", "Network map laid out from the spanning-tree root"],
+      ["vlan-review.webp", "VLANs", "Review screen with the exact commands before they're sent"],
+      ["firmware-update.webp", "Firmware", "Firmware update to the spare bank, one switch at a time"],
+    ];
+    for (const [file, title, alt] of screens) {
+      const img = new Image(1440, 880);
+      img.alt = alt; img.dataset.title = title; img.loading = "lazy"; img.decoding = "async";
+      img.src = "img/" + file;
+      slides.appendChild(img);
+    }
+    const imgs = [...slides.querySelectorAll("img")];
+    const dots = document.createElement("span");
+    dots.className = "dots";
+    dots.innerHTML = imgs.map((im, i) => `<button type="button" aria-label="Show ${im.dataset.title}"${i ? "" : ' class="on"'}></button>`).join("");
+    document.querySelector(".stage .titlebar").appendChild(dots);
+    let cur = 0, timer = 0, hover = false;
+    const show = (n) => {
+      imgs[cur].classList.remove("on"); dots.children[cur].classList.remove("on");
+      cur = (n + imgs.length) % imgs.length;
+      // restart the slow zoom on the new screen
+      imgs[cur].style.animation = "none"; void imgs[cur].offsetWidth; imgs[cur].style.animation = "";
+      imgs[cur].classList.add("on"); dots.children[cur].classList.add("on");
+      if (label) {
+        label.style.opacity = 0;
+        setTimeout(() => { label.textContent = `SwitchDesk — ${imgs[cur].dataset.title}`; label.style.opacity = 1; }, 250);
+      }
+    };
+    const run = () => { clearInterval(timer); if (!reduce) timer = setInterval(() => { if (!hover && !document.hidden) show(cur + 1); }, 4500); };
+    [...dots.children].forEach((b, i) => b.addEventListener("click", () => { show(i); run(); }));
+    slides.addEventListener("mouseenter", () => { hover = true; });
+    slides.addEventListener("mouseleave", () => { hover = false; });
+    run();
+  }
+
+  // ---------- screenshots tilt back until they reach the middle of the screen ----------
+  if (!reduce) {
+    const tilted = [document.querySelector(".stage .window"), ...document.querySelectorAll(".shot")].filter(Boolean);
+    let ticking = false;
+    const tilt = () => {
+      ticking = false;
+      const vh = innerHeight;
+      for (const el of tilted) {
+        const r = el.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > vh) continue;
+        // 1 when its top is at the bottom of the screen, 0 once it's a third of the way up
+        const t = Math.min(1, Math.max(0, (r.top - vh * 0.33) / (vh * 0.67)));
+        el.style.setProperty("--tilt", t.toFixed(3));
+      }
+    };
+    addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(tilt); } }, { passive: true });
+    addEventListener("resize", tilt);
+    tilt();
+  }
+
   // ---------- highlight the visitor's platform ----------
   const ua = navigator.userAgent;
   const mine = /Windows/i.test(ua) ? "win" : /Mac OS X|Macintosh/i.test(ua) ? "mac" : "";
