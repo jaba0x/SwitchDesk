@@ -1,6 +1,7 @@
 package core
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -78,6 +79,9 @@ func TestTopologyAndIssues(t *testing.T) {
 	linked := Topology{Edges: []Edge{{From: "a", To: "b"}}}
 	if split := networkIssues(two, names, linked); len(split) != 1 {
 		t.Fatal("expected split-root issue")
+	} else if !reflect.DeepEqual(split[0].SwitchIDs, []string{"a", "b"}) {
+		// the site filter places the issue by these
+		t.Fatalf("switch ids: %v", split[0].SwitchIDs)
 	}
 	// linked only through an unmanaged switch still counts as one layer 2 network
 	viaExt := Topology{Edges: []Edge{{From: "a", To: "ext:x"}, {From: "b", To: "ext:x"}}}

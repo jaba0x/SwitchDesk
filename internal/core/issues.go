@@ -29,7 +29,10 @@ func (s Severity) rank() int {
 }
 
 type Issue struct {
-	SwitchID   string   `json:"switchId"`
+	SwitchID string `json:"switchId"`
+	// SwitchIDs lists the switches a network-wide issue is about, which has
+	// no single SwitchID; the UI uses it to show the issue per site.
+	SwitchIDs  []string `json:"switchIds,omitempty"`
 	SwitchName string   `json:"switchName"`
 	Severity   Severity `json:"severity"`
 	Category   string   `json:"category"`
@@ -248,7 +251,10 @@ func networkIssues(snaps map[string]*aruba.Snapshot, names map[string]string, to
 	for _, e := range topo.Edges {
 		parent[find(e.From)] = find(e.To)
 	}
-	type domain struct{ roots map[string][]string }
+	type domain struct {
+		roots map[string][]string
+		ids   []string
+	}
 	domains := map[string]*domain{}
 	for id, s := range snaps {
 		if s == nil || !s.STP.Enabled || s.STP.RootMAC == "" {
@@ -260,6 +266,7 @@ func networkIssues(snaps map[string]*aruba.Snapshot, names map[string]string, to
 			domains[find(id)] = d
 		}
 		d.roots[s.STP.RootMAC] = append(d.roots[s.STP.RootMAC], names[id])
+		d.ids = append(d.ids, id)
 	}
 	var out []Issue
 	for _, d := range domains {
@@ -272,8 +279,10 @@ func networkIssues(snaps map[string]*aruba.Snapshot, names map[string]string, to
 			parts = append(parts, fmt.Sprintf("%s (%s)", mac, strings.Join(sws, ", ")))
 		}
 		sort.Strings(parts)
+		sort.Strings(d.ids)
 		out = append(out, Issue{
-			Severity: Warning, Category: "Spanning tree", SwitchName: "Network",
+			SwitchIDs: d.ids,
+			Severity:  Warning, Category: "Spanning tree", SwitchName: "Network",
 			Title:  fmt.Sprintf("%d different spanning-tree roots in one layer 2 network", len(d.roots)),
 			Detail: "These switches are linked at layer 2 but don't agree on the root. Roots seen: " + strings.Join(parts, "; ") + ". Mixed MST regions or a link where spanning tree is off can cause this.",
 		})

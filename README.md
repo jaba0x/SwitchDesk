@@ -83,6 +83,9 @@ Between full reads, SwitchDesk checks that each switch is still up, and Settings
 ### Switch list
 Search by name, address, site, model or software, or by state: `offline`, `disabled`, `problem`. Words combine, so `acc offline` finds offline access switches. Press `/` to jump to the search box. Tick switches to collect, disable, enable or delete them together, or use the small buttons at the end of each row. A disabled switch keeps its last data but isn't checked, read or alerted on until you enable it again.
 
+### Sites
+Give switches a site, and a site picker appears at the top of the sidebar. Picking one narrows the dashboard, switch list, network map, VLANs and firmware pages to that site's switches, so a VLAN added or renamed there only reaches that site. That matters when VLAN 2 is voice on one site and production on another. With all sites shown, the multi-switch VLAN dialogs label each switch with its site and warn when a change spans several. The choice is remembered, and new switches get the selected site filled in.
+
 ### Firmware updates
 Each switch shows the version it runs, what's in its primary and secondary bank, and whether your firmware library has something newer for its platform. **Update** copies the image into the spare bank (the running version stays in the other one as a fallback), sets it as the boot default, saves the config and reboots, then checks that the switch came back on the new version. Pick several switches and they're updated one at a time. Or choose **copy only** and reboot whenever suits you.
 
