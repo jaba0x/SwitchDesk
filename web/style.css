@@ -208,3 +208,43 @@ details a { color: var(--info); }
   .reveal { opacity: 1; transform: none; transition: none; }
   .btn:hover { transform: none; }
 }
+
+/* ---------- moving screenshots ---------- */
+/* hero: a slideshow of the main screens, tilted back until you scroll */
+.stage { perspective: 1800px; }
+.window { transform-origin: 50% 100%; transform: rotateX(calc(var(--tilt, 0) * 14deg)) scale(calc(1 - var(--tilt, 0) * .04)); will-change: transform; }
+.slides { position: relative; display: block; overflow: hidden; aspect-ratio: 1440 / 880; }
+.slides img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .7s ease; }
+.slides img.on { opacity: 1; animation: drift 6.5s ease-out forwards; }
+.slides img:first-child { position: relative; }
+@keyframes drift { from { transform: scale(1); } to { transform: scale(1.035); } }
+.titlebar span { transition: opacity .35s ease; }
+.titlebar .dots { margin-left: auto; display: flex; gap: 6px; position: relative; z-index: 1; }
+.titlebar .dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%; background: #343d4d; cursor: pointer; transition: background .3s, transform .3s; }
+.titlebar .dots button.on { background: #8b95a7; transform: scale(1.25); }
+
+/* big screenshots flatten as they come up the page, with one light sweep */
+.shot { position: relative; transform-origin: 50% 0; }
+.shot.reveal.in { transform: perspective(1600px) rotateX(calc(var(--tilt, 0) * 9deg)) scale(calc(1 - var(--tilt, 0) * .05)); transition: opacity .7s ease, transform .12s linear; }
+.shot::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .07) 50%, transparent 65%);
+  transform: translateX(-120%); }
+.shot.in::after { animation: sweep 1.6s .35s ease-out forwards; }
+@keyframes sweep { to { transform: translateX(120%); } }
+
+/* small screenshots rise one after another and lift on hover */
+.trio figure, .duo figure { transition: transform .35s ease; }
+.trio.reveal figure, .duo.reveal figure { opacity: 0; transform: translateY(26px); transition: opacity .6s ease, transform .6s ease; }
+.trio.reveal.in figure, .duo.reveal.in figure { opacity: 1; transform: none; }
+.trio.in figure:nth-child(2), .duo.in figure:nth-child(2) { transition-delay: .12s; }
+.trio.in figure:nth-child(3) { transition-delay: .24s; }
+.trio.in figure:hover, .duo.in figure:hover { transform: translateY(-6px); transition-delay: 0s; }
+.trio img, .duo img { transition: box-shadow .35s ease; }
+.trio figure:hover img, .duo figure:hover img { box-shadow: 0 22px 50px rgba(0, 0, 0, .5); }
+
+@media (prefers-reduced-motion: reduce) {
+  .window, .shot.reveal.in { transform: none; }
+  .slides img.on { animation: none; }
+  .shot.in::after { animation: none; }
+  .trio.reveal figure, .duo.reveal figure { opacity: 1; transform: none; }
+}

@@ -96,6 +96,7 @@ type Port struct {
 	VLAN        string `json:"vlan"`
 	Description string `json:"description"`
 	Type        string `json:"type"`
+	Trunk       string `json:"trunk,omitempty"` // AOS-S trunk the port belongs to, e.g. Trk3
 	// filled from the Instant On portal
 	PoEmW  int  `json:"poeMw,omitempty"`
 	Loop   bool `json:"loop,omitempty"`
@@ -148,7 +149,9 @@ type Snapshot struct {
 	// such as a wrong clock reported by the switch's web interface.
 	Notes  []Note  `json:"notes,omitempty"`
 	Optics []Optic `json:"optics,omitempty"` // transceivers with their optical levels
-	Web    bool    `json:"web,omitempty"`    // read through the switch's web interface
+	// PortAccess is 802.1X / MAC authentication read from the config; nil where SwitchDesk can't manage it.
+	PortAccess *PortAccess `json:"portAccess,omitempty"`
+	Web        bool        `json:"web,omitempty"` // read through the switch's web interface
 }
 
 type Note struct {

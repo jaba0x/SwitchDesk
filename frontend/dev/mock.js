@@ -94,6 +94,15 @@ password manager`;
     logs: [{ severity: "W", text: "W 10/23/26 21:14:02 00077 ports: port 12 is now off-line" }, { severity: "M", text: "M 10/23/26 20:02:51 00435 ports: port 50 is Disabled by Loop Protect" }, { severity: "I", text: "I 10/23/26 19:55:10 00076 ports: port 12 is now on-line" }],
     raw: { system: "  System Name        : acc-2930-f1\n  Software revision  : WC.16.11.0015", stp: "...", config: cfg },
     runningConfig: cfg, errors: [],
+    portAccess: {
+      servers: [{ host: "10.10.0.60", hasKey: true }], dot1xOn: true, macAuthOn: true,
+      ports: [
+        ...["1", "2", "3", "4", "5", "6"].map((port) => ({ port, dot1x: true, clientLimit: 2, reauthPeriod: 3600, unauthVlan: 20 })),
+        { port: "7", dot1x: true, macAuth: true, clientLimit: 3 },
+        { port: "30", macAuth: true },
+        { port: "31", macAuth: true },
+      ],
+    },
     optics: [
       { port: "49", type: "SFP+SR", model: "J9150D", serial: "CN84KJ01A2", dom: true, tempC: 34.2, rx: [-2.7], tx: [-2.3], recent: false },
       { port: "50", type: "SFP+LR", model: "J9151E", serial: "CN84KJ09Q7", dom: true, tempC: 38.9, rx: [-23.9], tx: [-2.4], alarms: ["Rx power low alarm", "Rx power low warning"], recent: true },
@@ -141,8 +150,12 @@ password manager`;
   const detail = (id) => ({ ...views.find((v) => v.id === id), snapshot: id === "acc4" || id === "io3" ? null : id === "io1" ? ioSnap : id === "io2" ? webSnap : snap, backups: [{ name: "20261023-210400.cfg", at: mins(4), size: 2400 }, { name: "20261019-081200.cfg", at: mins(6000), size: 2300 }] });
   window.go = { main: { App: {
     Platform: async () => "darwin", Version: async () => "0.3.0",
+    // add ?locked to the preview URL to see the lock screen
+    AppLock: async () => ({ enabled: /locked|pw/.test(location.search), locked: /locked/.test(location.search) && !window.__unlocked, starting: true, lockAfter: 15 }),
+    Unlock: async (p) => { if (p !== "password") { await new Promise((r) => setTimeout(r, 400)); throw "wrong password"; } window.__unlocked = true; },
+    LockNow: async () => { window.__unlocked = false; }, SetAppPassword: async () => {}, ForgetAppPassword: async () => { window.__unlocked = true; },
     GetDashboard: async () => dash, GetSwitch: async (id) => detail(id), GetTopology: async () => topo, SaveLayout: async () => {},
-    GetSettings: async () => ({ checkMethod: "port", firmwareAuto: "install", windowStart: "02:00", windowEnd: "05:00", pingInterval: 30, collectInterval: 15, parallel: 4, keepBackups: 20, cpuWarn: 80, memWarn: 90 }),
+    GetSettings: async () => ({ language: new URLSearchParams(location.search).get("lang") || "", checkMethod: "port", firmwareAuto: "install", windowStart: "02:00", windowEnd: "05:00", pingInterval: 30, collectInterval: 15, parallel: 4, keepBackups: 20, cpuWarn: 80, memWarn: 90 }),
     Credentials: async () => [{ id: "c1", name: "Network admins", username: "admin" }, { id: "c2", name: "noc@example.ge", username: "noc@example.ge", kind: "instanton" }],
     DiscoverCloud: async () => { await new Promise((r) => setTimeout(r, 400)); return [
       { id: "s1", name: "Office", switches: [{ deviceId: "94:60:d5:12:34:56", name: "office-1930", model: "JL682A", ip: "10.10.2.5", online: true, ports: 28, addedAs: "io1" }, { deviceId: "94:60:d5:12:34:57", name: "office-1930-b", model: "JL682A", ip: "10.10.2.6", online: true, ports: 28 }] },
@@ -153,6 +166,18 @@ password manager`;
     GetBackup: async () => cfg.replace("aaa authentication ssh login radius local\n", ""),
     PreviewVLAN: async (id, ch) => ch.action === "delete" ? ["configure terminal", `no vlan ${ch.id}`, "end", ch.save ? "write memory" : null].filter(Boolean) : ["configure terminal", `vlan ${ch.id}`, ch.name ? `name "${ch.name}"` : null, ch.addUntagged?.length ? "untagged " + ch.addUntagged.join(",") : null, ch.addTagged?.length ? "tagged " + ch.addTagged.join(",") : null, "exit", "end", ch.save ? "write memory" : null].filter(Boolean),
     ApplyVLAN: async () => ({ ok: true, transcript: ["> configure terminal", "> vlan 50", "> exit"] }),
+    PreviewPortAccess: async (id, ch) => ["configure terminal",
+      ch.addServer ? `radius-server host ${ch.addServer.host} key "********"` : null,
+      ch.removeServer ? `no radius-server host ${ch.removeServer}` : null,
+      ch.setRole ? `port-access role ${ch.setRole.name}` : null, ch.setRole?.vlan ? `vlan access ${ch.setRole.vlan}` : null, ch.setRole ? "exit" : null,
+      ch.deleteRole ? `no port-access role ${ch.deleteRole}` : null,
+      ch.dot1x === true ? `aaa port-access authenticator ${ch.ports.join(",")}` : ch.dot1x === false ? `no aaa port-access authenticator ${ch.ports.join(",")}` : null,
+      ch.macAuth === true ? `aaa port-access mac-based ${ch.ports.join(",")}` : ch.macAuth === false ? `no aaa port-access mac-based ${ch.ports.join(",")}` : null,
+      ch.clientLimit !== null && ch.clientLimit !== undefined ? `aaa port-access authenticator ${ch.ports.join(",")} client-limit ${ch.clientLimit}` : null,
+      ch.globalDot1x === true ? "aaa port-access authenticator active" : ch.globalDot1x === false ? "no aaa port-access authenticator active" : null,
+      "end", ch.save ? "write memory" : null].filter(Boolean),
+    ApplyPortAccess: async () => ({ ok: true, transcript: ["> configure terminal", "> aaa port-access authenticator 8", "> end"] }),
+    RefreshPortClients: async () => [{ port: "1/1/15", mac: "00:0c:29:9b:cc:d0", user: "jdoe", ip: "10.3.0.21", method: "dot1x", status: "Authenticated", role: "RoleLan", roleStatus: "Applied", vlan: "10" }],
     RunCommand: async (id, c) => "  Status and Counters - VLAN Information\n\n  VLAN ID Name     | Status\n  1       DEFAULT  | Port-based",
     RefreshAll: async () => {}, Refresh: async () => {},
     DataFolder: async () => ({ path: "/Users/jaba/Library/Application Support/SwitchDesk", defaultPath: "/Users/jaba/Library/Application Support/SwitchDesk", custom: false }),

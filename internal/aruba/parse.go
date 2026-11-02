@@ -285,17 +285,26 @@ func ParseSTP(text string) STP {
 
 // ---------- interfaces ----------
 
-var portNameRe = regexp.MustCompile(`^([A-Z]?\d+(/\d+){0,2}|lag\d+|Trk\d+|[A-Z]\d+)$`)
+// 24, A1, 1/1/49 (AOS-CX), and on stacked AOS-S 1/24 and 1/A1 (issue #14)
+var portNameRe = regexp.MustCompile(`^((\d+/){0,2}[A-Z]?\d+|lag\d+|Trk\d+)$`)
 
 func ParseInterfacesBrief(text string) []Port {
 	var out []Port
 	for _, line := range strings.Split(text, "\n") {
 		line = strings.ReplaceAll(line, "|", " ")
 		fs := strings.Fields(line)
-		if len(fs) < 3 || !portNameRe.MatchString(fs[0]) {
+		if len(fs) < 3 {
 			continue
 		}
-		p := Port{Name: fs[0]}
+		// AOS-S lists a trunk member as "13-Trk3" or "1/A1-Trk1"
+		name, trunk := fs[0], ""
+		if i := strings.Index(name, "-Trk"); i > 0 {
+			name, trunk = name[:i], name[i+1:]
+		}
+		if !portNameRe.MatchString(name) {
+			continue
+		}
+		p := Port{Name: name, Trunk: trunk}
 		idx := -1
 		for i := 1; i < len(fs)-1; i++ {
 			a, b := strings.ToLower(fs[i]), strings.ToLower(fs[i+1])
@@ -503,7 +512,9 @@ func ParseLogs(text string, max int) []LogLine {
 // ---------- port lists ----------
 
 var rangePart = regexp.MustCompile(`^([A-Za-z]*)(\d+)-([A-Za-z]*)(\d+)$`)
-var cxRange = regexp.MustCompile(`^(\d+/\d+/)(\d+)-(\d+/\d+/)?(\d+)$`)
+
+// 1/1/1-1/1/24 (AOS-CX), 1/1-1/24 and 1/A1-1/A4 (stacked AOS-S)
+var cxRange = regexp.MustCompile(`^((?:\d+/)+[A-Za-z]*)(\d+)-((?:\d+/)+[A-Za-z]*)?(\d+)$`)
 
 // ExpandPorts turns "1-4,A1-A2,49" or "1/1/1-1/1/3" into individual ports.
 func ExpandPorts(s string) []string {
@@ -513,7 +524,7 @@ func ExpandPorts(s string) []string {
 		if part == "" {
 			continue
 		}
-		if m := cxRange.FindStringSubmatch(part); m != nil {
+		if m := cxRange.FindStringSubmatch(part); m != nil && (m[3] == "" || m[3] == m[1]) {
 			a, _ := strconv.Atoi(m[2])
 			b, _ := strconv.Atoi(m[4])
 			for i := a; i <= b && i-a < 1024; i++ {

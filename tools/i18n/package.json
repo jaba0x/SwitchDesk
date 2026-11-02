@@ -1,0 +1,7 @@
+{
+  "name": "switchdesk-i18n-tools",
+  "private": true,
+  "description": "Extracts the interface text into frontend/dist/i18n/en.json for translators",
+  "scripts": { "extract": "node extract.mjs" },
+  "dependencies": { "acorn": "8.14.0", "acorn-walk": "8.3.4" }
+}

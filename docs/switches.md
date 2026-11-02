@@ -37,13 +37,24 @@ Bridge and root MAC and priority, this switch's role, topology changes, and ever
 
 ![Ports](images/switch-ports.png){ .shot }
 
-A large faceplate with its colour key, and a table with each port's name, status (Up, Down or Disabled), speed, type and VLAN membership (`20u` is untagged in VLAN 20, `30t` tagged in VLAN 30). The name is the one set on the switch: `name "..."` on AOS-S, `description` on AOS-CX. Hover a port on any faceplate to see it too, for example "Port 3 · Printer-2nd-floor".
+A large faceplate laid out like the hardware: copper ports, SFP ports and module ports (`A1`…) are separate blocks, and each member of a stacked switch (2930M, 3810, VSF on 2930F and 6300) gets its own row. Then its colour key, and a table with each port's name, status (Up, Down or Disabled), speed, type and VLAN membership (`20u` is untagged in VLAN 20, `30t` tagged in VLAN 30). The name is the one set on the switch: `name "..."` on AOS-S, `description` on AOS-CX. Hover a port on any faceplate to see it too, for example "Port 3 · Printer-2nd-floor".
 
 Switches with transceivers also get an **Optics** table: Rx and Tx power in dBm (one value per lane on QSFP), temperature, model and serial. On AOS-CX it shows the optic's own warning range and judges against it. AOS-S doesn't report those levels, so its recent optical alarms are shown instead. A port that's down with no light shows as *Not connected*, and DAC cables show *No DOM*. The readings come from `show interface dom detail` on AOS-CX and `show interfaces transceiver detail` on AOS-S.
 
 ### VLANs
 
 The switch's VLANs, with editing. See [VLANs](vlans.md).
+
+### Port access
+
+On AOS-S and AOS-CX switches, the **Port access** tab manages who may connect to a port:
+
+- **RADIUS servers:** add and remove them. The shared secret is never shown on screen, in the command preview or in the transcript. It can't contain spaces, double quotes or question marks, because the switch CLI treats a typed `?` as a request for help.
+- **802.1X and MAC authentication:** turn them on or off per port, or for the whole switch, with the client limit and re-authentication period. Shift-click selects a range of ports.
+- **Clients that don't log in:** on AOS-S you pick their VLAN. On AOS-CX you create local roles (a single VLAN, or a trunk with tagged VLANs) and choose per port which role applies after a login, after a rejected login, while RADIUS can't be reached, and before a login.
+- **Connected clients (AOS-CX):** port, MAC address, user, IP address, login method, status, role and VLAN, read at each collection or with **Refresh**.
+
+Ports that link to another switch or an access point are marked, and you're warned before turning on a login there, since that can cut the link and SwitchDesk's own connection with it. As with VLANs, you see the exact commands before anything is sent. Port access was contributed by [Arne Naessens](https://github.com/ArneNaessens).
 
 ### Neighbors
 
