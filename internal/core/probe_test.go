@@ -2,6 +2,9 @@ package core
 
 import (
 	"net"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,5 +65,39 @@ func TestTelnetNotAssumed(t *testing.T) {
 	applyPortProbes(&snap, "127.0.0.1")
 	if snap.Security.TelnetEnabled || snap.Security.HTTPPlain || snap.Security.TelnetPort == "" {
 		t.Fatalf("probe should clear telnet/http: %+v", snap.Security)
+	}
+}
+
+// Issue #18: with "no web-management plaintext" the switch still answers on
+// port 80, but only to redirect to HTTPS. That isn't plain HTTP management.
+func TestHTTPRedirectIsNotPlain(t *testing.T) {
+	serve := func(h http.HandlerFunc) (string, func()) {
+		s := httptest.NewServer(h)
+		_, p, _ := net.SplitHostPort(strings.TrimPrefix(s.URL, "http://"))
+		return p, s.Close
+	}
+	redir, stop1 := serve(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "https://"+r.Host+"/", http.StatusFound)
+	})
+	defer stop1()
+	page, stop2 := serve(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("<html>login</html>")) })
+	defer stop2()
+	elsewhere, stop3 := serve(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/login.html", http.StatusFound) })
+	defer stop3()
+
+	probeTimeout = 3 * time.Second
+	for port, want := range map[string]string{redir: "redirect", page: "open", elsewhere: "open"} {
+		if got := probeHTTP("127.0.0.1", port); got != want {
+			t.Errorf("port %s: %s, want %s", port, got, want)
+		}
+	}
+
+	old := httpPortNum
+	defer func() { httpPortNum = old }()
+	httpPortNum = redir
+	snap := aruba.Snapshot{Family: aruba.FamilyAOSS, Security: aruba.Security{HTTPPlain: true}}
+	applyPortProbes(&snap, "127.0.0.1")
+	if snap.Security.HTTPPlain || snap.Security.HTTPPort != "redirect" {
+		t.Fatalf("redirect-only port 80 still flagged: %+v", snap.Security)
 	}
 }

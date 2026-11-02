@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- **Site filter.** Pick a site at the top of the sidebar, and the dashboard, switch list, network map, VLANs and firmware pages show only that site's switches. A VLAN change made there only reaches that site, which matters when the same VLAN ID means different things at different sites. With all sites shown, the multi-switch VLAN dialogs tag each switch with its site and warn when a change spans several. Contributed by [Arne Naessens](https://github.com/ArneNaessens) in [#19](https://github.com/jaba0x/SwitchDesk/pull/19).
+- Fixed: AOS-S switches with `web-management ssl` and `no web-management plaintext` were still flagged for plain HTTP. They keep answering on port 80, but only to redirect the browser to HTTPS. SwitchDesk now looks at what port 80 sends back, and a redirect to HTTPS no longer counts. Reported by [@mattgrimley](https://github.com/mattgrimley) in [#18](https://github.com/jaba0x/SwitchDesk/issues/18).
+
 ## 1.0.1
 
 - Fixed: on AOS-S, ports that belong to a trunk (listed as `13-Trk3` or `1/A1-Trk1`) were left out of the port list and the faceplate. They're back, and the port's tooltip names its trunk.

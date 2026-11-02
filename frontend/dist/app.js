@@ -719,7 +719,7 @@ function tabOverview(d, snap) {
 
 // what SwitchDesk saw when it tried the port itself
 function portSeen(state, port) {
-  return { open: `port ${port} answers`, closed: `port ${port} refused`, filtered: `no answer on port ${port}` }[state] || "";
+  return { open: `port ${port} answers`, closed: `port ${port} refused`, filtered: `no answer on port ${port}`, redirect: `port ${port} only redirects to HTTPS` }[state] || "";
 }
 
 function tabSTP(snap) {
