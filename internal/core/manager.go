@@ -908,7 +908,11 @@ func (m *Manager) VLANOverview() []SwitchVLANs {
 			online = st.Online
 		}
 		ro := vlanReadOnly(sw, snap)
-		out = append(out, SwitchVLANs{ID: sw.ID, Name: displayName(sw, snap), Online: online, VLANs: snap.VLANs,
+		vlans := snap.VLANs
+		if vlans == nil {
+			vlans = []aruba.VLAN{} // a failed collect has none; send [] rather than null
+		}
+		out = append(out, SwitchVLANs{ID: sw.ID, Name: displayName(sw, snap), Online: online, VLANs: vlans,
 			Family: snap.Family.Label(), Editable: ro == "", ReadOnly: ro})
 	}
 	return out

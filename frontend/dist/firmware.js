@@ -45,7 +45,7 @@ async function renderFirmware(soft) {
   }
   const mode = { off: "Off", stage: "Copy new firmware to the spare bank automatically", install: `Install automatically between ${set.windowStart} and ${set.windowEnd}` }[set.firmwareAuto || "off"];
   $("#main").innerHTML = `<div class="page">
-    <div class="head"><h1>Firmware</h1><span class="grow"></span>
+    <div class="head"><h1>Firmware</h1>${siteSub()}<span class="grow"></span>
       <span class="muted" style="font-size:13px">Automatic updates: <a data-go="#/settings">${esc(mode)}</a></span></div>
     <div id="fw-updates">${updatesPanel()}</div>
     <div id="fw-jobs">${jobsPanel()}</div>
@@ -63,7 +63,7 @@ async function renderFirmware(soft) {
 }
 
 function updatesPanel() {
-  const vs = (S.dash?.switches || []).filter((v) => !v.disabled && v.firmware?.supported);
+  const vs = (siteDash()?.switches || []).filter((v) => !v.disabled && v.firmware?.supported);
   const avail = vs.filter((v) => v.firmware.available);
   for (const id of FW.sel) if (!avail.find((v) => v.id === id)) FW.sel.delete(id);
   const upToDate = vs.filter((v) => !v.firmware.available && v.firmware.running).length;
@@ -86,7 +86,7 @@ function updatesPanel() {
 
 function fwSel(id, on) { on ? FW.sel.add(id) : FW.sel.delete(id); $("#fw-updates").innerHTML = updatesPanel(); }
 function fwSelAll(on) {
-  for (const v of S.dash.switches.filter((v) => !v.disabled && v.firmware?.available)) on ? FW.sel.add(v.id) : FW.sel.delete(v.id);
+  for (const v of siteDash().switches.filter((v) => !v.disabled && v.firmware?.available)) on ? FW.sel.add(v.id) : FW.sel.delete(v.id);
   $("#fw-updates").innerHTML = updatesPanel();
 }
 

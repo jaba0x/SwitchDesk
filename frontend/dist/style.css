@@ -67,6 +67,21 @@ a:hover { text-decoration: underline; }
 .nav.on { color: var(--text); background: var(--panel); }
 .nav .count { margin-left: auto; font-size: 12px; padding: 0 6px; border-radius: 9px; background: var(--crit); color: #1b0b0d; font-weight: 600; }
 .side-foot { margin-top: auto; padding: 8px 10px 0; color: var(--faint); font-size: 12px; }
+/* site picker; the sidebar drags the window, so the picker opts out */
+.sitepick { --wails-draggable: no-drag; display: block; margin: 0 2px 12px; }
+.sitepick span { display: block; font-size: 11.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 4px 2px; }
+.sitepick select { width: 100%; padding: 5px 8px; font-size: 13px; }
+.sitepick.on select { border-color: var(--accent); color: var(--text); }
+.head .sub.sitesub { color: var(--accent); }
+/* text field with its own suggestion list (the site field) */
+.combo { position: relative; }
+.combo input { padding-right: 32px; }
+.combo-btn { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 0 6px 6px 0; background: none; color: var(--muted); cursor: pointer; }
+.combo-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.combo-btn:hover { color: var(--text); background: var(--panel-2); }
+.combo-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; max-height: 200px; overflow: auto; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.combo-opt { padding: 6px 8px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+.combo-opt:hover, .combo-opt.on { background: var(--panel-2); }
 
 main { overflow: auto; position: relative; }
 .page { padding: calc(var(--top) + 22px) 28px 40px; }

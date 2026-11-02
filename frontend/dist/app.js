@@ -91,22 +91,119 @@ function portsUp(s) {
   return `${s.portsUp}/${s.portsTotal}${off ? ` <span class="faint" title="${plural(off, "port")} disabled on the switch">· ${off} disabled</span>` : ""}`;
 }
 
+// ---------- site filter ----------
+// One site picked in the sidebar narrows the dashboard, switch list, map,
+// VLANs and firmware pages, so a change made there only reaches that site.
+const NO_SITE = "\u0001none"; // switches without a site; can't clash with a typed name
+try { S.site = localStorage.getItem("sd.site") || ""; } catch { S.site = ""; }
+const siteOf = (v) => (v?.site || "").trim();
+function siteNames() {
+  return [...new Set((S.dash?.switches || []).map(siteOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+const siteLabel = () => (S.site === NO_SITE ? "No site" : S.site);
+function inSite(v) {
+  if (!S.site) return true;
+  return S.site === NO_SITE ? !siteOf(v) : siteOf(v) === S.site;
+}
+// the dashboard data narrowed to the site, with its counts worked out again
+function siteDash() {
+  const d = S.dash;
+  if (!d || !S.site) return d;
+  if (S.siteCache?.dash === d && S.siteCache.site === S.site) return S.siteCache.out;
+  const sw = d.switches.filter(inSite), ids = new Set(sw.map((v) => v.id));
+  // a network-wide issue names its switches in switchIds
+  const issues = (d.issues || []).filter((i) => (i.switchId ? ids.has(i.switchId) : (i.switchIds || []).some((id) => ids.has(id))));
+  const n = (f) => sw.filter(f).length;
+  const out = { ...d, switches: sw, issues, total: sw.length,
+    disabled: n((v) => v.disabled), unknown: n((v) => !v.disabled && !v.status.checked),
+    online: n((v) => !v.disabled && v.status.checked && v.status.online), offline: n((v) => !v.disabled && v.status.checked && !v.status.online),
+    collecting: n((v) => v.status.collecting),
+    critical: issues.filter((i) => i.severity === "critical").length, warning: issues.filter((i) => i.severity === "warning").length,
+    info: issues.filter((i) => i.severity !== "critical" && i.severity !== "warning").length };
+  S.siteCache = { dash: d, site: S.site, out };
+  return out;
+}
+// siteOnly keeps the entries (anything with a switch id) that belong to the site
+function siteOnly(list) {
+  if (!S.site) return list || [];
+  const ids = new Set(siteDash().switches.map((v) => v.id));
+  return (list || []).filter((x) => ids.has(x.id));
+}
+// The site field: free text, plus a list of the sites already in use. A
+// <datalist> would do this, but the app's web view doesn't open its arrow.
+function siteField(value) {
+  const has = siteNames().length > 0;
+  return `<label class="f"><span>Site</span><div class="combo"><input type="text" id="ss" value="${esc(value)}" autocomplete="off" spellcheck="false" ${has ? `placeholder="Pick a site or type a new one"` : ""}>
+    ${has ? `<button type="button" class="combo-btn" tabindex="-1" title="Sites already in use"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
+    <div class="combo-list" hidden></div></div></label>`;
+}
+function wireSiteField(m) {
+  const box = $(".combo", m);
+  if (!box) return;
+  const inp = $("input", box), list = $(".combo-list", box), btn = $(".combo-btn", box);
+  const show = (all) => {
+    const q = all ? "" : inp.value.trim().toLowerCase();
+    const opts = siteNames().filter((s) => s.toLowerCase().includes(q));
+    list.innerHTML = opts.map((s) => `<div class="combo-opt${s === inp.value.trim() ? " on" : ""}" data-v="${esc(s)}">${esc(s)}</div>`).join("");
+    list.hidden = !opts.length;
+  };
+  const hide = () => { list.hidden = true; };
+  // mousedown would take focus from the input and close the list before the click lands
+  btn?.addEventListener("mousedown", (e) => e.preventDefault());
+  btn?.addEventListener("click", (e) => { e.preventDefault(); if (list.hidden) { show(true); inp.focus(); } else hide(); });
+  list.addEventListener("mousedown", (e) => {
+    const o = e.target.closest("[data-v]");
+    e.preventDefault();
+    if (o) { inp.value = o.dataset.v; hide(); }
+  });
+  inp.addEventListener("input", () => show(false));
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" && list.hidden) { e.preventDefault(); show(true); }
+    if (e.key === "Escape" && !list.hidden) { e.stopPropagation(); hide(); }
+  });
+  inp.addEventListener("blur", hide);
+}
+
+// the site name next to a page title, so it's clear the page is narrowed
+const siteSub = () => (S.site ? `<span class="sub sitesub">${esc(siteLabel())}</span>` : "");
+function setSite(v) {
+  S.site = v;
+  try { localStorage.setItem("sd.site", v); } catch {}
+  // a selection made for another site must not carry over
+  S.sel.clear();
+  FW.sel.clear();
+  SDMap.stop();
+  route();
+}
+function sitePicker() {
+  const names = siteNames();
+  if (!names.length) return "";
+  const none = (S.dash?.switches || []).some((v) => !siteOf(v));
+  const opt = (v, l) => `<option value="${esc(v)}" ${S.site === v ? "selected" : ""}>${esc(l)}</option>`;
+  return `<label class="sitepick${S.site ? " on" : ""}" title="Show and change only this site's switches"><span>Site</span>
+    <select onchange="setSite(this.value)">${opt("", "All sites")}${names.map((s) => opt(s, s)).join("")}${none ? opt(NO_SITE, "No site") : ""}</select></label>`;
+}
+
 // ---------- shell ----------
 function renderSide() {
   const r = S.route[0] || "dashboard";
-  const crit = S.dash?.critical || 0;
-  const fwCount = (S.dash?.switches || []).filter((v) => !v.disabled && v.firmware?.available && !v.firmware?.staged).length;
+  // a remembered site that no longer exists falls back to all sites
+  if (S.dash && S.site && !(S.site === NO_SITE ? S.dash.switches.some((v) => !siteOf(v)) : siteNames().includes(S.site))) S.site = "";
+  const sd = siteDash();
+  const crit = sd?.critical || 0;
+  const fwCount = (sd?.switches || []).filter((v) => !v.disabled && v.firmware?.available && !v.firmware?.staged).length;
   const item = (key, icon, label, extra = "") =>
     `<button class="nav${r === key || (key === "switches" && r === "switch") ? " on" : ""}" data-go="#/${key}">${ICON[icon]}<span>${label}</span>${extra}</button>`;
   $("#side").innerHTML = `
     <div class="brand"><span class="brand-mark">${"<i></i>".repeat(8)}</span><b>SwitchDesk</b></div>
+    ${sitePicker()}
     ${item("dashboard", "dash", "Dashboard", crit ? `<span class="count">${crit}</span>` : "")}
     ${item("switches", "list", "Switches")}
     ${item("map", "map", "Network map")}
     ${item("vlans", "vlan", "VLANs")}
     ${item("firmware", "chip", "Firmware", fwCount ? `<span class="count info">${fwCount}</span>` : "")}
     ${item("settings", "gear", "Settings")}
-    <div class="side-foot">${S.dash ? `${S.dash.online} of ${S.dash.total} online` : ""}${S.dash?.collecting ? `<br>Collecting from ${plural(S.dash.collecting, "switch").replace("switchs", "switches")}` : ""}
+    <div class="side-foot">${sd ? `${sd.online} of ${sd.total} online` : ""}${sd?.collecting ? `<br>Collecting from ${plural(sd.collecting, "switch").replace("switchs", "switches")}` : ""}
       <a class="credit" onclick="openURL('https://clihero.com')" title="clihero.com">
         <img src="clihero-logo-white.png" alt="clihero.com">
         <span>Built by Jaba Macharashvili</span></a></div>`;
@@ -171,7 +268,7 @@ async function refreshData() {
 
 // ---------- dashboard ----------
 function renderDashboard() {
-  const d = S.dash;
+  const d = siteDash();
   if (!d) return;
   const main = $("#main");
   if (!d.total) {
@@ -193,7 +290,7 @@ function renderDashboard() {
   const rank = (v) => (v.disabled ? 2 : v.status.checked && !v.status.online ? 0 : 1);
   const plates = [...d.switches].sort((a, b) => rank(a) - rank(b) || bySev[a.worst || ""] - bySev[b.worst || ""]);
   main.innerHTML = `<div class="page">
-    <div class="head"><h1>Dashboard</h1><span class="grow"></span>
+    <div class="head"><h1>Dashboard</h1>${siteSub()}<span class="grow"></span>
       <button class="btn" onclick="refreshAll(this)">${ICON.refresh}Collect now</button></div>
     ${d.loading ? `<div class="panel" style="padding:10px 14px;margin-bottom:14px" role="status">Loading saved data… ${d.total - d.loading} of ${d.total} switches</div>` : ""}
     <div class="fleet">
@@ -234,7 +331,7 @@ function renderIssueList() {
   const box = $("#issuelist");
   if (!box || !S.dash) return;
   const words = (S.iq || "").toLowerCase().split(/\s+/).filter(Boolean);
-  const all = (S.dash.issues || []).filter(sevMatch);
+  const all = (siteDash().issues || []).filter(sevMatch);
   const list = all.filter((i) => (!S.icat || i.category === S.icat) &&
     words.every((w) => `${i.title} ${i.switchName} ${i.detail} ${i.category}`.toLowerCase().includes(w)));
   const filtered = words.length || S.icat;
@@ -267,8 +364,14 @@ function plate(v) {
 
 async function refreshAll(btn) {
   btn?.classList.add("spin");
-  await call("RefreshAll");
-  toast("Collecting from all online switches");
+  if (S.site) {
+    const ids = siteDash().switches.filter((v) => !v.disabled).map((v) => v.id);
+    await Promise.all(ids.map((id) => call("Refresh", id)));
+    toast(`Collecting from ${siteLabel()}`);
+  } else {
+    await call("RefreshAll");
+    toast("Collecting from all online switches");
+  }
   setTimeout(() => btn?.classList.remove("spin"), 1500);
 }
 
@@ -286,7 +389,7 @@ S.sel = new Set();
 const switchesWord = (n) => `${n} switch${n === 1 ? "" : "es"}`;
 
 function renderSwitches(soft) {
-  const d = S.dash;
+  const d = siteDash();
   if (!d) return;
   const rows = d.switches.filter((v) => switchMatches(v, S.query));
   const ids = new Set(d.switches.map((v) => v.id));
@@ -324,7 +427,7 @@ function renderSwitches(soft) {
     return;
   }
   $("#main").innerHTML = `<div class="page">
-    <div class="head"><h1>Switches</h1><span class="sub" id="swcount">${counts}</span><span class="grow"></span>
+    <div class="head"><h1>Switches</h1>${siteSub()}<span class="sub" id="swcount">${counts}</span><span class="grow"></span>
       <span class="searchbox">${ICON.search}<input type="text" id="swsearch" placeholder="Search switches  /" value="${esc(S.query)}" oninput="S.query=this.value;renderSwitches(true)" title="Name, address, site, model or software. Also: online, offline, disabled, problem"></span>
       <button class="btn" onclick="openBulkModal()">Add many</button>
       <button class="btn primary" onclick="openSwitchModal()">${ICON.plus}Add switch</button></div>
@@ -348,7 +451,7 @@ function toggleSel(id, on) {
 }
 
 function selectAll(on) {
-  for (const v of S.dash.switches.filter((v) => switchMatches(v, S.query))) on ? S.sel.add(v.id) : S.sel.delete(v.id);
+  for (const v of siteDash().switches.filter((v) => switchMatches(v, S.query))) on ? S.sel.add(v.id) : S.sel.delete(v.id);
   renderSwitches(true);
 }
 
@@ -956,10 +1059,11 @@ async function openSwitchModal(sw, mode) {
     <div class="row"><label class="f"><span>Credentials</span><select id="sc">${credOptions(e.credentialId)}</select></label>
       <label class="f"><span>Switch type</span><select id="sf">${SWITCH_TYPES.map(([k, l]) => `<option value="${k}" ${k === (web ? "instant-on" : e.family || "auto") ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <div id="newcred" style="display:none" class="row"><label class="f"><span>Username</span><input type="text" id="cu" value="admin"></label><label class="f"><span>Password</span><input type="password" id="cp"></label></div>
-    <label class="f"><span>Site</span><input type="text" id="ss" value="${esc(e.site || "")}"></label>
+    ${siteField(sw ? e.site || "" : S.site && S.site !== NO_SITE ? S.site : "")}
     <label class="f"><span>Notes</span><input type="text" id="so" value="${esc(e.notes || "")}"></label>
     <div id="smsg"></div></div>
     <div class="foot">${sw ? `<button class="btn danger" id="sdel">Remove</button>` : ""}<span class="grow"></span><button class="btn" id="stest">Test connection</button><button class="btn" data-close>Cancel</button><button class="btn primary" id="ssave">${sw ? "Save" : "Add switch"}</button></div>`);
+  wireSiteField(m);
   const sc = $("#sc", m);
   $("#sf", m).onchange = () => {
     web = $("#sf", m).value === "instant-on";
@@ -1148,7 +1252,7 @@ async function openBulkModal() {
 function renderMap() {
   $("#main").innerHTML = `<div class="page full"><div class="mapwrap">
     <canvas id="map"></canvas>
-    <div class="maptools"><h1>Network map</h1>
+    <div class="maptools"><h1>Network map</h1>${siteSub()}
       <button class="btn small" onclick="SDMap.fit()">Fit to window</button>
       <button class="btn small" onclick="SDMap.relayout()">Arrange again</button>
       <label class="check btn small"><input type="checkbox" ${S.showEndpoints ? "checked" : ""} onchange="S.showEndpoints=this.checked;SDMap.reload()"> Phones and hosts</label>
@@ -1156,11 +1260,31 @@ function renderMap() {
     <div class="maplegend"><span><i style="border-color:#5d7088"></i>Link</span><span><i style="border-color:var(--warn);border-top-style:dashed"></i>STP blocking</span><span><i style="border-color:var(--crit)"></i>Port down</span><span>Hover or select a switch to see port numbers</span></div>
     <div class="panel mapcard" id="mapcard" style="display:none"></div></div></div>`;
   SDMap.start($("#map"), {
-    load: () => call("GetTopology", S.showEndpoints),
-    saveLayout: (l) => call("SaveLayout", l),
+    load: async () => siteTopo(S.mapAll = await call("GetTopology", S.showEndpoints)),
+    // the map only saves what it shows, so positions of other sites' nodes are added back
+    saveLayout: (l) => {
+      const shown = new Set(siteTopo(S.mapAll).nodes.map((n) => n.id)), keep = {};
+      for (const n of S.mapAll?.nodes || []) if (n.x != null && !shown.has(n.id)) keep[n.id] = { x: n.x, y: n.y };
+      return call("SaveLayout", { ...keep, ...l });
+    },
     select: showMapCard,
     status: (t) => { const el = $("#mapstat"); if (el) el.textContent = t; },
   });
+}
+
+// siteTopo keeps the site's switches, the devices they see, and the links between those
+function siteTopo(t) {
+  if (!S.site || !t) return t || { nodes: [], edges: [] };
+  const mine = new Set(siteDash().switches.map((v) => v.id));
+  const keep = new Set(mine);
+  for (const e of t.edges) {
+    if (mine.has(e.from)) keep.add(e.to);
+    if (mine.has(e.to)) keep.add(e.from);
+  }
+  // another site's switch seen over a link isn't drawn; its link goes too
+  const byId = new Map(t.nodes.map((n) => [n.id, n]));
+  for (const id of [...keep]) if (byId.get(id)?.managed && !mine.has(id)) keep.delete(id);
+  return { ...t, nodes: t.nodes.filter((n) => keep.has(n.id)), edges: t.edges.filter((e) => keep.has(e.from) && keep.has(e.to)) };
 }
 
 function showMapCard(n, topo) {
@@ -1187,11 +1311,13 @@ function commonName(data, id) {
 }
 
 async function renderVLANs(soft) {
-  const data = await call("VLANOverview");
+  // only the selected site's switches: they're the ones the editors below may change
+  const data = siteOnly(await call("VLANOverview"));
+  data.forEach((s) => { s.vlans ||= []; });
   S.vlanData = data;
   if (soft && (S.modalOpen || S.route[0] !== "vlans")) return;
   if (!data.length) {
-    $("#main").innerHTML = `<div class="page"><div class="head"><h1>VLANs</h1></div><div class="panel"><div class="empty"><h3>No VLAN data yet</h3><p>VLANs appear here once switches have been collected.</p></div></div></div>`;
+    $("#main").innerHTML = `<div class="page"><div class="head"><h1>VLANs</h1>${siteSub()}</div><div class="panel"><div class="empty"><h3>No VLAN data yet</h3><p>VLANs appear here once ${S.site ? "this site's " : ""}switches have been collected.</p></div></div></div>`;
     return;
   }
   const scroll = $("#vlmx") ? [$("#vlmx").scrollLeft, $("#vlmx").scrollTop] : null;
@@ -1211,11 +1337,21 @@ async function renderVLANs(soft) {
     const edit = canEdit ? `<td style="text-align:right;white-space:nowrap"><button class="btn small" onclick="openNetVLAN(${id})">Edit</button>${del ? ` <button class="btn small danger" onclick="openNetVLANDelete(${id})">Delete</button>` : ""}</td>` : "";
     return `<tr><td><span class="mono">${id}</span> ${esc(common)}${mism ? ` <span class="sev warning" title="${esc(Object.keys(names).join(", "))}">names differ</span>` : ""}</td>${cells}${edit}</tr>`;
   });
-  $("#main").innerHTML = `<div class="page"><div class="head"><h1>VLANs</h1><span class="sub">${ids.length} across ${plural(data.length, "switch").replace("switchs", "switches")}</span><span class="grow"></span>
+  $("#main").innerHTML = `<div class="page"><div class="head"><h1>VLANs</h1>${siteSub()}<span class="sub">${ids.length} across ${plural(data.length, "switch").replace("switchs", "switches")}</span><span class="grow"></span>
       ${canEdit ? `<button class="btn primary" onclick="openNetVLAN()">${ICON.plus}New VLAN</button>` : ""}</div>
     <p class="muted" style="margin-top:-6px">Each cell shows how many ports carry the VLAN on that switch. Click one to edit it there${canEdit ? ", or use Edit to change the VLAN on every switch at once" : ""}.</p>
     <div class="panel" id="vlmx" style="overflow:auto"><table class="matrix"><thead><tr><th>VLAN</th>${data.map((s) => `<th><a data-go="#/switch/${s.id}/vlans" style="color:inherit" title="${esc(s.family)}${s.editable ? "" : ": VLANs " + esc(s.readOnly)}">${esc(s.name)}</a></th>`).join("")}${canEdit ? "<th></th>" : ""}</tr></thead><tbody>${rows.join("")}</tbody></table></div></div>`;
   if (scroll) [$("#vlmx").scrollLeft, $("#vlmx").scrollTop] = scroll;
+}
+
+// With all sites shown, the multi-switch editors mark each switch's site and
+// warn when the change spans several, since one VLAN ID can mean different things per site.
+function siteOfId(id) { return siteOf((S.dash?.switches || []).find((v) => v.id === id)); }
+const siteTag = (id) => (!S.site && siteNames().length > 1 ? ` <span class="tag">${esc(siteOfId(id) || "No site")}</span>` : "");
+function sitesNote(ids) {
+  if (S.site) return `<div class="muted" style="font-size:13px;margin-bottom:8px">Only switches on site <b style="color:var(--text)">${esc(siteLabel())}</b> are listed.</div>`;
+  const n = new Set(ids.map((id) => siteOfId(id) || NO_SITE)).size;
+  return n > 1 ? `<div class="msg warnm" style="margin-bottom:10px">These switches are on ${n} sites, and a VLAN ID can mean something different on each. Pick a site in the sidebar to change only that site.</div>` : "";
 }
 
 // ---------- network-wide VLAN editor ----------
@@ -1246,7 +1382,8 @@ function openNetVLAN(id) {
   const has = (s, vid) => (s.vlans || []).some((x) => x.id === vid);
   const want = {};
   for (const s of data) want[s.id] = isNew ? s.editable : has(s, id);
-  const m = modal(`<h2>${isNew ? "New VLAN on several switches" : `VLAN ${id} on all switches`}</h2><div class="body">
+  const m = modal(`<h2>${isNew ? "New VLAN on several switches" : `VLAN ${id} on all switches`}${S.site ? ` at ${esc(siteLabel())}` : ""}</h2><div class="body">
+    ${sitesNote(data.map((s) => s.id))}
     <div class="row"><label class="f" style="flex:0 0 120px"><span>VLAN ID</span><input type="number" id="nvid" min="1" max="4094" value="${id || ""}" ${isNew ? "" : "disabled"}></label>
       <label class="f"><span>Name</span><input type="text" id="nvname" maxlength="32" value="${esc(common)}" placeholder="${isNew ? "" : "leave empty to keep each switch's name"}"></label></div>
     <div class="muted" style="font-size:13px;margin-bottom:8px">Tick the switches that should carry this VLAN. Ports stay as they are; set port membership on each switch's VLANs tab.</div>
@@ -1266,7 +1403,7 @@ function openNetVLAN(id) {
       const locked = !s.editable || (v === 1 && cur); // VLAN 1 can't be deleted
       const now = cur ? (cur.name ? esc(cur.name) : `<span class="faint">no name</span>`) : `<span class="faint">not present</span>`;
       return `<tr><td><input type="checkbox" data-s="${s.id}" ${want[s.id] ? "checked" : ""} ${locked ? "disabled" : ""}></td>
-        <td>${esc(s.name)} <span class="faint" style="font-size:12px">${esc(s.family)}</span>${s.online ? "" : ` <span class="sev warning">offline</span>`}</td>
+        <td>${esc(s.name)} <span class="faint" style="font-size:12px">${esc(s.family)}</span>${siteTag(s.id)}${s.online ? "" : ` <span class="sev warning">offline</span>`}</td>
         <td>${v ? now : ""}</td><td>${s.editable ? (v ? netVLANLabel(s, ch) : "") : `<span class="faint" style="font-size:12px">VLANs ${esc(s.readOnly)}</span>`}</td></tr>`;
     }).join("");
     const ed = data.filter((s) => s.editable);
@@ -1310,7 +1447,8 @@ function openNetVLANDelete(id) {
   const name = commonName(data, id).common;
   const pick = {};
   for (const s of data) pick[s.id] = s.editable;
-  const m = modal(`<h2>Delete VLAN ${id}${name ? ` (${esc(name)})` : ""}</h2><div class="body">
+  const m = modal(`<h2>Delete VLAN ${id}${name ? ` (${esc(name)})` : ""}${S.site ? ` at ${esc(siteLabel())}` : ""}</h2><div class="body">
+    ${sitesNote(data.map((s) => s.id))}
     <div class="muted" style="font-size:13px;margin-bottom:8px">Tick the switches to delete this VLAN from. Ports that carry it lose it.</div>
     <table><thead><tr><th style="width:28px"><input type="checkbox" id="ndall" title="All switches that can be changed"></th><th>Switch</th><th>Name</th><th>Ports</th></tr></thead><tbody id="ndrows"></tbody></table>
     <div style="height:14px"></div><label class="check"><input type="checkbox" id="ndsave" checked> Save to startup config (write memory)</label>
@@ -1321,7 +1459,7 @@ function openNetVLANDelete(id) {
       const v = s.vlans.find((x) => x.id === id);
       const n = (v.untagged?.length || 0) + (v.tagged?.length || 0);
       return `<tr><td><input type="checkbox" data-s="${s.id}" ${pick[s.id] ? "checked" : ""} ${s.editable ? "" : "disabled"}></td>
-        <td>${esc(s.name)} <span class="faint" style="font-size:12px">${esc(s.family)}</span>${s.online ? "" : ` <span class="sev warning">offline</span>`}</td>
+        <td>${esc(s.name)} <span class="faint" style="font-size:12px">${esc(s.family)}</span>${siteTag(s.id)}${s.online ? "" : ` <span class="sev warning">offline</span>`}</td>
         <td>${v.name ? esc(v.name) : `<span class="faint">no name</span>`}</td>
         <td>${s.editable ? (n ? plural(n, "port") : `<span class="faint">none</span>`) : `<span class="faint" style="font-size:12px">VLANs ${esc(s.readOnly)}</span>`}</td></tr>`;
     }).join("");
@@ -1353,9 +1491,10 @@ function netVLANReview(id, items) {
   const ok = items.filter((p) => !p.error);
   const removes = ok.filter((p) => p.ch.action === "delete").length;
   const block = (p, i) => `<div class="panel" style="margin:0 0 10px;padding:10px 12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b>${esc(p.s.name)}</b>${netVLANLabel(p.s, p.ch)}<span class="grow" style="flex:1"></span><span id="nvst${i}"></span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b>${esc(p.s.name)}</b>${siteTag(p.s.id)}${netVLANLabel(p.s, p.ch)}<span class="grow" style="flex:1"></span><span id="nvst${i}"></span></div>
       ${p.error ? `<div class="msg err">${esc(p.error)}. This switch is skipped.</div>` : `<pre class="code mono" id="nvtx${i}" style="margin:0">${esc(p.cmds.join("\n"))}</pre>`}</div>`;
-  const m = modal(`<h2>Review VLAN ${id} changes</h2><div class="body">
+  const m = modal(`<h2>Review VLAN ${id} changes${S.site ? ` at ${esc(siteLabel())}` : ""}</h2><div class="body">
+    ${S.site ? "" : sitesNote(ok.map((p) => p.s.id))}
     <p class="muted" style="margin-top:0">${plural(ok.length, "switch").replace("switchs", "switches")} will be changed one after the other. On each switch, sending stops at the first line it rejects${ok[0]?.ch.save ? ", and nothing is saved to startup config there" : ""}. A failure on one switch doesn't stop the others.</p>
     ${removes ? `<div class="msg err" style="margin-bottom:12px">VLAN ${id} is removed from ${plural(removes, "switch").replace("switchs", "switches")}. Ports that carried it lose it.</div>` : ""}
     ${items.map(block).join("")}<div id="nvres"></div></div>
