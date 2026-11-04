@@ -5,3 +5,4 @@ dist-zip/
 *.exe
 .DS_Store
 site/
+frontend/dev/hardware/

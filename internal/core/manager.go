@@ -548,6 +548,7 @@ type PortLED struct {
 	Speed       string `json:"speed"`
 	Description string `json:"description,omitempty"` // the port's configured name
 	Trunk       string `json:"trunk,omitempty"`
+	Cage        string `json:"cage,omitempty"` // "sfp" when the model's hardware has an SFP cage here
 }
 
 type SwitchView struct {
@@ -584,6 +585,7 @@ func summarize(snap *aruba.Snapshot) *Summary {
 	s := &Summary{Family: snap.Family.Label(), Hostname: snap.Facts.Hostname, Model: snap.Facts.Model, Software: snap.Facts.Software,
 		Serial: snap.Facts.Serial, Uptime: snap.Facts.Uptime, CPU: snap.Facts.CPU, Memory: snap.Facts.Memory,
 		VLANs: len(snap.VLANs), Neighbors: len(snap.Neighbors), CollectedAt: snap.CollectedAt}
+	cages := aruba.SFPCages(snap)
 	blocking := map[string]bool{}
 	for _, p := range snap.STP.Ports {
 		if p.State == "Blocking" || p.State == "Discarding" {
@@ -591,7 +593,11 @@ func summarize(snap *aruba.Snapshot) *Summary {
 		}
 	}
 	for _, p := range snap.Ports {
-		s.Ports = append(s.Ports, PortLED{Name: p.Name, Up: p.Up, Enabled: p.Enabled, Blocking: blocking[p.Name], Type: p.Type, Speed: p.Speed, Description: p.Description, Trunk: p.Trunk})
+		led := PortLED{Name: p.Name, Up: p.Up, Enabled: p.Enabled, Blocking: blocking[p.Name], Type: p.Type, Speed: p.Speed, Description: p.Description, Trunk: p.Trunk}
+		if cages[p.Name] {
+			led.Cage = "sfp"
+		}
+		s.Ports = append(s.Ports, led)
 		s.PortsTotal++
 		if p.Up {
 			s.PortsUp++
@@ -724,6 +730,17 @@ func (m *Manager) Detail(id string) (Detail, error) {
 			backups := m.st.Backups(id)
 			if backups == nil {
 				backups = []store.Backup{}
+			}
+			if cages := aruba.SFPCages(snap); len(cages) > 0 {
+				// mark SFP cages from the model's hardware, on a copy
+				full := *snap
+				full.Ports = append([]aruba.Port(nil), snap.Ports...)
+				for i := range full.Ports {
+					if cages[full.Ports[i].Name] {
+						full.Ports[i].Cage = "sfp"
+					}
+				}
+				snap = &full
 			}
 			return Detail{SwitchView: v, Snapshot: snap, Backups: backups}, nil
 		}

@@ -70,7 +70,7 @@ async function call(fn, ...args) {
 
 // ---------- faceplate ----------
 // SFP+SR, SFP+DA1, 1000SX, 1000LX, 100FX, 10GbE-LR…
-function isFiber(p) { return /sfp|xfp|qsfp|fiber|dac|(sr|lr|lrm|er|sx|lx|zx|lh|bx|fx|ex)\d*$/i.test(p.type || "") || /^Trk|^lag/i.test(p.name); }
+function isFiber(p) { return p.cage === "sfp" || /sfp|xfp|qsfp|fiber|dac|(sr|lr|lrm|er|sx|lx|zx|lh|bx|fx|ex)\d*$/i.test(p.type || "") || /^Trk|^lag/i.test(p.name); }
 
 function leds(ports, stp, big, optics) {
   const opt = Object.fromEntries((optics || []).map((o) => [o.port, o]));
@@ -683,7 +683,9 @@ function tabOverview(d, snap) {
   const f = snap.facts, st = snap.stp, sec = snap.security, set = S.settings || { cpuWarn: 80, memWarn: 90 };
   const isS = snap.family === "aos-s";
   const env = snap.env || [];
+  if (set.hardwarePhotos && f.model) setTimeout(() => frontPhoto(f.model), 0);
   return `${leds(snap.ports, st, true, snap.optics)}<div style="margin:8px 0 16px">${ledKey(snap.ports)}</div>
+  <div id="frontphoto"></div>
   <div class="grid2">
     <section class="panel"><h2>Problems on this switch</h2>
       ${d.issues?.length ? d.issues.map(issueRow).join("") : `<div class="empty" style="padding:22px"><h3>Nothing to fix</h3></div>`}</section>
@@ -715,6 +717,21 @@ function tabOverview(d, snap) {
     ${env.length ? `<section class="panel"><h2>Hardware</h2><div class="body">${env.map((e) => checkRow(e.ok, { fan: "Fan", psu: "Power supply", temp: "Temperature" }[e.kind] + " " + esc(e.name), e.status)).join("")}</div></section>` : ""}
     ${snap.errors?.length ? `<section class="panel"><h2>Collection notes</h2><div class="body faint" style="font-size:13px">${snap.errors.map(esc).join("<br>")}</div></section>` : ""}
   </div>`;
+}
+
+// The model's front panel photo from the NetBox device type library, when
+// "Show front panel photos" is on. Fetched once per model, then from disk.
+const photos = new Map();
+async function frontPhoto(model) {
+  let url = photos.get(model);
+  if (url === undefined) {
+    try { url = await window.go.main.App.HardwarePhoto(model); } catch { url = ""; }
+    photos.set(model, url);
+  }
+  const box = document.getElementById("frontphoto");
+  if (!box || !url) return;
+  box.innerHTML = `<section class="panel frontphoto"><h2>Front panel</h2><div class="body"><img src="${url}" alt="Front panel of ${esc(model)}">
+    <p class="faint">Photo: NetBox device type library (CC0)</p></div></section>`;
 }
 
 // what SwitchDesk saw when it tried the port itself
@@ -2055,6 +2072,8 @@ async function renderSettings() {
       <div class="row"><label class="f"><span>Warn above CPU %</span><input type="number" id="cw" value="${set.cpuWarn}"></label>
         <label class="f"><span>Warn above memory %</span><input type="number" id="mw" value="${set.memWarn}"></label></div>
       <label class="check" style="margin-bottom:18px"><input type="checkbox" id="is" ${set.ignoreSnmp ? "checked" : ""}> Don't flag default SNMP communities</label>
+      <label class="check" style="margin-bottom:4px"><input type="checkbox" id="hp" ${set.hardwarePhotos ? "checked" : ""}> Show front panel photos</label>
+      <p class="faint" style="font-size:12.5px;margin:0 0 18px 24px">Downloaded once per model from the NetBox device type library on GitHub.</p>
       <div style="border-top:1px solid var(--line-soft);padding-top:14px;margin-bottom:16px"><b style="font-weight:600">Automatic firmware updates</b>
         <p class="faint" style="font-size:12.5px;margin:4px 0 10px">Uses the newest image in the firmware library for each switch. SwitchDesk has to be running for this.</p>
         <label class="check" style="margin-bottom:6px"><input type="radio" name="fa" value="off" ${set.firmwareAuto === "off" ? "checked" : ""}> Off</label>
@@ -2319,7 +2338,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "" });
+    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "" });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }

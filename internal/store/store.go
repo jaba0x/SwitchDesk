@@ -82,6 +82,9 @@ type Settings struct {
 	CPUWarn         int    `json:"cpuWarn"`
 	MemWarn         int    `json:"memWarn"`
 	IgnoreSNMP      bool   `json:"ignoreSnmp"`
+	// HardwarePhotos shows the model's front panel photo on the switch page,
+	// downloaded once per model from the NetBox device type library.
+	HardwarePhotos bool `json:"hardwarePhotos"`
 	// Firmware: "off", "stage" (copy to the spare bank only) or "install"
 	// (copy, then reboot inside the maintenance window).
 	FirmwareAuto string `json:"firmwareAuto"`

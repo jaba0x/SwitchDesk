@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3
+
+- **SFP cages from the hardware.** SwitchDesk now knows which ports of each Aruba and HPE model are SFP cages, from the [NetBox device type library](https://github.com/netbox-community/devicetype-library). The faceplate draws them as SFP ports even when they're empty or hold a copper module. 108 models are in the list.
+- **Front panel photos, if you want them.** Turn on **Settings → Show front panel photos** and the switch's Overview tab shows a photo of its model, for the 68 models the library has one of. Each photo is downloaded once from GitHub and kept in the data folder. It's off by default, so SwitchDesk doesn't go online unless you ask.
+
+Suggested by [@deuce361](https://github.com/deuce361) in [#20](https://github.com/jaba0x/SwitchDesk/issues/20).
+
 ## 1.0.2
 
 - **Site filter.** Pick a site at the top of the sidebar, and the dashboard, switch list, network map, VLANs and firmware pages show only that site's switches. A VLAN change made there only reaches that site, which matters when the same VLAN ID means different things at different sites. With all sites shown, the multi-switch VLAN dialogs tag each switch with its site and warn when a change spans several. Contributed by [Arne Naessens](https://github.com/ArneNaessens) in [#19](https://github.com/jaba0x/SwitchDesk/pull/19).

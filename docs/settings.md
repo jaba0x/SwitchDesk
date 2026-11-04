@@ -22,6 +22,7 @@ Shared username and password sets. Add as many as you need and pick one per swit
 | Warn above CPU % | 80 | |
 | Warn above memory % | 90 | |
 | Don't flag default SNMP communities | off | For networks where `public` is expected. |
+| Show front panel photos | off | Shows a photo of the switch model on its Overview tab. Each photo is downloaded once from the [NetBox device type library](https://github.com/netbox-community/devicetype-library) on GitHub and kept in the data folder's `hardware` folder. Nothing is downloaded while this is off. |
 
 ### Status check
 

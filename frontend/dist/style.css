@@ -416,3 +416,7 @@ tr:hover .copyv button, .copyv button:focus-visible { opacity: 1; }
 
 /* the firmware table has no sticky action column */
 .swlist.fwlist th:last-child { position: static; box-shadow: none; background: none; }
+
+.frontphoto { margin-bottom: 16px; }
+.frontphoto img { display: block; width: 100%; max-width: 900px; height: auto; border-radius: 4px; }
+.frontphoto p { font-size: 12px; margin: 8px 0 0; }

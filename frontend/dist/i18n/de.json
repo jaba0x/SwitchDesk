@@ -983,6 +983,11 @@
     "Without the password, the saved switch passwords can't be read. SwitchDesk can start over without it: your switches, settings, config copies and map stay, but every saved password is cleared and has to be entered again under Settings → Credentials.": "Ohne das Passwort lassen sich die gespeicherten Switch-Passwörter nicht lesen. SwitchDesk kann ohne es neu beginnen: Ihre Switches, Einstellungen, Konfigurationskopien und die Karte bleiben, aber alle gespeicherten Passwörter werden gelöscht und müssen unter Einstellungen → Zugangsdaten neu eingegeben werden.",
     "You have {0}.": "Sie haben {0}.",
     "You're on the latest version ({0}).": "Sie haben die neueste Version ({0}).",
-    "Your current data will be copied to {0}.": "Ihre aktuellen Daten werden nach {0} kopiert."
+    "Your current data will be copied to {0}.": "Ihre aktuellen Daten werden nach {0} kopiert.",
+    "Show front panel photos": "Fotos der Vorderseite zeigen",
+    "Downloaded once per model from the NetBox device type library on GitHub.": "Einmal pro Modell aus der NetBox Device Type Library auf GitHub heruntergeladen.",
+    "Front panel": "Vorderseite",
+    "Photo: NetBox device type library (CC0)": "Foto: NetBox Device Type Library (CC0)",
+    "Front panel of {0}": "Vorderseite von {0}"
   }
 }

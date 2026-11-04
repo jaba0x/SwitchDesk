@@ -1,0 +1,1451 @@
+{
+"J9623A": {
+"model": "Aruba 2620-24",
+"photo": "",
+"sfp": [
+"27",
+"28"
+]
+},
+"J9624A": {
+"model": "Aruba 2620-24-PPoE+",
+"photo": "",
+"sfp": [
+"27",
+"28"
+]
+},
+"J9625A": {
+"model": "Aruba 2620-24-PoE+",
+"photo": "",
+"sfp": [
+"27",
+"28"
+]
+},
+"J9626A": {
+"model": "Aruba 2620-48",
+"photo": "",
+"sfp": [
+"51",
+"52"
+]
+},
+"J9627A": {
+"model": "Aruba 2620-48 PoE+",
+"photo": "",
+"sfp": [
+"51",
+"52"
+]
+},
+"J9726A": {
+"model": "Aruba 2920-24G",
+"photo": "",
+"sfp": []
+},
+"J9727A": {
+"model": "Aruba 2920-24G-PoE+",
+"photo": "",
+"sfp": []
+},
+"J9728A": {
+"model": "Aruba 2920-48G",
+"photo": "",
+"sfp": []
+},
+"J9729A": {
+"model": "Aruba 2920-48G-PoE+",
+"photo": "",
+"sfp": []
+},
+"J9772A": {
+"model": "Aruba 2530-48G-PoE+",
+"photo": "hpe-aruba-2530-48g-poep.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"J9773A": {
+"model": "Aruba 2530-24G-PoE+",
+"photo": "hpe-aruba-2530-24g-poep.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"J9774A": {
+"model": "Aruba 2530-8G-PoE+",
+"photo": "hpe-aruba-2530-8g-poep.front.png",
+"sfp": [
+"9",
+"10"
+]
+},
+"J9775A": {
+"model": "Aruba 2530-48G",
+"photo": "hpe-aruba-2530-48g.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"J9776A": {
+"model": "Aruba 2530-24G",
+"photo": "hpe-aruba-2530-24g.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"J9777A": {
+"model": "Aruba 2530-8G",
+"photo": "hpe-aruba-2530-8g.front.png",
+"sfp": [
+"9",
+"10"
+]
+},
+"J9778A": {
+"model": "Aruba 2530-48-PoE+",
+"photo": "hpe-aruba-2530-48-poep.front.png",
+"sfp": [
+"51",
+"52"
+]
+},
+"J9779A": {
+"model": "Aruba 2530-24-PoE+",
+"photo": "",
+"sfp": [
+"27",
+"28"
+]
+},
+"J9780A": {
+"model": "Aruba 2530-8-PoE+",
+"photo": "hpe-aruba-2530-8-poep.front.png",
+"sfp": [
+"9",
+"10"
+]
+},
+"J9781A": {
+"model": "Aruba 2530-48",
+"photo": "hpe-aruba-2530-48.front.png",
+"sfp": [
+"51",
+"52"
+]
+},
+"J9782A": {
+"model": "Aruba 2530-24",
+"photo": "hpe-aruba-2530-24.front.png",
+"sfp": [
+"27",
+"28"
+]
+},
+"J9783A": {
+"model": "Aruba 2530-8",
+"photo": "",
+"sfp": [
+"9",
+"10"
+]
+},
+"J9821A": {
+"model": "Aruba 5406R zl2",
+"photo": "hpe-aruba-5406r-zl2.front.png",
+"sfp": []
+},
+"J9822A": {
+"model": "Aruba 5412R zl2",
+"photo": "hpe-aruba-5412r-zl2.front.png",
+"sfp": []
+},
+"J9836A": {
+"model": "Aruba 2920-48G-PoE+-740W",
+"photo": "",
+"sfp": []
+},
+"J9855A": {
+"model": "Aruba 2530-48G-2SFP+",
+"photo": "",
+"sfp": [
+"49",
+"50"
+]
+},
+"JL071A": {
+"model": "Aruba 3810M 24G 1-slot Switch",
+"photo": "hpe-aruba-3810m-24g-1-slot-switch.front.png",
+"sfp": []
+},
+"JL074A": {
+"model": "Aruba 3810M 48G PoeP 1-slot",
+"photo": "hpe-aruba-3810m-48g-poep-1-slot.front.png",
+"sfp": []
+},
+"JL076A": {
+"model": "Aruba 3810M-40G-8SR",
+"photo": "",
+"sfp": []
+},
+"JL253A": {
+"model": "Aruba 2930F-24G-4SFP+",
+"photo": "hpe-aruba-2930f-24g-4sfpp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL254A": {
+"model": "Aruba 2930F-48G-4SFP+",
+"photo": "hpe-aruba-2930f-48g-4sfpp.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL255A": {
+"model": "Aruba 2930F-24G-PoE+-4SFP+",
+"photo": "hpe-aruba-2930f-24g-poep-4sfpp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL256A": {
+"model": "Aruba 2930F-48G-PoE+-4SFP+",
+"photo": "",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL258A": {
+"model": "Aruba 2930F-8G-PoE+-2SFP+",
+"photo": "hpe-aruba-2930f-8g-poep-2sfpp.front.png",
+"sfp": [
+"9",
+"10"
+]
+},
+"JL259A": {
+"model": "Aruba 2930F-24G-4SFP",
+"photo": "hpe-aruba-2930f-24g-4sfp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL261A": {
+"model": "Aruba 2930F-24G-POE+-4SFP",
+"photo": "hpe-aruba-2930f-24g-poep-4sfp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL319A": {
+"model": "Aruba 2930M-24G",
+"photo": "hpe-aruba-2930m-24g.front.png",
+"sfp": []
+},
+"JL320A": {
+"model": "Aruba 2930M-24G-PoE+",
+"photo": "",
+"sfp": []
+},
+"JL321A": {
+"model": "Aruba 2930M-48G",
+"photo": "hpe-aruba-2930m-48g.front.png",
+"sfp": []
+},
+"JL322A": {
+"model": "Aruba 2930M-48G-PoE+",
+"photo": "hpe-aruba-2930m-48g-poep.front.png",
+"sfp": []
+},
+"JL323A": {
+"model": "Aruba 2930M-40G-8SR-PoE+",
+"photo": "",
+"sfp": []
+},
+"JL324A": {
+"model": "Aruba 2930M-24SR-PoE+",
+"photo": "hpe-aruba-2930m-24sr-poep.front.png",
+"sfp": []
+},
+"JL354A": {
+"model": "Aruba 2540-24G-4SFP+",
+"photo": "hpe-aruba-2540-24g-4sfpp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL355A": {
+"model": "Aruba 2540-48G-4SFP+",
+"photo": "hpe-aruba-2540-48g-4sfpp.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL356A": {
+"model": "Aruba 2540-24G-PoE+-4SFP+",
+"photo": "hpe-aruba-2540-24g-poep-4sfpp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL357A": {
+"model": "Aruba 2540-48G-PoE+-4SFP+",
+"photo": "hpe-aruba-2540-48g-poep-4sfpp.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL375A": {
+"model": "Aruba 8400",
+"photo": "",
+"sfp": []
+},
+"JL381A": {
+"model": "Aruba 1920S-24G",
+"photo": "",
+"sfp": [
+"25",
+"26"
+]
+},
+"JL479A": {
+"model": "Aruba 8320-48XF6Q",
+"photo": "",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32",
+"33",
+"34",
+"35",
+"36",
+"37",
+"38",
+"39",
+"40",
+"41",
+"42",
+"43",
+"44",
+"45",
+"46",
+"47",
+"48",
+"49",
+"50",
+"51",
+"52",
+"53",
+"54"
+]
+},
+"JL557A": {
+"model": "Aruba 2930F-48G-PoE+-4SFP",
+"photo": "hpe-aruba-2930f-48g-poep-4sfp.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL579A": {
+"model": "Aruba 8320-32Q",
+"photo": "hpe-aruba-8320-32q.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32"
+]
+},
+"JL581A": {
+"model": "Aruba 8320-48XT6Q",
+"photo": "",
+"sfp": [
+"49",
+"50",
+"51",
+"52",
+"53",
+"54"
+]
+},
+"JL624A": {
+"model": "Aruba 8325-48Y8C Front-to-Back",
+"photo": "hpe-aruba-8325-48y8c-front-to-back.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32",
+"33",
+"34",
+"35",
+"36",
+"37",
+"38",
+"39",
+"40",
+"41",
+"42",
+"43",
+"44",
+"45",
+"46",
+"47",
+"48",
+"49",
+"50",
+"51",
+"52",
+"53",
+"54",
+"55",
+"56"
+]
+},
+"JL625A": {
+"model": "Aruba 8325-48Y8C Back-to-Front",
+"photo": "hpe-aruba-8325-48y8c-back-to-front.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32",
+"33",
+"34",
+"35",
+"36",
+"37",
+"38",
+"39",
+"40",
+"41",
+"42",
+"43",
+"44",
+"45",
+"46",
+"47",
+"48",
+"49",
+"50",
+"51",
+"52",
+"53",
+"54",
+"55",
+"56"
+]
+},
+"JL626A": {
+"model": "Aruba 8325-32C Front-to-Back",
+"photo": "hpe-aruba-8325-32c-front-to-back.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32"
+]
+},
+"JL627A": {
+"model": "Aruba 8325-32C Back-to-Front",
+"photo": "hpe-aruba-8325-32c-back-to-front.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32"
+]
+},
+"JL658A": {
+"model": "Aruba 6300M-24SFPP-4SFP56",
+"photo": "hpe-aruba-6300m-24sfpp-4sfp56.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL659A": {
+"model": "Aruba 6300M-48SR5-POE6-4SFP56",
+"photo": "",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL660A": {
+"model": "Aruba 6300M-24SR5-POE6-4SFP56",
+"photo": "",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL661A": {
+"model": "Aruba 6300M-48G-POE4-4SFP56",
+"photo": "hpe-aruba-6300m-48g-poe4-4sfp56.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL662A": {
+"model": "Aruba 6300M-24G-POE4-4SFP56",
+"photo": "hpe-aruba-6300m-24g-poe4-4sfp56.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL663A": {
+"model": "Aruba 6300M-48G-4SFP56",
+"photo": "hpe-aruba-6300m-48g-4sfp56.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL664A": {
+"model": "Aruba 6300M-24G-4SFP56",
+"photo": "hpe-aruba-6300m-24g-4sfp56.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL665A": {
+"model": "Aruba 6300F-48G-POE4-4SFP56",
+"photo": "hpe-aruba-6300f-48g-poe4-4sfp56.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL666A": {
+"model": "Aruba 6300F-24G-POE4-4SFP56",
+"photo": "hpe-aruba-6300f-24g-poe4-4sfp56.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL667A": {
+"model": "Aruba 6300F-48G-4SFP56",
+"photo": "hpe-aruba-6300f-48g-4sfp56.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL668A": {
+"model": "Aruba 6300F-24G-4SFP56",
+"photo": "hpe-aruba-6300f-24g-4sfp56.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL675A": {
+"model": "Aruba 6100-48G-POE4-4SFP+",
+"photo": "hpe-aruba-6100-48g-poe4-4sfpp.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL676A": {
+"model": "Aruba 6100-48G-4SFP+",
+"photo": "hpe-aruba-6100-48g-4sfpp.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL677A": {
+"model": "Aruba 6100-24G-POE4-4SFP+",
+"photo": "hpe-aruba-6100-24g-poe4-4sfpp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL678A": {
+"model": "Aruba 6100-24G-4SFP+",
+"photo": "hpe-aruba-6100-24g-4sfpp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL679A": {
+"model": "Aruba 6100-12G-POE4-2SFP+",
+"photo": "hpe-aruba-6100-12g-poe4-2sfpp.front.png",
+"sfp": [
+"15",
+"16"
+]
+},
+"JL680A": {
+"model": "Aruba 1930 8G",
+"photo": "",
+"sfp": [
+"9",
+"10"
+]
+},
+"JL681A": {
+"model": "Aruba 1930 8G PoE",
+"photo": "",
+"sfp": [
+"9",
+"10"
+]
+},
+"JL682A": {
+"model": "Aruba 1930 24G",
+"photo": "",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL683B": {
+"model": "Aruba 1930 24G PoE 195W",
+"photo": "",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL684B": {
+"model": "Aruba 1930 24G PoE 370W",
+"photo": "",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL685A": {
+"model": "Aruba 1930 48G",
+"photo": "hpe-aruba-1930-48g.front.jpg",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL686B": {
+"model": "Aruba 1930 48G PoE",
+"photo": "",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL693A": {
+"model": "Aruba 2930F-12G-PoE+-2SFP+",
+"photo": "hpe-aruba-2930f-12g-poep-2sfpp.front.png",
+"sfp": [
+"15",
+"16"
+]
+},
+"JL700C": {
+"model": "Aruba 8360-32Y4C Front-to-Back",
+"photo": "hpe-aruba-8360-32y4c-front-to-back.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32",
+"33",
+"34",
+"35",
+"36"
+]
+},
+"JL701C": {
+"model": "Aruba 8360-32Y4C Back-to-Front",
+"photo": "hpe-aruba-8360-32y4c-back-to-front.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32",
+"33",
+"34",
+"35",
+"36"
+]
+},
+"JL702C": {
+"model": "Aruba 8360-16Y2C Front-to-Back",
+"photo": "hpe-aruba-8360-16y2c-front-to-back.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18"
+]
+},
+"JL703C": {
+"model": "Aruba 8360-16Y2C Back-to-Front",
+"photo": "hpe-aruba-8360-16y2c-back-to-front.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18"
+]
+},
+"JL704C": {
+"model": "Aruba 8360-48Y6C Front-to-Back",
+"photo": "hpe-aruba-8360-48y6c-front-to-back.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32",
+"33",
+"34",
+"35",
+"36",
+"37",
+"38",
+"39",
+"40",
+"41",
+"42",
+"43",
+"44",
+"45",
+"46",
+"47",
+"48",
+"49",
+"50",
+"51",
+"52",
+"53",
+"54"
+]
+},
+"JL705C": {
+"model": "Aruba 8360-48Y6C Back-to-Front",
+"photo": "hpe-aruba-8360-48y6c-back-to-front.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32",
+"33",
+"34",
+"35",
+"36",
+"37",
+"38",
+"39",
+"40",
+"41",
+"42",
+"43",
+"44",
+"45",
+"46",
+"47",
+"48",
+"49",
+"50",
+"51",
+"52",
+"53",
+"54"
+]
+},
+"JL706C": {
+"model": "Aruba 8360-48XT4C Front-to-Back",
+"photo": "hpe-aruba-8360-48xt4c-front-to-back.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL707C": {
+"model": "Aruba 8360-48XT4C Back-to-Front",
+"photo": "hpe-aruba-8360-48xt4c-back-to-front.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL708C": {
+"model": "Aruba 8360-12C Front-to-Back",
+"photo": "hpe-aruba-8360-12c-front-to-back.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12"
+]
+},
+"JL709C": {
+"model": "Aruba 8360-12C Back-to-Front",
+"photo": "hpe-aruba-8360-12c-back-to-front.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12"
+]
+},
+"JL710C": {
+"model": "Aruba 8360-24XF2C Front-to-Back",
+"photo": "hpe-aruba-8360-24xf2c-front-to-back.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26"
+]
+},
+"JL711C": {
+"model": "Aruba 8360-24XF2C Back-to-Front",
+"photo": "hpe-aruba-8360-24xf2c-back-to-front.front.png",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26"
+]
+},
+"JL724A": {
+"model": "Aruba 6200F-24G-4SFP+",
+"photo": "hpe-aruba-6200f-24g-4sfpp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL724B": {
+"model": "Aruba 6200F-24G-4SFP+ B",
+"photo": "hpe-aruba-6200f-24g-4sfpp-b.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL725A": {
+"model": "Aruba 6200F-24G-POE4-4SFP+",
+"photo": "hpe-aruba-6200f-24g-poe4-4sfpp.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL726A": {
+"model": "Aruba 6200F-48G-4SFP+",
+"photo": "hpe-aruba-6200f-48g-4sfpp.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL727A": {
+"model": "Aruba 6200F-48G-POE4-4SFP+ 370w",
+"photo": "hpe-aruba-6200f-48g-poe4-4sfpp-370w.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL728A": {
+"model": "Aruba 6200F-48G-POE4-4SFP+ 740W",
+"photo": "hpe-aruba-6200f-48g-poe4-4sfpp-740w.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL805A": {
+"model": "Aruba 1960 12XGT 4SFP+",
+"photo": "",
+"sfp": [
+"13",
+"14",
+"15",
+"16"
+]
+},
+"JL806A": {
+"model": "Aruba 1960 24G 2XGT 2SFP+",
+"photo": "",
+"sfp": [
+"27",
+"28"
+]
+},
+"JL807A": {
+"model": "Aruba 1960 24G PoE 2XGT 2SFP+ 370W",
+"photo": "",
+"sfp": [
+"27",
+"28"
+]
+},
+"JL808A": {
+"model": "Aruba 1960 48G 2XGT 2SFP+",
+"photo": "",
+"sfp": [
+"51",
+"52"
+]
+},
+"JL809A": {
+"model": "Aruba 1960 48G PoE 2XGT 2SFP+ 600W",
+"photo": "",
+"sfp": [
+"51",
+"52"
+]
+},
+"JL810A": {
+"model": "Aruba 1830 8G",
+"photo": "",
+"sfp": []
+},
+"JL811A": {
+"model": "Aruba 1830 8G PoE",
+"photo": "",
+"sfp": []
+},
+"JL812A": {
+"model": "Aruba 1830 24G 2SFP",
+"photo": "",
+"sfp": [
+"25",
+"26"
+]
+},
+"JL813A": {
+"model": "Aruba 1830 24G 2SFP PoE",
+"photo": "",
+"sfp": [
+"25",
+"26"
+]
+},
+"JL814A": {
+"model": "Aruba 1830 48G 4SFP",
+"photo": "",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL815A": {
+"model": "Aruba 1830 48G 4SFP PoE",
+"photo": "",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+}
+}

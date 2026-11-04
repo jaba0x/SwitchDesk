@@ -97,6 +97,7 @@ type Port struct {
 	Description string `json:"description"`
 	Type        string `json:"type"`
 	Trunk       string `json:"trunk,omitempty"` // AOS-S trunk the port belongs to, e.g. Trk3
+	Cage        string `json:"cage,omitempty"`  // "sfp" when the model's hardware has an SFP cage here
 	// filled from the Instant On portal
 	PoEmW  int  `json:"poeMw,omitempty"`
 	Loop   bool `json:"loop,omitempty"`
