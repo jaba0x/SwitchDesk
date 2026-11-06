@@ -176,7 +176,13 @@ func openBundle(src, pass string) (*bundle, error) {
 	}
 	var invFile *zip.File
 	for _, f := range zr.File {
+		if !filepath.IsLocal(filepath.FromSlash(f.Name)) {
+			continue
+		}
 		name := path.Clean(f.Name)
+		if name != f.Name {
+			continue
+		}
 		switch {
 		case name == "manifest.json":
 			raw, err := read(f)

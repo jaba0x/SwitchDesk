@@ -92,6 +92,64 @@ func TestImportReplacesUnsafeIDs(t *testing.T) {
 	}
 }
 
+func TestOpenBundleIgnoresNonCanonicalArchivePaths(t *testing.T) {
+	root := t.TempDir()
+	s, sw := seed(t, filepath.Join(root, "source"), "10.0.0.1")
+	good := filepath.Join(root, "good.sdbak")
+	if err := s.Export(good, "correct horse", true); err != nil {
+		t.Fatal(err)
+	}
+
+	zr, err := zip.OpenReader(good)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zr.Close()
+	bad := filepath.Join(root, "bad.sdbak")
+	out, err := os.Create(bad)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zw := zip.NewWriter(out)
+	for _, f := range zr.File {
+		if f.Name == "snapshots/"+sw.ID+".json" {
+			continue
+		}
+		r, err := f.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		w, err := zw.Create(f.Name)
+		if err != nil {
+			r.Close()
+			t.Fatal(err)
+		}
+		if _, err := io.Copy(w, r); err != nil {
+			r.Close()
+			t.Fatal(err)
+		}
+		r.Close()
+	}
+	if _, err := zw.Create("snapshots/../snapshots/" + sw.ID + ".json"); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := out.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := openBundle(bad, "correct horse")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.zr.Close()
+	if _, ok := b.files["snapshots/"+sw.ID+".json"]; ok {
+		t.Fatal("non-canonical archive path was accepted")
+	}
+}
+
 // Even with a bad ID already on disk, the store never builds a path from it,
 // and Open gives the switch a fresh ID.
 func TestBadIDOnDisk(t *testing.T) {
