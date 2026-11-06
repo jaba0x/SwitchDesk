@@ -20,6 +20,8 @@ It runs on macOS and Windows and keeps all data on your own computer.
 
 **Every switch in detail.** System facts, management access, spanning tree, ports, VLANs, LLDP and CDP neighbors, logs, the running config with saved copies you can compare, and a read-only console. See [Switches](switches.md).
 
+**Where is this device?** Type a MAC address under Clients and get the switch and port it's plugged into, with the uplinks along the path told apart from the edge port. See [Switches](switches.md#clients).
+
 **VLANs without the CLI.** Click ports to make them untagged, tagged or off, see the exact commands before anything is sent, and compare VLANs across all switches in one matrix. See [VLANs](vlans.md).
 
 **A network map that draws itself.** Built from LLDP and CDP, laid out top-down from the spanning-tree root, with blocked and down links marked. See [Network map](network-map.md).

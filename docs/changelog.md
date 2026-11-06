@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.4
+
+Most of this release comes from a Reddit thread about SwitchDesk. Thanks to everyone who wrote in.
+
+- **Clients: where is this device?** A new page in the sidebar. Type a MAC address, or part of one, and SwitchDesk lists every switch that learned it, with the **edge port** first and the uplinks along the path marked with the switch they lead to. Address tables are now read with every collection.
+- **New checks.** Failed login attempts in the recent log; ports that keep flapping; local user accounts added or removed since the last collection; outdated SSH ciphers, MACs and key exchange still offered by the switch; no time zone set.
+- **Stacks.** AOS-S stacking and AOS-CX VSF members are read with their status and shown on the switch page. A missing or failed member is a critical problem, and a stack running as a chain instead of a ring is a warning.
+- **Dependencies.** golang.org/x/crypto and the other golang.org/x modules are brought up to date, and the builds use Go 1.26. A workflow keeps them current.
+
 ## 1.0.3
 
 - **SFP cages from the hardware.** SwitchDesk now knows which ports of each Aruba and HPE model are SFP cages, from the [NetBox device type library](https://github.com/netbox-community/devicetype-library). The faceplate draws them as SFP ports even when they're empty or hold a copper module. 108 models are in the list.

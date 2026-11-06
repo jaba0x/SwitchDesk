@@ -33,6 +33,7 @@ const ICON = {
   trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
   chip: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  client: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
 };
@@ -237,6 +238,7 @@ function renderSide() {
     ${item("switches", "list", "Switches")}
     ${item("map", "map", "Network map")}
     ${item("vlans", "vlan", "VLANs")}
+    ${item("clients", "client", "Clients")}
     ${item("firmware", "chip", "Firmware", fwCount ? `<span class="count info">${fwCount}</span>` : "")}
     ${item("settings", "gear", "Settings")}
     <div class="side-foot">${sd ? `${sd.online} of ${sd.total} online` : ""}${sd?.collecting ? `<br>Collecting from ${plural(sd.collecting, "switch").replace("switchs", "switches")}` : ""}
@@ -292,6 +294,7 @@ async function showRoute() {
   } else if (page === "switches") renderSwitches();
   else if (page === "map") renderMap();
   else if (page === "vlans") renderVLANs();
+  else if (page === "clients") renderClients();
   else if (page === "firmware") renderFirmware();
   else if (page === "settings") renderSettings();
   else renderDashboard();
@@ -714,6 +717,9 @@ function tabOverview(d, snap) {
       <dt>Priority</dt><dd>${esc(st.bridgePriority || "?")}${st.rootPriority ? ` <span class="faint">(root ${esc(st.rootPriority)})</span>` : ""}</dd>
       ${snap.cloud ? "" : `<dt>Topology changes</dt><dd>${st.topologyChanges}${st.lastChange ? ` <span class="faint">last ${esc(st.lastChange)}</span>` : ""}</dd>`}` : ""}
     </dl></div></section>
+    ${snap.stack ? `<section class="panel"><h2>Stack</h2><div class="body">
+      <div class="check-row"><span class="ico faint">–</span><span>${esc(snap.stack.topology || "")} ${snap.stack.topology ? "topology" : ""}${snap.stack.status ? `, ${esc(snap.stack.status.toLowerCase())}` : ""}</span></div>
+      ${snap.stack.members.map((mb) => checkRow(mb.ok, `Member ${esc(mb.id)}: ${esc(mb.status)}`, [mb.model, mb.mac].filter(Boolean).join(" · "))).join("")}</div></section>` : ""}
     ${env.length ? `<section class="panel"><h2>Hardware</h2><div class="body">${env.map((e) => checkRow(e.ok, { fan: "Fan", psu: "Power supply", temp: "Temperature" }[e.kind] + " " + esc(e.name), e.status)).join("")}</div></section>` : ""}
     ${snap.errors?.length ? `<section class="panel"><h2>Collection notes</h2><div class="body faint" style="font-size:13px">${snap.errors.map(esc).join("<br>")}</div></section>` : ""}
   </div>`;
@@ -1817,6 +1823,40 @@ function commonName(data, id) {
   const names = {};
   data.forEach((s) => { const v = (s.vlans || []).find((x) => x.id === id); if (v?.name) names[v.name] = (names[v.name] || 0) + 1; });
   return { common: Object.entries(names).sort((a, b) => b[1] - a[1])[0]?.[0] || "", names };
+}
+
+// ---------- clients: where is this MAC plugged in? ----------
+
+async function renderClients() {
+  $("#main").innerHTML = `<div class="page"><div class="head"><h1>Clients</h1>${siteSub()}</div>
+    <div class="panel" style="padding:16px 18px">
+      <div class="ifilter"><span class="searchbox">${ICON.search}<input type="text" id="macq" placeholder="MAC address, or the start or end of one" value="${esc(S.macq || "")}" autofocus></span>
+        <button class="btn" id="macgo">Find</button></div>
+      <p class="faint" style="font-size:13px;margin:10px 0 0">Every switch on the path learns a client's address. The edge port, where the client is actually plugged in, is listed first; ports that lead to another switch are marked as uplinks.</p>
+    </div>
+    <div id="macres"></div></div>`;
+  const run = async () => {
+    const q = $("#macq").value.trim();
+    S.macq = q;
+    if (q.replace(/[^0-9a-f]/gi, "").length < 4) { $("#macres").innerHTML = q ? `<p class="faint">Type at least four hex digits.</p>` : ""; return; }
+    let hits;
+    try { hits = await call("FindMAC", q) || []; } catch (e) { toast(e.message, true); return; }
+    if (S.site) { const ids = new Set(siteDash().switches.map((v) => v.id)); hits = hits.filter((h) => ids.has(h.switchId)); }
+    if (!hits.length) {
+      $("#macres").innerHTML = `<div class="panel"><div class="empty"><h3>Not found</h3><p>No switch has learned ${esc(q)}. Address tables are read with every collection, so a device that was quiet for a few minutes may have aged out.</p></div></div>`;
+      return;
+    }
+    const rows = hits.map((h) => `<tr class="${h.edge ? "edge" : ""}">
+      <td class="mono">${esc(h.mac)}</td>
+      <td><a data-go="#/switch/${h.switchId}/ports">${esc(h.switchName)}</a></td>
+      <td class="mono">${esc(h.port)}${h.portName ? ` <span class="faint">${esc(h.portName)}</span>` : ""}</td>
+      <td class="num">${esc(h.vlan || "")}</td>
+      <td>${h.edge ? `<span class="ok">Edge port</span>${h.others ? ` <span class="faint">${h.others} more on this port</span>` : ""}` : `<span class="faint">Uplink to ${esc(h.uplink)}</span>`}</td></tr>`);
+    $("#macres").innerHTML = `<div class="panel"><table><thead><tr><th>MAC address</th><th>Switch</th><th>Port</th><th class="num">VLAN</th><th>Where</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  };
+  $("#macgo").onclick = run;
+  $("#macq").addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
+  if (S.macq) run();
 }
 
 async function renderVLANs(soft) {

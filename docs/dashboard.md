@@ -31,6 +31,7 @@ Hover an LED for the port number and name, speed and VLAN.
 | Default SNMP community | `public` or `private` is configured. |
 | No manager password (AOS-S) | Anyone with access gets full rights. |
 | Fan, power supply or temperature problem | Hardware fault reported by the switch. |
+| Stack member missing or failed | A member of an AOS-S stack or an AOS-CX VSF stack isn't commander, standby or member. |
 
 ### Warnings
 
@@ -45,11 +46,16 @@ Hover an LED for the port number and name, speed and VLAN.
 | Unsaved configuration changes (AOS-S) | Changes are lost on the next reboot. |
 | High CPU or memory | Above the limits set in Settings (80% and 90% by default). |
 | Major or error events in the log | Taken from the recent log buffer. |
+| Failed login attempts | Three or more in the recent log: someone is trying passwords, or a script has a wrong one. |
+| Ports flapping | A port went down three or more times in the recent log. Usually a bad cable, transceiver or a device that keeps rebooting. |
+| Local user accounts changed | An account appeared in or disappeared from the running config since the last collection. Shown for a day. If nobody on your team did it, treat it as a break-in. |
+| Outdated SSH algorithms enabled | The SSH server still offers CBC or legacy ciphers, MD5 or SHA-1 MACs, or SHA-1 key exchange. |
+| Stack ring is broken | The stack runs as a chain, so one more failed link splits it. |
 | Data collection failed | SSH worked but reading the switch didn't. |
 
 ### Notes
 
-Blocked spanning-tree ports (normal on redundant links), no syslog server, local accounts only, and data older than six hours.
+Blocked spanning-tree ports (normal on redundant links), no syslog server, no time zone set (the clock runs on UTC), local accounts only, and data older than six hours.
 
 !!! tip
     If default SNMP communities are expected in your network, turn the check off in [Settings](settings.md).

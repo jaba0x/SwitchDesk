@@ -420,3 +420,5 @@ tr:hover .copyv button, .copyv button:focus-visible { opacity: 1; }
 .frontphoto { margin-bottom: 16px; }
 .frontphoto img { display: block; width: 100%; max-width: 900px; height: auto; border-radius: 4px; }
 .frontphoto p { font-size: 12px; margin: 8px 0 0; }
+
+tr.edge td { background: rgba(74, 222, 128, 0.06); }

@@ -11,7 +11,7 @@
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1b212b?style=flat-square&logo=windows&logoColor=white">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.23+-1b212b?style=flat-square&logo=go&logoColor=white">
   <img alt="Wails" src="https://img.shields.io/badge/Wails-v2-1b212b?style=flat-square">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.3-4cc38a?style=flat-square">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.4-4cc38a?style=flat-square">
 </p>
 
 <p align="center">
@@ -40,12 +40,12 @@ Online and offline counts, a problem list sorted by severity, and every switch d
 |---|---|
 | Reachability | Switch offline, SSH login failing, SSH host key changed |
 | Spanning tree | STP disabled, topology changes since last check, root picked by default priority, more than one root in the network |
-| Security | Telnet on, plain HTTP management on, default SNMP community, no manager password |
+| Security | Telnet on, plain HTTP management on, default SNMP community, no manager password, outdated SSH ciphers, failed login attempts, local user accounts changed |
 | Port access | Port authentication with no RADIUS server, 802.1X set on ports but off for the switch |
-| Management | No NTP, no syslog, local accounts only, unsaved config, wrong clock (Instant On) |
-| Hardware | Fan, power supply and temperature faults, high CPU or memory |
+| Management | No NTP, no syslog, no time zone, local accounts only, unsaved config, wrong clock (Instant On) |
+| Hardware | Fan, power supply and temperature faults, stack members missing, broken stack ring, high CPU or memory |
 | Optics | SFP/QSFP receive power out of range, against the optic's own levels (AOS-CX) or its recent alarms (AOS-S) |
-| Logs | Major and error events in the recent log |
+| Logs | Major and error events in the recent log, ports flapping |
 
 ### Every switch, in detail
 
@@ -54,6 +54,8 @@ Online and offline counts, a problem list sorted by severity, and every switch d
 </p>
 
 System facts, a management-access checklist, spanning tree (bridge, root, port roles and states), ports with their configured names and optical levels for SFPs, VLANs, LLDP and CDP neighbors, logs, the running config, and the raw output of every command it ran. Config copies are saved whenever the config changes, and any two can be compared side by side. A console runs `show`, `ping` and `traceroute`, and nothing else.
+
+**Clients** finds where a device is plugged in: type a MAC address and get the switch and the edge port, with the uplinks along the path told apart from it.
 
 ### VLANs without the CLI
 Create, rename and delete VLANs, and set port membership by clicking ports through untagged, tagged and off. Before anything is sent you see the exact commands. Sending stops at the first line the switch rejects, and `write memory` only runs when every line before it went through.

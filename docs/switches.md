@@ -25,7 +25,7 @@ Click a switch to open it. The header shows its address, family, model, software
 
 ![Switch overview](images/switch-overview.png){ .shot }
 
-The port faceplate, this switch's problems, system facts with CPU and memory meters, the firmware banks, a checklist of management access (SSH, Telnet, HTTP/HTTPS, SNMP, manager password, time sync, syslog, RADIUS/TACACS+), spanning-tree summary and hardware status. With **Show front panel photos** on in Settings, a photo of the model sits under the faceplate, for the models the NetBox device type library has a photo of.
+The port faceplate, this switch's problems, system facts with CPU and memory meters, the firmware banks, a checklist of management access (SSH, Telnet, HTTP/HTTPS, SNMP, manager password, time sync, syslog, RADIUS/TACACS+), spanning-tree summary, the stack members with their status (on a stacked or VSF switch) and hardware status. With **Show front panel photos** on in Settings, a photo of the model sits under the faceplate, for the models the NetBox device type library has a photo of.
 
 ### Spanning tree
 
@@ -81,3 +81,9 @@ Run `show`, `ping` and `traceroute` commands on the switch. Anything else is ref
 ### Raw output
 
 The exact output of every command SwitchDesk ran in the last reading. If something on the other tabs looks wrong, this shows what the switch actually said.
+
+## Clients
+
+**Clients** in the sidebar finds where a device is plugged in. Type a MAC address, or the start or end of one, and every switch that has learned it is listed. The **edge port**, the one the device is actually connected to, comes first; the other rows are uplinks on the switches along the path, named after the switch they lead to (from LLDP/CDP, or the trunk the port belongs to). Clicking the switch opens its Ports tab.
+
+Address tables are read with every collection, so a device that has been quiet for longer than the switch's MAC age time may be missing until it sends something.

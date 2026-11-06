@@ -91,6 +91,7 @@ password manager`;
       { protocol: "lldp", localPort: "12", sysName: "ap-lobby", portId: "eth0", mgmtIp: "10.10.40.4", capabilities: "wlan-access-point", description: "Aruba AP-505" },
     ],
     env: [{ kind: "fan", name: "Sys-1", status: "Sys-1 | Fan OK | 0", ok: true }, { kind: "psu", name: "1", status: "1 JL085A Powered", ok: true }],
+    stack: { topology: "Chain", status: "Active", members: [{ id: "1", mac: "00:1a:2b:3c:4d:01", model: "Aruba JL256A 2930F-48G-PoE+-4SFP+ Switch", status: "Commander", ok: true }, { id: "2", mac: "00:1a:2b:3c:4d:02", model: "Aruba JL256A 2930F-48G-PoE+-4SFP+ Switch", status: "Standby", ok: true }, { id: "3", mac: "00:1a:2b:3c:4d:03", model: "Aruba JL256A 2930F-48G-PoE+-4SFP+ Switch", status: "Missing", ok: false }] },
     logs: [{ severity: "W", text: "W 10/23/26 21:14:02 00077 ports: port 12 is now off-line" }, { severity: "M", text: "M 10/23/26 20:02:51 00435 ports: port 50 is Disabled by Loop Protect" }, { severity: "I", text: "I 10/23/26 19:55:10 00076 ports: port 12 is now on-line" }],
     raw: { system: "  System Name        : acc-2930-f1\n  Software revision  : WC.16.11.0015", stp: "...", config: cfg },
     runningConfig: cfg, errors: [],
@@ -155,6 +156,10 @@ password manager`;
     Unlock: async (p) => { if (p !== "password") { await new Promise((r) => setTimeout(r, 400)); throw "wrong password"; } window.__unlocked = true; },
     LockNow: async () => { window.__unlocked = false; }, SetAppPassword: async () => {}, ForgetAppPassword: async () => { window.__unlocked = true; },
     GetDashboard: async () => dash, GetSwitch: async (id) => detail(id), GetTopology: async () => topo, SaveLayout: async () => {},
+    FindMAC: async (q) => (/^(3c:?2a|.*5e$)/i.test(q) || q.length >= 6 ? [
+      { switchId: "acc1", switchName: "acc-2930-f1", port: "7", portName: "Printer 2nd floor", vlan: "20", mac: "3c:2a:f4:11:22:5e", edge: true, others: 0 },
+      { switchId: "agg1", switchName: "agg-6300-f1", port: "1/1/27", vlan: "20", mac: "3c:2a:f4:11:22:5e", uplink: "acc-2930-f1", edge: false, others: 311 },
+      { switchId: "core", switchName: "core-cx-01", port: "1/1/2", vlan: "20", mac: "3c:2a:f4:11:22:5e", uplink: "agg-6300-f1", edge: false, others: 1204 }] : []),
     GetSettings: async () => ({ language: new URLSearchParams(location.search).get("lang") || "", checkMethod: "port", firmwareAuto: "install", windowStart: "02:00", windowEnd: "05:00", pingInterval: 30, collectInterval: 15, parallel: 4, keepBackups: 20, cpuWarn: 80, memWarn: 90, hardwarePhotos: new URLSearchParams(location.search).has("hw") }),
     // the preview reads photos from a local NetBox clone at dev/hardware/, if there is one
     HardwarePhoto: async () => (/core|agg/.test(location.hash) ? "" : "hardware/hpe-aruba-2530-24g-poep.front.png"),

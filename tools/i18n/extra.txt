@@ -31,3 +31,8 @@ Instant On: VLANs changed on the switch's web page
 Expected one root per STP domain.
 trunk
 Combo and SFP ports
+The SSH server still offers {0}.
+Went down several times in the recent log: {0}.
+Added: {0}.
+Removed: {0}.
+Seen {0}.
