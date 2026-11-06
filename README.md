@@ -216,4 +216,6 @@ Built by **Jaba Macharashvili**. More of my infra, homelab and hardware projects
 
 Thanks to [Arne Naessens](https://github.com/ArneNaessens) for mass VLAN editing, port access, the site filter, the disabled-port display and the `ntp server-name` fix, and to everyone who reports issues or helps translate.
 
+SwitchDesk is released under the [MIT License](LICENSE).
+
 Built with [Wails](https://wails.io). Fonts are [IBM Plex](https://github.com/IBM/plex), under the SIL Open Font License. Port layouts and front panel photos come from the [NetBox device type library](https://github.com/netbox-community/devicetype-library) (CC0).
