@@ -2,7 +2,7 @@ module github.com/jaba0x/switchdesk
 
 go 1.26.0
 
-toolchain go1.27.3
+toolchain go1.26.10
 
 require (
 	github.com/pkg/sftp v1.13.9

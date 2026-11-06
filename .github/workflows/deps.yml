@@ -23,8 +23,9 @@ jobs:
       - name: Update modules
         run: |
           go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/sys@latest golang.org/x/term@latest golang.org/x/text@latest
-          # the newest patch release of the Go version the modules need
-          go get toolchain@latest
+          # the newest patch release of the Go line SwitchDesk builds with.
+          # Not @latest: Wails v2.10 can't build with a newer Go than 1.26.
+          go get toolchain@patch
           go mod tidy
           git --no-pager diff --stat
 
