@@ -72,6 +72,11 @@ type Security struct {
 	LogServers      []string `json:"logServers"`
 	AAA             []string `json:"aaa"`
 	ManagerPassword bool     `json:"managerPassword"`
+	Timezone        string   `json:"timezone"` // "" when the switch runs on UTC with no time zone set
+	// the algorithms the SSH server offers, from "show ip ssh" / "show ssh server"
+	SSHCiphers []string `json:"sshCiphers,omitempty"`
+	SSHMACs    []string `json:"sshMacs,omitempty"`
+	SSHKex     []string `json:"sshKex,omitempty"`
 	// What SwitchDesk saw when it tried the ports itself: "open", "closed",
 	// "filtered" or "" when not checked. These override the config guess.
 	TelnetPort string `json:"telnetPort"`
@@ -152,7 +157,30 @@ type Snapshot struct {
 	Optics []Optic `json:"optics,omitempty"` // transceivers with their optical levels
 	// PortAccess is 802.1X / MAC authentication read from the config; nil where SwitchDesk can't manage it.
 	PortAccess *PortAccess `json:"portAccess,omitempty"`
-	Web        bool        `json:"web,omitempty"` // read through the switch's web interface
+	Web        bool        `json:"web,omitempty"`   // read through the switch's web interface
+	MACs       []MACEntry  `json:"macs,omitempty"`  // the switch's MAC address table
+	Stack      *Stack      `json:"stack,omitempty"` // AOS-S stacking or AOS-CX VSF, nil on a standalone switch
+}
+
+// MACEntry is one learned address: where a client is plugged in.
+type MACEntry struct {
+	MAC  string `json:"mac"` // aa:bb:cc:dd:ee:ff
+	Port string `json:"port"`
+	VLAN string `json:"vlan"`
+}
+
+type StackMember struct {
+	ID     string `json:"id"`
+	MAC    string `json:"mac"`
+	Model  string `json:"model"`
+	Status string `json:"status"` // Commander, Standby, Member, Missing, ...
+	OK     bool   `json:"ok"`
+}
+
+type Stack struct {
+	Topology string        `json:"topology"` // Ring, Chain, ...
+	Status   string        `json:"status"`
+	Members  []StackMember `json:"members"`
 }
 
 type Note struct {

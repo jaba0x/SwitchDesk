@@ -32,6 +32,25 @@ type Status struct {
 	AuthFailed     bool      `json:"authFailed"`
 	HostKeyChanged bool      `json:"hostKeyChanged"`
 	TopologyDelta  int       `json:"topologyDelta"`
+	// local accounts that appeared or disappeared in the running config
+	// between two collections, kept for a day so the change is noticed
+	UsersAdded   []string  `json:"usersAdded,omitempty"`
+	UsersRemoved []string  `json:"usersRemoved,omitempty"`
+	UsersChanged time.Time `json:"usersChanged,omitempty"`
+}
+
+// noteUserChanges compares the local accounts of two configs.
+func noteUserChanges(st *Status, prev, snap *aruba.Snapshot) {
+	if !st.UsersChanged.IsZero() && time.Since(st.UsersChanged) > 24*time.Hour {
+		st.UsersAdded, st.UsersRemoved, st.UsersChanged = nil, nil, time.Time{}
+	}
+	if prev == nil || prev.RunningConfig == "" || snap.RunningConfig == "" {
+		return
+	}
+	added, removed := aruba.DiffUsers(aruba.ConfigUsers(prev.Family, prev.RunningConfig), aruba.ConfigUsers(snap.Family, snap.RunningConfig))
+	if len(added) > 0 || len(removed) > 0 {
+		st.UsersAdded, st.UsersRemoved, st.UsersChanged = added, removed, time.Now()
+	}
 }
 
 type Manager struct {
@@ -452,6 +471,7 @@ func (m *Manager) collect(id string) {
 	if prev != nil && prev.STP.Enabled && snap.STP.TopologyChanges > prev.STP.TopologyChanges {
 		st.TopologyDelta = snap.STP.TopologyChanges - prev.STP.TopologyChanges
 	}
+	noteUserChanges(st, prev, &snap)
 	m.snaps[id] = &snap
 	st.LastCollect = time.Now()
 	st.CollectError, st.AuthFailed, st.HostKeyChanged = "", false, false

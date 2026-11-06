@@ -253,3 +253,54 @@ func TestOpticIssues(t *testing.T) {
 		t.Fatalf("warning: %+v", warn)
 	}
 }
+
+func TestFindMACAndNewRules(t *testing.T) {
+	st, err := store.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, _ := st.SaveSwitch(store.Switch{Name: "acc", Host: "10.0.0.2", Port: 22})
+	c, _ := st.SaveSwitch(store.Switch{Name: "core", Host: "10.0.0.1", Port: 22})
+	m := New(st, nil)
+	<-m.loaded
+	accSnap := &aruba.Snapshot{Family: aruba.FamilyAOSS, Facts: aruba.Facts{Hostname: "acc", BaseMAC: "00:00:00:00:00:aa"},
+		Ports:     []aruba.Port{{Name: "5", Description: "printer"}, {Name: "48"}},
+		Neighbors: []aruba.Neighbor{{Protocol: "lldp", LocalPort: "48", SysName: "core", ChassisID: "00:00:00:00:00:cc", Capabilities: "Bridge"}},
+		MACs:      []aruba.MACEntry{{MAC: "12:34:56:78:9a:bc", Port: "5", VLAN: "10"}, {MAC: "12:34:56:78:9a:bd", Port: "48", VLAN: "10"}}}
+	coreSnap := &aruba.Snapshot{Family: aruba.FamilyAOSCX, Facts: aruba.Facts{Hostname: "core", BaseMAC: "00:00:00:00:00:cc"},
+		Ports:     []aruba.Port{{Name: "1/1/1"}},
+		Neighbors: []aruba.Neighbor{{Protocol: "lldp", LocalPort: "1/1/1", SysName: "acc", ChassisID: "00:00:00:00:00:aa", Capabilities: "Bridge"}},
+		MACs:      []aruba.MACEntry{{MAC: "12:34:56:78:9a:bc", Port: "1/1/1", VLAN: "10"}}}
+	m.mu.Lock()
+	m.snaps[a.ID], m.snaps[c.ID] = accSnap, coreSnap
+	m.status[a.ID], m.status[c.ID] = &Status{Online: true, Checked: true}, &Status{Online: true, Checked: true}
+	m.mu.Unlock()
+	hits := m.FindMAC("12:34:56:78:9A:BC")
+	if len(hits) != 2 || !hits[0].Edge || hits[0].SwitchName != "acc" || hits[0].Port != "5" || hits[0].PortName != "printer" || hits[1].Edge || hits[1].Uplink != "acc" {
+		t.Fatalf("hits = %+v", hits)
+	}
+	if h := m.FindMAC("9abd"); len(h) != 1 || h[0].Uplink != "core" {
+		t.Fatalf("suffix search = %+v", h)
+	}
+	if m.FindMAC("12") != nil {
+		t.Fatal("too short a query should give nothing")
+	}
+
+	snap := &aruba.Snapshot{Family: aruba.FamilyAOSS, Facts: aruba.Facts{Hostname: "s", CPU: -1, Memory: -1}, RunningConfig: "hostname s\n", CollectedAt: time.Now(),
+		Security: aruba.Security{SSHCiphers: []string{"aes256-ctr", "3des-cbc"}, NTPServers: []string{"x"}, LogServers: []string{"x"}, AAA: []string{"x"}, ManagerPassword: true},
+		Logs: []aruba.LogLine{{Text: "auth: Invalid user name/password on SSH session"}, {Text: "auth: Invalid user name/password on SSH session"}, {Text: "auth: Invalid user name/password on SSH session"},
+			{Text: "ports: port 7 is now off-line"}, {Text: "ports: port 7 is now off-line"}, {Text: "ports: port 7 is now off-line"}},
+		Stack: &aruba.Stack{Topology: "Chain", Members: []aruba.StackMember{{ID: "1", Status: "Commander", OK: true}, {ID: "2", Status: "Missing"}}}}
+	s := &Status{Online: true, Checked: true, UsersAdded: []string{"eve (manager)"}, UsersChanged: time.Now()}
+	want := map[string]bool{"Outdated SSH algorithms enabled": false, "No time zone set": false, "3 failed login attempts in the recent log": false, "1 port(s) flapping": false, "Local user accounts changed": false, "Stack member 2 is missing": false, "Stack ring is broken": false}
+	for _, i := range evaluate(a, s, snap, store.DefaultSettings()) {
+		if _, ok := want[i.Title]; ok {
+			want[i.Title] = true
+		}
+	}
+	for k, v := range want {
+		if !v {
+			t.Errorf("missing issue %q", k)
+		}
+	}
+}

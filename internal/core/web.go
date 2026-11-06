@@ -90,6 +90,7 @@ func (m *Manager) webRead(sw store.Switch) {
 	if prev != nil && prev.STP.Enabled && snap.STP.TopologyChanges > prev.STP.TopologyChanges {
 		st.TopologyDelta = snap.STP.TopologyChanges - prev.STP.TopologyChanges
 	}
+	noteUserChanges(st, prev, &snap)
 	m.snaps[sw.ID] = &snap
 	st.LastCollect = time.Now()
 	st.CollectError, st.AuthFailed, st.HostKeyChanged = "", false, false

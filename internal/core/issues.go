@@ -165,7 +165,18 @@ func evaluate(sw store.Switch, st *Status, snap *aruba.Snapshot, set store.Setti
 	if sec.SNMPDefault && !set.IgnoreSNMP {
 		add(Critical, "Security", "Default SNMP community in use", "Community \"public\" or \"private\" is configured.")
 	}
+	if weak := aruba.WeakSSH(sec); len(weak) > 0 {
+		fix := "On AOS-S, restrict them with ip ssh cipher and ip ssh mac."
+		if snap.Family == aruba.FamilyAOSCX {
+			fix = "On AOS-CX, restrict them with ssh ciphers, ssh macs and ssh key-exchange-algorithms."
+		}
+		add(Warning, "Security", "Outdated SSH algorithms enabled", "The SSH server still offers "+strings.Join(weak, ", ")+". "+fix)
+	}
 	if snap.RunningConfig != "" {
+		if sec.Timezone == "" && snap.Family != aruba.FamilyInstantOn {
+			fix := "Set it with: time timezone <minutes from UTC>, or clock timezone on AOS-CX."
+			add(Info, "Management", "No time zone set", "The switch's clock and log timestamps run on UTC. "+fix)
+		}
 		if len(sec.NTPServers) == 0 {
 			add(Warning, "Management", "No NTP/SNTP server", "Log timestamps and certificates depend on correct time.")
 		}
@@ -225,6 +236,41 @@ func evaluate(sw store.Switch, st *Status, snap *aruba.Snapshot, set store.Setti
 	}
 	if major > 0 {
 		add(Warning, "Logs", fmt.Sprintf("%d major/error event(s) in recent log", major), sample)
+	}
+	if n := aruba.FailedLogins(snap.Logs); n >= 3 {
+		add(Warning, "Security", fmt.Sprintf("%d failed login attempts in the recent log", n), "Someone is trying passwords on this switch, or a script has a wrong one. The log tab has the details.")
+	}
+	if flaps := aruba.PortFlaps(snap.Logs); len(flaps) > 0 {
+		var names []string
+		for p, n := range flaps {
+			if n >= 3 {
+				names = append(names, fmt.Sprintf("%s (%d×)", p, n))
+			}
+		}
+		if len(names) > 0 {
+			sort.Strings(names)
+			add(Warning, "Ports", fmt.Sprintf("%d port(s) flapping", len(names)), "Went down several times in the recent log: "+strings.Join(names, ", ")+". Usually a bad cable, transceiver or a device rebooting.")
+		}
+	}
+	if len(st.UsersAdded) > 0 || len(st.UsersRemoved) > 0 {
+		d := ""
+		if len(st.UsersAdded) > 0 {
+			d += "Added: " + strings.Join(st.UsersAdded, ", ") + ". "
+		}
+		if len(st.UsersRemoved) > 0 {
+			d += "Removed: " + strings.Join(st.UsersRemoved, ", ") + ". "
+		}
+		add(Warning, "Security", "Local user accounts changed", d+"Seen "+st.UsersChanged.Format("Jan 2 15:04")+". If nobody on your team did this, treat it as a break-in.")
+	}
+	if stk := snap.Stack; stk != nil {
+		for _, mb := range stk.Members {
+			if !mb.OK {
+				add(Critical, "Hardware", fmt.Sprintf("Stack member %s is %s", mb.ID, strings.ToLower(mb.Status)), strings.TrimSpace(mb.Model+" "+mb.MAC))
+			}
+		}
+		if len(stk.Members) > 1 && strings.EqualFold(stk.Topology, "chain") {
+			add(Warning, "Hardware", "Stack ring is broken", "The stack runs as a chain, so one more failed link splits it. Check the stacking cables.")
+		}
 	}
 	if snap.CollectedAt.Before(time.Now().Add(-6 * time.Hour)) {
 		add(Info, "SSH", "Data is more than 6 hours old", "Last collected "+snap.CollectedAt.Format("Jan 2 15:04"))

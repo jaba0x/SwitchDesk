@@ -38,6 +38,8 @@ func commandsFor(f Family) []command {
 			{key: "temp", cmd: "show environment temperature"},
 			{key: "logs", cmd: "show events -r -n 60", alt: []string{"show logging -r -n 60"}},
 			{key: "paclients", cmd: PortClientsCmd, alt: []string{"show port-access clients"}},
+			{key: "macs", cmd: "show mac-address-table", t: 60 * time.Second},
+			{key: "stack", cmd: "show vsf"},
 			{key: "config", cmd: "show running-config", t: 90 * time.Second},
 		}
 	case FamilyInstantOn:
@@ -68,6 +70,8 @@ func commandsFor(f Family) []command {
 			{key: "temp", cmd: "show system temperature"},
 			{key: "configstatus", cmd: "show config status"},
 			{key: "logs", cmd: "show logging -r", t: 40 * time.Second},
+			{key: "macs", cmd: "show mac-address", t: 60 * time.Second},
+			{key: "stack", cmd: "show stacking"},
 			{key: "config", cmd: "show running-config", t: 90 * time.Second},
 		}
 	}
@@ -198,6 +202,7 @@ func parseInto(s *Snapshot) {
 		if v := first(m, "SSH Version", "Version"); v != "" {
 			s.Security.SSHVersion = v
 		}
+		s.Security.SSHCiphers, s.Security.SSHMACs, s.Security.SSHKex = ParseSSHAlgorithms(sshOut)
 	}
 	s.VLANs = MergeVLANs(cfgVLANs, ParseVLANTable(raw["vlans"]))
 	s.Ports = ParseInterfacesBrief(raw["interfaces"])
@@ -216,6 +221,8 @@ func parseInto(s *Snapshot) {
 	s.Neighbors = append(ParseNeighbors(raw["lldp"], "lldp"), ParseNeighbors(raw["cdp"], "cdp")...)
 	s.Env = append(append(ParseEnv("fan", raw["fans"]), ParseEnv("psu", raw["psu"])...), ParseEnv("temp", raw["temp"])...)
 	s.Logs = ParseLogs(raw["logs"], 60)
+	s.MACs = ParseMACTable(raw["macs"])
+	s.Stack = ParseStack(raw["stack"])
 	s.RunningConfig = raw["config"]
 	if saved, ok := ConfigStatusSaved(raw["configstatus"]); ok {
 		s.Facts.ConfigSaved = &saved

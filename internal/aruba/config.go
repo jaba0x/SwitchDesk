@@ -76,6 +76,8 @@ func ParseConfigAOSS(cfg string) ([]VLAN, Security, bool) {
 			sec.HTTPSEnabled = true
 		case h == "no web-management plaintext":
 			sec.HTTPPlain = false
+		case strings.HasPrefix(h, "time timezone "):
+			sec.Timezone = strings.TrimPrefix(h, "time timezone ")
 		case h == "no ip ssh":
 			sec.SSHEnabled = false
 		case strings.HasPrefix(h, "ip ssh port "):
@@ -207,6 +209,8 @@ func ParseConfigCX(cfg string) ([]VLAN, Security, bool) {
 					}
 				}
 			}
+		case strings.HasPrefix(h, "clock timezone "):
+			sec.Timezone = strings.TrimPrefix(h, "clock timezone ")
 		case strings.HasPrefix(h, "ssh server vrf"):
 			sec.SSHEnabled = true
 		case strings.HasPrefix(h, "ssh server port"):
