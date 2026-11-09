@@ -31,7 +31,7 @@ Hover an LED for the port number and name, speed and VLAN.
 | Default SNMP community | `public` or `private` is configured. |
 | No manager password (AOS-S) | Anyone with access gets full rights. |
 | Fan, power supply or temperature problem | Hardware fault reported by the switch. |
-| Stack member missing or failed | A member of an AOS-S stack or an AOS-CX VSF stack isn't commander, standby or member. |
+| Stack member missing or failed | A member of an AOS-S stack or an AOS-CX VSF stack isn't conductor (commander), standby or member. |
 
 ### Warnings
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- **Fixed: standalone AOS-CX switches reported as a broken stack.** On AOS-CX 10.10 and later a switch calls itself the "conductor" (older releases said "master"), and a standalone 6100, 6200 or 6300 still lists itself as VSF member 1. SwitchDesk 1.0.4 took both as a failed stack member. A single member is now treated as no stack, and conductor counts as healthy. Reported by [@ThomasWestbeld](https://github.com/ThomasWestbeld) in [#22](https://github.com/jaba0x/SwitchDesk/issues/22).
+- **Backup imports** skip archive entries with non-canonical paths.
+
 ## 1.0.4
 
 Most of this release comes from a Reddit thread about SwitchDesk. Thanks to everyone who wrote in.

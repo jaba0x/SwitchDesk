@@ -230,7 +230,10 @@ func isNumber(s string) bool {
 // ---------- stack members ----------
 
 var stackMemberMAC = regexp.MustCompile(`^(?:[0-9a-f]{6}-[0-9a-f]{6}|(?:[0-9a-f]{2}:){5}[0-9a-f]{2})$`)
-var stackOKStatus = map[string]bool{"commander": true, "standby": true, "member": true, "master": true, "active": true}
+
+// Healthy member roles. AOS-CX 10.10 and later say "conductor" where older
+// releases said "master" (issue #22).
+var stackOKStatus = map[string]bool{"commander": true, "conductor": true, "master": true, "standby": true, "member": true, "active": true, "ready": true}
 var stackTwoWord = map[string]bool{"version mismatch": true, "not joined": true, "not present": true, "fabric mismatch": true, "in progress": true}
 
 // ParseStack reads AOS-S "show stacking" or AOS-CX "show vsf". It returns nil
@@ -274,7 +277,9 @@ func ParseStack(out string) *Stack {
 		}
 		st.Members = append(st.Members, StackMember{ID: fs[0], MAC: NormMAC(fs[1]), Model: strings.Join(rest, " "), Status: status, OK: stackOKStatus[strings.ToLower(status)]})
 	}
-	if len(st.Members) == 0 {
+	// A standalone AOS-CX switch still answers "show vsf" with itself as
+	// member 1 (the 6100, 6200 and 6300 all do), so one member is no stack.
+	if len(st.Members) < 2 {
 		return nil
 	}
 	return st

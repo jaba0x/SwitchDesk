@@ -2,6 +2,7 @@ package aruba
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -146,6 +147,24 @@ Mbr ID  Mac Address        Type           Status
 	st = ParseStack(cx)
 	if st == nil || st.Topology != "Ring" || len(st.Members) != 2 || st.Members[1].Status != "Standby" || st.Members[0].Model != "JL668A" {
 		t.Fatalf("got %+v", st)
+	}
+	// issue #22: a standalone 6100 on 10.16 lists itself as the conductor
+	alone := `MAC Address   : 12:34:56:78:9a:bc
+Secondary     :
+Topology      : Standalone
+Status        : No Split
+Split Detection Method : None
+
+Mbr ID  Mac Address        Type           Status
+------  -----------------  -------------  ---------------
+1       12:34:56:78:9a:bc  JL677A         Conductor
+`
+	if st := ParseStack(alone); st != nil {
+		t.Fatalf("standalone switch read as a stack: %+v", st)
+	}
+	two := strings.Replace(alone, "1       12:34:56:78:9a:bc  JL677A         Conductor\n", "1       12:34:56:78:9a:bc  JL677A         Conductor\n2       12:34:56:78:9a:bd  JL677A         Standby\n", 1)
+	if st := ParseStack(two); st == nil || len(st.Members) != 2 || !st.Members[0].OK || !st.Members[1].OK {
+		t.Fatalf("conductor/standby stack: %+v", st)
 	}
 	if ParseStack("Stacking is disabled.") != nil || ParseStack("") != nil {
 		t.Fatal("standalone should give nil")
