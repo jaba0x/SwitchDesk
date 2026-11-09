@@ -695,6 +695,7 @@ func (s *Store) LoadSnapshotLite(id string) (aruba.Snapshot, bool) {
 	if err != nil || json.Unmarshal(b, &w) != nil {
 		return aruba.Snapshot{}, false
 	}
+	w.Snapshot.Stack = w.Snapshot.Stack.Normalize()
 	return w.Snapshot, true
 }
 
@@ -722,6 +723,7 @@ func (s *Store) LoadSnapshot(id string) (aruba.Snapshot, bool) {
 	if err != nil || json.Unmarshal(b, &snap) != nil {
 		return snap, false
 	}
+	snap.Stack = snap.Stack.Normalize()
 	return snap, true
 }
 

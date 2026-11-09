@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.6
+
+- **Fixed: the false stack warning from 1.0.4 stayed until the next collection.** Snapshots saved by 1.0.4 still carried the old verdict, so a standalone AOS-CX switch kept showing "Stack member 1 is conductor" after updating, until it was collected again. Saved snapshots are now re-checked when SwitchDesk starts ([#22](https://github.com/jaba0x/SwitchDesk/issues/22)).
+
 ## 1.0.5
 
 - **Fixed: standalone AOS-CX switches reported as a broken stack.** On AOS-CX 10.10 and later a switch calls itself the "conductor" (older releases said "master"), and a standalone 6100, 6200 or 6300 still lists itself as VSF member 1. SwitchDesk 1.0.4 took both as a failed stack member. A single member is now treated as no stack, and conductor counts as healthy. Reported by [@ThomasWestbeld](https://github.com/ThomasWestbeld) in [#22](https://github.com/jaba0x/SwitchDesk/issues/22).

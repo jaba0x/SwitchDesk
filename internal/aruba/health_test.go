@@ -166,6 +166,15 @@ Mbr ID  Mac Address        Type           Status
 	if st := ParseStack(two); st == nil || len(st.Members) != 2 || !st.Members[0].OK || !st.Members[1].OK {
 		t.Fatalf("conductor/standby stack: %+v", st)
 	}
+	// a snapshot saved by 1.0.4: one conductor marked as failed
+	old := &Stack{Topology: "Standalone", Members: []StackMember{{ID: "1", Status: "Conductor", OK: false}}}
+	if old.Normalize() != nil {
+		t.Fatal("saved single-member stack should normalize to nil")
+	}
+	pair := &Stack{Members: []StackMember{{ID: "1", Status: "Conductor"}, {ID: "2", Status: "Missing", OK: true}}}
+	if n := pair.Normalize(); n == nil || !n.Members[0].OK || n.Members[1].OK {
+		t.Fatalf("normalize = %+v", n)
+	}
 	if ParseStack("Stacking is disabled.") != nil || ParseStack("") != nil {
 		t.Fatal("standalone should give nil")
 	}

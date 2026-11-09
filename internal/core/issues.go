@@ -262,7 +262,7 @@ func evaluate(sw store.Switch, st *Status, snap *aruba.Snapshot, set store.Setti
 		}
 		add(Warning, "Security", "Local user accounts changed", d+"Seen "+st.UsersChanged.Format("Jan 2 15:04")+". If nobody on your team did this, treat it as a break-in.")
 	}
-	if stk := snap.Stack; stk != nil {
+	if stk := snap.Stack.Normalize(); stk != nil {
 		for _, mb := range stk.Members {
 			if !mb.OK {
 				add(Critical, "Hardware", fmt.Sprintf("Stack member %s is %s", mb.ID, strings.ToLower(mb.Status)), strings.TrimSpace(mb.Model+" "+mb.MAC))

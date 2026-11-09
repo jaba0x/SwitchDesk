@@ -236,6 +236,19 @@ var stackMemberMAC = regexp.MustCompile(`^(?:[0-9a-f]{6}-[0-9a-f]{6}|(?:[0-9a-f]
 var stackOKStatus = map[string]bool{"commander": true, "conductor": true, "master": true, "standby": true, "member": true, "active": true, "ready": true}
 var stackTwoWord = map[string]bool{"version mismatch": true, "not joined": true, "not present": true, "fabric mismatch": true, "in progress": true}
 
+// Normalize re-reads the stack against the current rules, so a snapshot saved
+// by an older version doesn't keep a wrong verdict until the next collection:
+// a single member is no stack, and each member's health follows its role.
+func (st *Stack) Normalize() *Stack {
+	if st == nil || len(st.Members) < 2 {
+		return nil
+	}
+	for i := range st.Members {
+		st.Members[i].OK = stackOKStatus[strings.ToLower(st.Members[i].Status)]
+	}
+	return st
+}
+
 // ParseStack reads AOS-S "show stacking" or AOS-CX "show vsf". It returns nil
 // for a standalone switch.
 func ParseStack(out string) *Stack {
