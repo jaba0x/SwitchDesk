@@ -33,6 +33,7 @@ const ICON = {
   trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
   chip: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  cols: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>',
   globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
   term: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg>',
   client: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
@@ -170,6 +171,18 @@ function siteOnly(list) {
 }
 // The site field: free text, plus a list of the sites already in use. A
 // <datalist> would do this, but the app's web view doesn't open its arrow.
+// Interface font and size from Settings (issue #25). Defaults change nothing.
+const UI_FONTS = { "": null, system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', verdana: 'Verdana, Tahoma, sans-serif' };
+function applyLook(set) {
+  const r = document.documentElement;
+  const f = UI_FONTS[set?.uiFont || ""];
+  f ? r.style.setProperty("--sans", f) : r.style.removeProperty("--sans");
+  const z = +set?.uiScale || 100;
+  document.body.style.zoom = z === 100 ? "" : String(z / 100);
+}
+
+function splitTags(s) { return s.split(",").map((t) => t.trim()).filter(Boolean); }
+
 function siteField(value) {
   const has = siteNames().length > 0;
   return `<label class="f"><span>Site</span><div class="combo"><input type="text" id="ss" value="${esc(value)}" autocomplete="off" spellcheck="false" ${has ? `placeholder="Pick a site or type a new one"` : ""}>
@@ -438,8 +451,71 @@ function switchMatches(v, q) {
   if (!q) return true;
   const s = v.summary || {};
   const state = v.disabled ? "disabled paused" : !v.status.checked ? "unknown" : v.status.online ? "online up" : "offline down";
-  const hay = [v.name, v.host, v.site, v.notes, s.hostname, s.model, s.software, s.family, s.serial, state, v.worst, v.worst ? "problem" : ""].join(" ").toLowerCase();
+  const hay = [v.name, v.host, v.site, v.notes, ...(v.tags || []).map((t) => t + " #" + t), s.hostname, s.model, s.software, s.bootRom, s.family, s.serial, state, v.worst, v.worst ? "problem" : ""].join(" ").toLowerCase();
   return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+}
+
+// ---------- switch list columns (issue #25) ----------
+
+// IPv4 sorts by number (10.0.0.20 before 10.0.0.132); anything else by text.
+function ipKey(h) {
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(h || "");
+  return m ? m.slice(1).reduce((n, x) => n * 256 + +x, 0) : h || "";
+}
+const sevRank = { critical: 3, warning: 2, info: 1, note: 0 };
+const tagChips = (v) => (v.tags || []).map((t) => `<span class="tag link nogo" onclick="event.stopPropagation();filterTag(this.textContent)">${esc(t)}</span>`).join(" ");
+const SW_COLS = [
+  { id: "name", label: "Name", key: (v) => (v.name || v.summary?.hostname || "").toLowerCase(), cell: (v) => `${esc(v.name || v.summary?.hostname || "")}${v.disabled ? ` <span class="tag">disabled</span>` : ""}` },
+  { id: "host", label: "Address", cls: "mono", key: (v) => ipKey(v.host), cell: (v) => esc(v.host) },
+  { id: "site", label: "Site", key: (v) => v.site || "", cell: (v) => esc(v.site) },
+  { id: "tags", label: "Tags", key: (v) => (v.tags || []).join(" ").toLowerCase(), cell: tagChips },
+  { id: "model", label: "Model", cls: "ellip", key: (v) => v.summary?.model || "", cell: (v) => `<span title="${esc(v.summary?.family || "")}">${esc(v.summary?.model || "")}</span>` },
+  { id: "serial", label: "Serial", cls: "mono", hidden: true, key: (v) => v.summary?.serial || "", cell: (v) => esc(v.summary?.serial || "") },
+  { id: "software", label: "Software", cls: "mono", key: (v) => v.summary?.software || "", cell: (v) => esc(v.summary?.software || "") },
+  { id: "bootrom", label: "Boot ROM", cls: "mono", hidden: true, key: (v) => v.summary?.bootRom || "", cell: (v) => esc(v.summary?.bootRom || "") },
+  { id: "firmware", label: "Firmware", key: (v) => (canUpdate(v) ? 0 : 1), cell: (v) => fwCell(v) },
+  { id: "cpu", label: "CPU", num: true, cls: "num", key: (v) => (v.summary?.cpu >= 0 ? v.summary.cpu : ""), cell: (v) => (v.summary?.cpu >= 0 ? v.summary.cpu + "%" : "") },
+  { id: "mem", label: "Mem", num: true, cls: "num", key: (v) => (v.summary?.memory >= 0 ? v.summary.memory : ""), cell: (v) => (v.summary?.memory >= 0 ? v.summary.memory + "%" : "") },
+  { id: "ports", label: "Ports up", num: true, cls: "num", key: (v) => (v.summary?.portsTotal ? v.summary.portsUp : ""), cell: (v) => (v.summary?.portsTotal ? portsUp(v.summary) : "") },
+  { id: "uptime", label: "Uptime", hidden: true, key: (v) => v.summary?.uptime || "", cell: (v) => esc(v.summary?.uptime || "") },
+  { id: "stp", label: "STP", key: (v) => v.summary?.stpRole || "", cell: (v) => esc(v.summary?.stpRole || "") },
+  { id: "problems", label: "Problems", key: (v) => (v.worst ? sevRank[v.worst] * 1000 + (v.issues || []).length : ""), cell: (v) => (v.worst ? `<span class="sev ${v.worst}">${(v.issues || []).length}</span>` : "") },
+  { id: "collected", label: "Collected", cls: "faint", key: (v) => (v.summary?.collectedAt ? -new Date(v.summary.collectedAt).getTime() : ""), cell: (v) => (v.status.collecting ? "now" : ago(v.summary?.collectedAt)) },
+];
+
+function swPref(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } }
+function swSave(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+function swHidden() { return new Set(swPref("sd-cols-hidden", SW_COLS.filter((c) => c.hidden).map((c) => c.id))); }
+function swSort() { return swPref("sd-cols-sort", { col: "name", dir: 1 }); }
+function sortSwitches(id) {
+  const s = swSort();
+  swSave("sd-cols-sort", s.col === id ? { col: id, dir: -s.dir } : { col: id, dir: 1 });
+  renderSwitches(true);
+}
+function filterTag(t) {
+  S.query = "#" + t.toLowerCase();
+  if (location.hash !== "#/switches") { location.hash = "#/switches"; return; }
+  if ($("#swsearch")) $("#swsearch").value = S.query;
+  renderSwitches(true);
+}
+function openColumns(btn) {
+  document.querySelector(".colmenu")?.remove();
+  const hidden = swHidden();
+  const menu = document.createElement("div");
+  menu.className = "colmenu";
+  menu.innerHTML = `<div class="faint" style="font-size:12px;padding:4px 8px 6px">Columns</div>` + SW_COLS.map((c) => `<label class="check"><input type="checkbox" data-col="${c.id}" ${hidden.has(c.id) ? "" : "checked"}> ${esc(c.label)}</label>`).join("") +
+    `<div style="padding:6px 8px 2px"><a onclick="swSave('sd-cols-hidden', SW_COLS.filter((c) => c.hidden).map((c) => c.id));document.querySelector('.colmenu')?.remove();renderSwitches(true)">Reset</a></div>`;
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect();
+  menu.style.top = r.bottom + 4 + "px";
+  menu.style.left = Math.max(8, r.right - menu.offsetWidth) + "px";
+  menu.addEventListener("change", (e) => {
+    const h = swHidden();
+    e.target.checked ? h.delete(e.target.dataset.col) : h.add(e.target.dataset.col);
+    swSave("sd-cols-hidden", [...h]);
+    renderSwitches(true);
+  });
+  setTimeout(() => document.addEventListener("click", function off(e) { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener("click", off); } }), 0);
 }
 
 S.sel = new Set();
@@ -452,19 +528,28 @@ function renderSwitches(soft) {
   const ids = new Set(d.switches.map((v) => v.id));
   for (const id of S.sel) if (!ids.has(id)) S.sel.delete(id);
   const allOn = rows.length > 0 && rows.every((v) => S.sel.has(v.id));
+  const cols = SW_COLS.filter((c) => !swHidden().has(c.id));
+  const srt = swSort();
+  const sc = SW_COLS.find((c) => c.id === srt.col);
+  if (sc) {
+    const k = sc.key;
+    rows.sort((a, b) => {
+      const x = k(a), y = k(b);
+      const e = x === "" || x === undefined || x === null, f = y === "" || y === undefined || y === null;
+      if (e !== f) return e ? 1 : -1; // empty values last either way
+      const r = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: "base" });
+      return srt.dir * r;
+    });
+  }
+  const th = (c) => `<th class="${c.num ? "num " : ""}sortable${srt.col === c.id ? " sorted" : ""}" onclick="sortSwitches('${c.id}')" title="Sort by ${esc(c.label)}">${esc(c.label)}${srt.col === c.id ? `<span class="arrow">${srt.dir > 0 ? "▲" : "▼"}</span>` : ""}</th>`;
   const table = `<table class="swlist"><thead><tr>
       <th class="cb nogo"><input type="checkbox" title="Select all shown" ${allOn ? "checked" : ""} onchange="selectAll(this.checked)"></th>
-      <th></th><th>Name</th><th>Address</th><th>Site</th><th>Model</th><th>Software</th><th>Firmware</th><th class="num">CPU</th><th class="num">Mem</th><th class="num">Ports up</th><th>STP</th><th>Problems</th><th>Collected</th><th></th></tr></thead><tbody>
+      <th></th>${cols.map(th).join("")}<th></th></tr></thead><tbody>
     ${rows.map((v) => {
-      const s = v.summary || {};
       return `<tr class="click${v.disabled ? " off" : ""}${S.sel.has(v.id) ? " picked" : ""}" data-go="#/switch/${v.id}">
       <td class="cb nogo"><input type="checkbox" ${S.sel.has(v.id) ? "checked" : ""} onchange="toggleSel('${v.id}', this.checked)"></td>
       <td>${v.disabled ? `<span class="dot" title="Disabled"></span>` : statusDot(v)}</td>
-      <td>${esc(v.name || s.hostname || "")}${v.disabled ? ` <span class="tag">disabled</span>` : ""}</td><td class="mono">${esc(v.host)}</td><td>${esc(v.site)}</td>
-      <td title="${esc(s.family || "")}">${esc(s.model || "")}</td><td class="mono">${esc(s.software || "")}</td><td>${fwCell(v)}</td>
-      <td class="num">${s.cpu >= 0 && s.cpu !== undefined ? s.cpu + "%" : ""}</td><td class="num">${s.memory >= 0 && s.memory !== undefined ? s.memory + "%" : ""}</td>
-      <td class="num">${s.portsTotal ? portsUp(s) : ""}</td><td>${esc(s.stpRole || "")}</td>
-      <td>${v.worst ? `<span class="sev ${v.worst}">${(v.issues || []).length}</span>` : ""}</td><td class="faint">${v.status.collecting ? "now" : ago(s.collectedAt)}</td>
+      ${cols.map((c) => `<td${c.cls ? ` class="${c.cls}"` : ""}>${c.cell(v)}</td>`).join("")}
       <td class="acts nogo">${v.cloud ? `<span class="ib" style="visibility:hidden">${ICON.globe}</span>` : `<button class="ib" title="Open the web interface" onclick="openWeb('${v.id}')">${ICON.globe}</button>`}${v.cloud || v.web ? `<span class="ib" style="visibility:hidden">${ICON.term}</span>` : `<button class="ib" title="Open in your SSH client" onclick="openSSH('${v.id}')">${ICON.term}</button>`}${canUpdate(v) ? `<button class="ib" title="Update firmware to ${esc(v.firmware.available)}" onclick="openUpgradeDialog(['${v.id}'])">${ICON.up}</button>` : `<span class="ib" style="visibility:hidden">${ICON.up}</span>`}<button class="ib" title="${v.disabled ? "Enable" : "Disable"}" onclick="setDisabled(['${v.id}'], ${!v.disabled})">${v.disabled ? ICON.play : ICON.pause}</button><button class="ib danger" title="Delete" onclick="deleteSwitches(['${v.id}'])">${ICON.trash}</button></td></tr>`;
     }).join("")}</tbody></table>
     ${rows.length ? "" : `<div class="empty">No switches match “${esc(S.query)}”. <a onclick="clearSearch()">Clear search</a></div>`}`;
@@ -485,7 +570,8 @@ function renderSwitches(soft) {
   }
   $("#main").innerHTML = `<div class="page">
     <div class="head"><h1>Switches</h1>${siteSub()}<span class="sub" id="swcount">${counts}</span><span class="grow"></span>
-      <span class="searchbox">${ICON.search}<input type="text" id="swsearch" placeholder="Search switches  /" value="${esc(S.query)}" oninput="S.query=this.value;renderSwitches(true)" title="Name, address, site, model or software. Also: online, offline, disabled, problem"></span>
+      <span class="searchbox">${ICON.search}<input type="text" id="swsearch" placeholder="Search switches  /" value="${esc(S.query)}" oninput="S.query=this.value;renderSwitches(true)" title="Name, address, site, tag, model or software. Also: online, offline, disabled, problem"></span>
+      <button class="btn" title="Choose columns" onclick="event.stopPropagation();openColumns(this)">${ICON.cols}Columns</button>
       <button class="btn" onclick="openBulkModal()">Add many</button>
       <button class="btn primary" onclick="openSwitchModal()">${ICON.plus}Add switch</button></div>
     <div id="selbar">${bar}</div>
@@ -1579,6 +1665,7 @@ async function openSwitchModal(sw, mode) {
       <label class="f"><span>Switch type</span><select id="sf">${SWITCH_TYPES.map(([k, l]) => `<option value="${k}" ${k === (web ? "instant-on" : e.family || "auto") ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <div id="newcred" style="display:none" class="row"><label class="f"><span>Username</span><input type="text" id="cu" value="admin"></label><label class="f"><span>Password</span><input type="password" id="cp"></label></div>
     ${siteField(sw ? e.site || "" : S.site && S.site !== NO_SITE ? S.site : "")}
+    <label class="f"><span>Tags <span class="faint">(comma separated, such as core, access, building A)</span></span><input type="text" id="st" value="${esc((e.tags || []).join(", "))}"></label>
     <label class="f"><span>Notes</span><input type="text" id="so" value="${esc(e.notes || "")}"></label>
     <div id="smsg"></div></div>
     <div class="foot">${sw ? `<button class="btn danger" id="sdel">Remove</button>` : ""}<span class="grow"></span><button class="btn" id="stest">Test connection</button><button class="btn" data-close>Cancel</button><button class="btn primary" id="ssave">${sw ? "Save" : "Add switch"}</button></div>`);
@@ -1609,7 +1696,7 @@ async function openSwitchModal(sw, mode) {
       toggle();
       cid = c.id;
     }
-    return { ...(sw || {}), host: $("#sh", m).value.trim(), port: +$("#sp", m).value || (web ? 443 : 22), name: $("#sn", m).value.trim(), credentialId: cid, family: web ? "instant-on" : $("#sf", m).value, web, site: $("#ss", m).value.trim(), notes: $("#so", m).value.trim() };
+    return { ...(sw || {}), host: $("#sh", m).value.trim(), port: +$("#sp", m).value || (web ? 443 : 22), name: $("#sn", m).value.trim(), credentialId: cid, family: web ? "instant-on" : $("#sf", m).value, web, site: $("#ss", m).value.trim(), tags: splitTags($("#st", m).value), notes: $("#so", m).value.trim() };
   };
   $("#stest", m).onclick = async () => {
     const b = $("#stest", m);
@@ -1718,11 +1805,12 @@ async function openCloudEdit(sw) {
     <p class="muted" style="font-size:13px;margin-top:0">Read from the Instant On portal: site <b>${esc(sw.cloud.siteName)}</b>, device <span class="mono">${esc(sw.cloud.deviceId)}</span>.</p>
     <label class="f"><span>Name <span class="faint">(optional, the portal name is used otherwise)</span></span><input type="text" id="en" value="${esc(sw.name || "")}"></label>
     <label class="f"><span>Instant On account</span><select id="ec">${credOptions(sw.credentialId, "instanton").replace(/<option value="__new">.*?<\/option>/, "")}</select></label>
+    <label class="f"><span>Tags <span class="faint">(comma separated)</span></span><input type="text" id="et" value="${esc((sw.tags || []).join(", "))}"></label>
     <label class="f"><span>Notes</span><input type="text" id="eo" value="${esc(sw.notes || "")}"></label><div id="emsg"></div></div>
     <div class="foot"><button class="btn danger" id="edel">Remove</button><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="esave">Save</button></div>`);
   $("#esave", m).onclick = async () => {
     try {
-      await call("SaveSwitch", { ...sw, name: $("#en", m).value.trim(), credentialId: $("#ec", m).value, notes: $("#eo", m).value.trim() });
+      await call("SaveSwitch", { ...sw, name: $("#en", m).value.trim(), credentialId: $("#ec", m).value, tags: splitTags($("#et", m).value), notes: $("#eo", m).value.trim() });
       closeModal();
       toast("Saved");
       loadDetail(sw.id);
@@ -1845,7 +1933,9 @@ function openWeb(id) {
   const v = (S.dash?.switches || []).find((x) => x.id === id) || (S.detail?.id === id ? S.detail : null);
   if (!v || !v.host) return;
   const host = v.host.includes(":") && !v.host.startsWith("[") ? `[${v.host}]` : v.host;
-  const scheme = v.web && v.port === 80 ? "http" : "https";
+  // what SwitchDesk saw on the switch: HTTPS on, or only plain HTTP (issue #25)
+  const seen = v.summary?.webScheme;
+  const scheme = v.web ? (v.port === 80 ? "http" : "https") : seen || "https";
   const port = v.web && v.port && v.port !== 80 && v.port !== 443 ? ":" + v.port : "";
   openURL(`${scheme}://${host}${port}/`);
 }
@@ -2183,6 +2273,12 @@ async function renderSettings() {
       <label class="f" id="sshcw" style="margin-bottom:4px;${sshPick(set) === "custom" ? "" : "display:none"}"><span>Command</span><input type="text" id="sshc" class="mono" value="${esc(set.sshCommand || "")}" placeholder="putty.exe -ssh {dest} -P {port}"></label>
       <p class="faint mono" id="sshhint" style="font-size:12px;margin:0 0 4px"></p>
       <p class="faint" style="font-size:12.5px;margin:0 0 18px">{host}, {port}, {user}, {dest} (user@host), {url} (ssh://…) and {name} are filled in for each switch. The password is never passed on.</p>
+      <div class="row"><label class="f"><span>Interface font</span><select id="uif" onchange="applyLook({uiFont:this.value,uiScale:$('#uiz').value})">
+          <option value="" ${!set.uiFont ? "selected" : ""}>IBM Plex Sans (default)</option>
+          <option value="system" ${set.uiFont === "system" ? "selected" : ""}>This computer's font</option>
+          <option value="verdana" ${set.uiFont === "verdana" ? "selected" : ""}>Verdana (wide, easy to read)</option></select></label>
+        <label class="f"><span>Interface size</span><select id="uiz" onchange="applyLook({uiFont:$('#uif').value,uiScale:this.value})">
+          ${[90, 100, 110, 125, 150].map((z) => `<option value="${z}" ${(+set.uiScale || 100) === z ? "selected" : ""}>${z}%${z === 100 ? " (default)" : ""}</option>`).join("")}</select></label></div>
       <div style="border-top:1px solid var(--line-soft);padding-top:14px;margin-bottom:16px"><b style="font-weight:600">Automatic firmware updates</b>
         <p class="faint" style="font-size:12.5px;margin:4px 0 10px">Uses the newest image in the firmware library for each switch. SwitchDesk has to be running for this.</p>
         <label class="check" style="margin-bottom:6px"><input type="radio" name="fa" value="off" ${set.firmwareAuto === "off" ? "checked" : ""}> Off</label>
@@ -2448,7 +2544,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim() });
+    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }
@@ -2558,6 +2654,7 @@ async function start() {
   }
   // the language first, so even the lock screen is in it
   S.settings = await call("GetSettings").catch(() => ({}));
+  applyLook(S.settings);
   await I18N.use(S.settings.language || "", api).catch(() => {});
   // optional app password: nothing is loaded before it's entered
   const lock = await call("AppLock").catch(() => null);

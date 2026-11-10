@@ -135,6 +135,7 @@ func ParseSystem(text string) Facts {
 	f.BaseMAC = first(m, "Base MAC Addr", "Base MAC Address")
 	f.Software = first(m, "Software revision", "ArubaOS-CX Version", "AOS-CX Version", "Software Version", "Description")
 	f.Uptime = first(m, "Up Time", "Uptime")
+	f.BootROM = first(m, "ROM Version", "ServiceOS Version", "Boot ROM Version", "Primary Boot ROM Version")
 	f.Location = first(m, "System Location", "Location")
 	f.Contact = first(m, "System Contact", "Contact")
 	if v := first(m, "CPU Util (%)", "CPU Util", "CPU Utilization (%)"); v != "" {

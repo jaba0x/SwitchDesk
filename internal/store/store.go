@@ -29,6 +29,7 @@ type Switch struct {
 	Family       aruba.Family `json:"family"`
 	CredentialID string       `json:"credentialId"`
 	Site         string       `json:"site"`
+	Tags         []string     `json:"tags,omitempty"` // free labels such as core, access, building-a (issue #25)
 	Notes        string       `json:"notes"`
 	HostKey      string       `json:"hostKey"`
 	// CertFP pins the switch's HTTPS certificate (AOS-CX REST, Instant On
@@ -101,6 +102,10 @@ type Settings struct {
 	// {port}, {user}, {dest}, {url} and {name} filled in.
 	SSHClient  string `json:"sshClient"`
 	SSHCommand string `json:"sshCommand"`
+	// UIFont and UIScale change how the interface looks: "" (IBM Plex Sans),
+	// "system" or "verdana"; a size in percent, 0 meaning 100.
+	UIFont  string `json:"uiFont"`
+	UIScale int    `json:"uiScale"`
 }
 
 func DefaultSettings() Settings {
@@ -333,6 +338,7 @@ func (s *Store) SaveSwitch(sw Switch) (Switch, error) {
 			}
 		}
 	}
+	sw.Tags = NormalizeTags(sw.Tags)
 	if sw.ID == "" {
 		sw.ID = NewID()
 		sw.CreatedAt = time.Now()
@@ -815,4 +821,23 @@ func (s *Store) ReadBackup(id, name string) (string, error) {
 	}
 	b, err := os.ReadFile(filepath.Join(s.dir, "backups", id, name))
 	return string(b), err
+}
+
+// NormalizeTags trims and de-duplicates tags, keeping their order and the
+// way they were written; "Core" and "core" are the same tag.
+func NormalizeTags(in []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, t := range in {
+		t = strings.Join(strings.Fields(t), " ")
+		if t == "" || len(t) > 40 || seen[strings.ToLower(t)] {
+			continue
+		}
+		seen[strings.ToLower(t)] = true
+		out = append(out, t)
+		if len(out) == 20 {
+			break
+		}
+	}
+	return out
 }

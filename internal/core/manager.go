@@ -541,19 +541,23 @@ func (m *Manager) ClearAuthFailure(id string) {
 // ---------- views ----------
 
 type Summary struct {
-	Family      string    `json:"family"`
-	Hostname    string    `json:"hostname"`
-	Model       string    `json:"model"`
-	Software    string    `json:"software"`
-	Serial      string    `json:"serial"`
-	Uptime      string    `json:"uptime"`
-	CPU         int       `json:"cpu"`
-	Memory      int       `json:"memory"`
-	VLANs       int       `json:"vlans"`
-	PortsUp     int       `json:"portsUp"`
-	PortsTotal  int       `json:"portsTotal"`
-	Neighbors   int       `json:"neighbors"`
-	STPRole     string    `json:"stpRole"`
+	Family     string `json:"family"`
+	Hostname   string `json:"hostname"`
+	Model      string `json:"model"`
+	Software   string `json:"software"`
+	Serial     string `json:"serial"`
+	Uptime     string `json:"uptime"`
+	CPU        int    `json:"cpu"`
+	Memory     int    `json:"memory"`
+	VLANs      int    `json:"vlans"`
+	PortsUp    int    `json:"portsUp"`
+	PortsTotal int    `json:"portsTotal"`
+	Neighbors  int    `json:"neighbors"`
+	STPRole    string `json:"stpRole"`
+	BootROM    string `json:"bootRom,omitempty"`
+	// WebScheme is how the switch's web interface answers: "https", "http",
+	// or "" when SwitchDesk doesn't know (issue #25).
+	WebScheme   string    `json:"webScheme,omitempty"`
 	Ports       []PortLED `json:"ports"`
 	CollectedAt time.Time `json:"collectedAt"`
 }
@@ -604,7 +608,14 @@ func summarize(snap *aruba.Snapshot) *Summary {
 	}
 	s := &Summary{Family: snap.Family.Label(), Hostname: snap.Facts.Hostname, Model: snap.Facts.Model, Software: snap.Facts.Software,
 		Serial: snap.Facts.Serial, Uptime: snap.Facts.Uptime, CPU: snap.Facts.CPU, Memory: snap.Facts.Memory,
-		VLANs: len(snap.VLANs), Neighbors: len(snap.Neighbors), CollectedAt: snap.CollectedAt}
+		VLANs: len(snap.VLANs), Neighbors: len(snap.Neighbors), CollectedAt: snap.CollectedAt, BootROM: snap.Facts.BootROM}
+	sec := snap.Security
+	switch {
+	case sec.HTTPSEnabled:
+		s.WebScheme = "https"
+	case sec.HTTPPlain || sec.HTTPPort == "open":
+		s.WebScheme = "http"
+	}
 	cages := aruba.SFPCages(snap)
 	blocking := map[string]bool{}
 	for _, p := range snap.STP.Ports {

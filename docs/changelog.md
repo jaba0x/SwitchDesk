@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.12
+
+- **Sort the switch list by any column.** Click a header; click again to reverse. Addresses sort by number, so `10.0.0.20` comes before `10.0.0.132`.
+- **Choose the columns.** A **Columns** button above the list shows or hides each column. New optional columns: Serial, **Boot ROM** (the AOS-S ROM version or the AOS-CX ServiceOS version) and Uptime.
+- **Tags.** Give switches your own labels, such as core, access or building A, in their Edit dialog. Tags show in the list, are searchable, and clicking one shows only those switches, ready to select for a bulk action.
+- **Interface font and size** in Settings, for readability on different screens.
+- **Fixed: the Web button opened HTTPS on switches that only serve plain HTTP.** It now uses what the switch has on.
+- **Fixed: "No time zone set" on switches that are right to run on UTC.** A switch without a time zone runs on UTC, which is correct in the UK, Ireland, Portugal or Iceland, so the note now only appears when your computer isn't on UTC/GMT.
+
+The first five come from [@JasonZhang0320](https://github.com/JasonZhang0320) in [#25](https://github.com/jaba0x/SwitchDesk/issues/25), the time zone fix from [@mattgrimley](https://github.com/mattgrimley) in [#24](https://github.com/jaba0x/SwitchDesk/issues/24).
+
 ## 1.0.11
 
 - **Clients lists every device.** The Clients page now opens with all learned MAC addresses, once each, at the port they're plugged into, with how many switches saw them on the way. Type to filter by address, switch, port, description or VLAN; click an address for its full path.

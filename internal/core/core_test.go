@@ -298,6 +298,9 @@ func TestFindMACAndNewRules(t *testing.T) {
 		Logs: []aruba.LogLine{{Text: "auth: Invalid user name/password on SSH session"}, {Text: "auth: Invalid user name/password on SSH session"}, {Text: "auth: Invalid user name/password on SSH session"},
 			{Text: "ports: port 7 is now off-line"}, {Text: "ports: port 7 is now off-line"}, {Text: "ports: port 7 is now off-line"}},
 		Stack: &aruba.Stack{Topology: "Chain", Members: []aruba.StackMember{{ID: "1", Status: "Commander", OK: true}, {ID: "2", Status: "Missing"}}}}
+	was := localIsUTC
+	defer func() { localIsUTC = was }()
+	localIsUTC = func() bool { return false }
 	s := &Status{Online: true, Checked: true, UsersAdded: []string{"eve (manager)"}, UsersChanged: time.Now()}
 	want := map[string]bool{"Outdated SSH algorithms enabled": false, "No time zone set": false, "3 failed login attempts in the recent log": false, "1 port(s) flapping": false, "Local user accounts changed": false, "Stack member 2 is missing": false, "Stack ring is broken": false}
 	for _, i := range evaluate(a, s, snap, store.DefaultSettings()) {
@@ -309,5 +312,31 @@ func TestFindMACAndNewRules(t *testing.T) {
 		if !v {
 			t.Errorf("missing issue %q", k)
 		}
+	}
+}
+
+// Issue #24: a switch without a time zone runs on UTC, which is right in
+// London, so there's nothing to note when this computer is on UTC/GMT.
+func TestNoTimeZoneNoteOnUTC(t *testing.T) {
+	was := localIsUTC
+	defer func() { localIsUTC = was }()
+	sw := store.Switch{ID: "x", Name: "x"}
+	snap := &aruba.Snapshot{Family: aruba.FamilyAOSS, Facts: aruba.Facts{CPU: -1, Memory: -1}, RunningConfig: "hostname x\n", CollectedAt: time.Now()}
+	st := &Status{Online: true, Checked: true}
+	has := func() bool {
+		for _, i := range evaluate(sw, st, snap, store.DefaultSettings()) {
+			if i.Title == "No time zone set" {
+				return true
+			}
+		}
+		return false
+	}
+	localIsUTC = func() bool { return true }
+	if has() {
+		t.Fatal("noted on a computer in GMT")
+	}
+	localIsUTC = func() bool { return false }
+	if !has() {
+		t.Fatal("not noted on a computer outside UTC")
 	}
 }

@@ -564,3 +564,13 @@ func TestCopyImageRejectsUnsafeValues(t *testing.T) {
 		t.Error("accepted a vrf with a newline")
 	}
 }
+
+func TestBootROM(t *testing.T) {
+	if f := ParseSystem("  ROM Version        : WC.16.01.0008        Serial Number      : SG12345678\n"); f.BootROM != "WC.16.01.0008" {
+		t.Fatalf("AOS-S boot ROM = %q", f.BootROM)
+	}
+	cx := "Vendor                   : Aruba\nProduct Name             : JL668A 6300F 24G\nServiceOS Version        : FL.01.14.0002\nBIOS Version             : FL.01.0001\n"
+	if f := ParseSystem(cx); f.BootROM != "FL.01.14.0002" {
+		t.Fatalf("AOS-CX ServiceOS = %q", f.BootROM)
+	}
+}

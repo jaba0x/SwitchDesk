@@ -55,7 +55,7 @@ Hover an LED for the port number and name, speed and VLAN.
 
 ### Notes
 
-Blocked spanning-tree ports (normal on redundant links), no syslog server, no time zone set (the clock runs on UTC), local accounts only, and data older than six hours.
+Blocked spanning-tree ports (normal on redundant links), no syslog server, no time zone set (the clock runs on UTC; only noted when your computer isn't on UTC or GMT itself), local accounts only, and data older than six hours.
 
 !!! tip
     If default SNMP communities are expected in your network, turn the check off in [Settings](settings.md).

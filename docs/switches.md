@@ -4,9 +4,13 @@
 
 ![Switch list](images/switches.png){ .shot }
 
-Every switch with its address, site, model, software, firmware status, CPU and memory, ports up, spanning-tree role, problem count and when it was last read.
+Every switch with its address, site, tags, model, software, firmware status, CPU and memory, ports up, spanning-tree role, problem count and when it was last read.
 
-**Search** matches name, address, site, model, software and serial, and also states: `online`, `offline`, `disabled`, `problem`. Words combine, so `acc offline` finds offline switches with "acc" in their name. Press ++slash++ to jump to the box.
+**Sort** by clicking any column header; click again to reverse. Addresses sort by number, so `10.0.0.20` comes before `10.0.0.132`. **Columns** above the list chooses which columns are shown; Serial, Boot ROM and Uptime are off until you turn them on. Both choices are remembered.
+
+**Tags** are your own labels for switches, such as `core`, `access` or `building A`. Add them in a switch's **Edit** dialog, separated by commas. Click a tag in the list to show only the switches that have it, then select them all for a bulk action.
+
+**Search** matches name, address, site, tags, model, software, boot ROM and serial, and also states: `online`, `offline`, `disabled`, `problem`. Words combine, so `acc offline` finds offline switches with "acc" in their name. Press ++slash++ to jump to the box.
 
 **Select switches** with the checkboxes (the header one selects everything shown). A bar appears with actions for all of them:
 
@@ -15,7 +19,7 @@ Every switch with its address, site, model, software, firmware status, CPU and m
 - **Disable** pauses them: no checks, no SSH, no alerts. They keep their last data and stay greyed out until you **Enable** them again. Handy for a switch that's being replaced or is on the bench.
 - **Delete** removes them from SwitchDesk with their saved configs. Nothing on the switch itself changes.
 
-The small buttons at the end of each row do the same for a single switch: update (when there's something newer), disable or enable, and delete.
+The small buttons at the end of each row open the switch's web interface or an SSH session, and do the same for a single switch: update (when there's something newer), disable or enable, and delete.
 
 ## The switch page
 

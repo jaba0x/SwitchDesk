@@ -361,6 +361,12 @@ func (a *App) DeleteCredential(id string) error { return a.st.DeleteCredential(i
 func (a *App) GetSettings() store.Settings { return a.st.Settings() }
 
 func (a *App) SaveSettings(s store.Settings) error {
+	if s.UIScale != 0 && (s.UIScale < 80 || s.UIScale > 175) {
+		s.UIScale = 100
+	}
+	if s.UIFont != "" && s.UIFont != "system" && s.UIFont != "verdana" {
+		s.UIFont = ""
+	}
 	err := a.st.SaveSettings(s)
 	a.emit("")
 	return err

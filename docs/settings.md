@@ -24,6 +24,8 @@ Shared username and password sets. Add as many as you need and pick one per swit
 | Don't flag default SNMP communities | off | For networks where `public` is expected. |
 | Show front panel photos | off | Shows a photo of the switch model on its Overview tab. Each photo is downloaded once from the [NetBox device type library](https://github.com/netbox-community/devicetype-library) on GitHub and kept in the data folder's `hardware` folder. Nothing is downloaded while this is off. |
 | SSH client | Automatic | The program the **SSH** button on each switch opens: this computer's terminal, one of the clients SwitchDesk knows (marked when it isn't installed), or a custom command. See [Opening a switch in your SSH client](switches.md#opening-a-switch-in-your-ssh-client). |
+| Interface font | IBM Plex Sans | The font of the interface: IBM Plex Sans, this computer's own font, or Verdana. Switch output stays in a fixed-width font. |
+| Interface size | 100% | Makes everything larger or smaller, from 90% to 150%, for high-resolution or small screens. |
 
 ### Status check
 

@@ -173,7 +173,9 @@ func evaluate(sw store.Switch, st *Status, snap *aruba.Snapshot, set store.Setti
 		add(Warning, "Security", "Outdated SSH algorithms enabled", "The SSH server still offers "+strings.Join(weak, ", ")+". "+fix)
 	}
 	if snap.RunningConfig != "" {
-		if sec.Timezone == "" && snap.Family != aruba.FamilyInstantOn {
+		// No time zone line means UTC. That's only worth a note when this
+		// computer isn't on UTC/GMT itself (issue #24: right for London).
+		if sec.Timezone == "" && snap.Family != aruba.FamilyInstantOn && !localIsUTC() {
 			fix := "Set it with: time timezone <minutes from UTC>, or clock timezone on AOS-CX."
 			add(Info, "Management", "No time zone set", "The switch's clock and log timestamps run on UTC. "+fix)
 		}
@@ -405,4 +407,16 @@ func opticIssues(snap *aruba.Snapshot, add func(sev Severity, cat, title, detail
 	if len(warn) > 0 {
 		add(Warning, "Optics", fmt.Sprintf("Optical power warning on %d port(s)", len(warn)), strings.Join(warn, "; ")+tip)
 	}
+}
+
+// localIsUTC says whether this computer's time zone is UTC or GMT for part
+// of the year (London, Lisbon, Reykjavik...).
+var localIsUTC = func() bool {
+	y := time.Now().Year()
+	for _, m := range []time.Month{time.January, time.July} {
+		if _, off := time.Date(y, m, 1, 12, 0, 0, 0, time.Local).Zone(); off == 0 {
+			return true
+		}
+	}
+	return false
 }

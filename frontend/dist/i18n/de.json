@@ -1050,6 +1050,20 @@
     "{0} of {1} addresses": "{0} von {1} Adressen",
     "Type at least four hex digits of the address.": "Mindestens vier Hex-Ziffern der Adresse eingeben.",
     "No switch has learned {0}.": "Kein Switch hat {0} gelernt.",
-    "Path of {0}": "Pfad von {0}"
+    "Path of {0}": "Pfad von {0}",
+    "Columns": "Spalten",
+    "Choose columns": "Spalten wählen",
+    "Reset": "Zurücksetzen",
+    "Tags": "Tags",
+    "Boot ROM": "Boot-ROM",
+    "Sort by {0}": "Nach {0} sortieren",
+    "(comma separated, such as core, access, building A)": "(durch Komma getrennt, z. B. core, access, Gebäude A)",
+    "(comma separated)": "(durch Komma getrennt)",
+    "Interface font": "Schrift der Oberfläche",
+    "Interface size": "Größe der Oberfläche",
+    "IBM Plex Sans (default)": "IBM Plex Sans (Standard)",
+    "This computer's font": "Schrift dieses Computers",
+    "Verdana (wide, easy to read)": "Verdana (breit, gut lesbar)",
+    "Name, address, site, tag, model or software. Also: online, offline, disabled, problem": "Name, Adresse, Standort, Tag, Modell oder Software. Außerdem: online, offline, disabled, problem"
   }
 }

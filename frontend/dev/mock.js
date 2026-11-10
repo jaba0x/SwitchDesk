@@ -28,6 +28,7 @@
       id: s.id, name: s.name, host: s.host, port: 22, family: "auto", credentialId: "c1", site: "HQ",
       status: { online: !s.offline, checked: true, latencyMs: s.offline ? 0 : 2 + (s.host.length % 5), since: mins(s.offline ? 47 : 3000), collecting: false, lastCollect: mins(4) },
       summary: s.offline ? { family: "AOS-S", hostname: s.name, model: "JL256A 2930F-48G-PoE+-4SFP+", software: "WC.16.11.0015", ports: [], collectedAt: mins(300) } : { family: s.fam, hostname: s.name, model: s.model, software: s.sw, serial: "SG" + s.id.toUpperCase() + "123", uptime: "41 days", cpu: s.id === "acc2" ? 37 : 6, memory: 31, vlans: 6, portsUp: s.p.filter((x) => x.up).length, portsTotal: s.p.length, neighbors: 3, stpRole: s.role, collectedAt: mins(4), ports: s.p },
+      tags: { core: ["Core", "Datacenter"], agg1: ["Distribution"], acc1: ["Access", "Building A"], acc2: ["Access", "Building A"] }[s.id] || ["Access"],
       issues, worst: issues[0]?.severity || "", disabled: false,
       firmware: s.offline ? {} : (() => {
         const run = s.sw && /^[A-Z]{2}\./.test(s.sw) ? s.sw : "";

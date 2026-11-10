@@ -343,7 +343,7 @@ dl.kv dd { margin: 0; user-select: text; word-break: break-word; }
 .plate.off { opacity: .55; }
 #swtable { overflow-x: auto; }
 .swlist td { white-space: nowrap; vertical-align: middle; }
-.swlist td:nth-child(7) { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.swlist td.ellip { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 .swlist td.acts, .swlist th:last-child { position: sticky; right: 0; background: var(--panel); box-shadow: -8px 0 8px -8px rgba(0,0,0,.4); }
 .swlist tr.picked td.acts { background: #262f3f; }
 .swlist tr.click:hover td.acts { background: #262e3b; }
@@ -422,3 +422,14 @@ tr:hover .copyv button, .copyv button:focus-visible { opacity: 1; }
 .frontphoto p { font-size: 12px; margin: 8px 0 0; }
 
 tr.edge td { background: rgba(74, 222, 128, 0.06); }
+
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover, th.sorted { color: var(--text); }
+th .arrow { font-size: 9px; margin-left: 4px; opacity: .8; }
+.tag.link { cursor: pointer; }
+.tag.link:hover { color: var(--text); border-color: var(--line); }
+.colmenu { position: fixed; z-index: 60; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 4px; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.colmenu .check { display: flex; gap: 8px; align-items: center; padding: 4px 8px; margin: 0; font-size: 13px; cursor: pointer; }
+.colmenu .check:hover { background: var(--panel-2); border-radius: 4px; }
+#swtable { overflow-x: auto; }
+.swlist td, .swlist th { white-space: nowrap; }

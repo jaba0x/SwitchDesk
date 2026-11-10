@@ -145,8 +145,16 @@ func Collect(ctx context.Context, r Runner, f Family, versionOut string) Snapsho
 func parseInto(s *Snapshot) {
 	raw := s.Raw
 	s.Facts = ParseSystem(raw["system"])
-	if v := ParseSystem(raw["version"]); s.Facts.Software == "" {
-		s.Facts.Software = v.Software
+	if v := ParseSystem(raw["version"]); s.Facts.Software == "" || s.Facts.BootROM == "" {
+		if s.Facts.Software == "" {
+			s.Facts.Software = v.Software
+		}
+		if s.Facts.BootROM == "" {
+			s.Facts.BootROM = v.BootROM
+		}
+	}
+	if s.Facts.BootROM == "" {
+		s.Facts.BootROM = first(parseKV(raw["images"]), "Primary Boot ROM Version", "Boot ROM Version")
 	}
 	if s.Facts.Software == "" {
 		s.Facts.Software = versionLine(raw["version"])

@@ -35,6 +35,7 @@ type Facts struct {
 	Location    string `json:"location"`
 	Contact     string `json:"contact"`
 	ConfigSaved *bool  `json:"configSaved,omitempty"`
+	BootROM     string `json:"bootRom,omitempty"` // AOS-S ROM version, AOS-CX ServiceOS version
 }
 
 type STPPort struct {
