@@ -1037,6 +1037,19 @@
     "{0} (not found)": "{0} (nicht gefunden)",
     "(not found)": "(nicht gefunden)",
     "Open the switch's web interface in your browser": "Weboberfläche des Switches im Browser öffnen",
-    "Open the web interface": "Weboberfläche öffnen"
+    "Open the web interface": "Weboberfläche öffnen",
+    "Filter by MAC address, switch, port or VLAN": "Nach MAC-Adresse, Switch, Port oder VLAN filtern",
+    "Find path": "Pfad finden",
+    "Each device is listed once, at the port it's plugged into. Every switch on the way learns its address too: click an address, or type one and press Find path, to see them all.": "Jedes Gerät steht einmal da, an dem Port, an dem es steckt. Jeder Switch auf dem Weg lernt die Adresse ebenfalls: Adresse anklicken oder eingeben und „Pfad finden“ drücken, um alle zu sehen.",
+    "Reading the address tables…": "Adresstabellen werden gelesen…",
+    "No addresses yet": "Noch keine Adressen",
+    "Address tables are read with every collection. Collect your switches once and the devices behind them show up here.": "Adresstabellen werden bei jeder Abfrage gelesen. Einmal abfragen, dann erscheinen die Geräte hier.",
+    "Seen on": "Gesehen auf",
+    "Switches that learned this address": "Switches, die diese Adresse gelernt haben",
+    "Showing {0} of {1} addresses. Type to narrow the list.": "{0} von {1} Adressen. Zum Eingrenzen tippen.",
+    "{0} of {1} addresses": "{0} von {1} Adressen",
+    "Type at least four hex digits of the address.": "Mindestens vier Hex-Ziffern der Adresse eingeben.",
+    "No switch has learned {0}.": "Kein Switch hat {0} gelernt.",
+    "Path of {0}": "Pfad von {0}"
   }
 }

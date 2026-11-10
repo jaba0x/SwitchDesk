@@ -282,6 +282,13 @@ func TestFindMACAndNewRules(t *testing.T) {
 	if h := m.FindMAC("9abd"); len(h) != 1 || h[0].Uplink != "core" {
 		t.Fatalf("suffix search = %+v", h)
 	}
+	all := m.Clients()
+	if len(all) != 2 || all[0].MAC != "12:34:56:78:9a:bc" || !all[0].Edge || all[0].Seen != 2 || all[0].SwitchName != "acc" || all[1].MAC != "12:34:56:78:9a:bd" {
+		t.Fatalf("clients = %+v", all)
+	}
+	if !portLess("1/1/2", "1/1/10") || portLess("1/1/10", "1/1/2") || !portLess("5", "48") {
+		t.Fatal("port order")
+	}
 	if m.FindMAC("12") != nil {
 		t.Fatal("too short a query should give nothing")
 	}

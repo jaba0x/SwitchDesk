@@ -2,6 +2,7 @@ package core
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -31,6 +32,59 @@ func (m *Manager) FindMAC(query string) []MACHit {
 	if len(q) < 4 {
 		return nil
 	}
+	return m.macHits(func(bare string) bool {
+		return strings.HasPrefix(bare, q) || strings.HasSuffix(bare, q) || (len(q) >= 6 && strings.Contains(bare, q))
+	}, 200)
+}
+
+// ClientList is every address in the switches' tables, once, at the port
+// the client is plugged into. Seen counts the switches that learned it.
+type ClientEntry struct {
+	MACHit
+	Seen int `json:"seen"`
+}
+
+// Clients lists every learned MAC address once, with the edge port where
+// there is one. Addresses only seen on uplinks (a client behind a switch
+// SwitchDesk doesn't manage) keep their best uplink row.
+func (m *Manager) Clients() []ClientEntry {
+	hits := m.macHits(func(string) bool { return true }, 200000)
+	var out []ClientEntry
+	for i := 0; i < len(hits); {
+		j := i
+		for j < len(hits) && hits[j].MAC == hits[i].MAC {
+			j++
+		}
+		out = append(out, ClientEntry{MACHit: hits[i], Seen: j - i})
+		i = j
+	}
+	sort.SliceStable(out, func(a, b int) bool {
+		if out[a].SwitchName != out[b].SwitchName {
+			return out[a].SwitchName < out[b].SwitchName
+		}
+		return portLess(out[a].Port, out[b].Port)
+	})
+	return out
+}
+
+// portLess orders 1/1/2 before 1/1/10.
+func portLess(a, b string) bool {
+	pa, pb := strings.FieldsFunc(a, func(r rune) bool { return r == '/' }), strings.FieldsFunc(b, func(r rune) bool { return r == '/' })
+	for i := 0; i < len(pa) && i < len(pb); i++ {
+		if pa[i] == pb[i] {
+			continue
+		}
+		na, ea := strconv.Atoi(pa[i])
+		nb, eb := strconv.Atoi(pb[i])
+		if ea == nil && eb == nil {
+			return na < nb
+		}
+		return pa[i] < pb[i]
+	}
+	return len(pa) < len(pb)
+}
+
+func (m *Manager) macHits(match func(bare string) bool, limit int) []MACHit {
 	_, infos, _, _ := m.views()
 	topo := buildTopology(infos, nil, false)
 	// switch id + local port -> the switch at the other end
@@ -77,8 +131,7 @@ func (m *Manager) FindMAC(query string) []MACHit {
 			}
 		}
 		for _, e := range in.snap.MACs {
-			bare := strings.ReplaceAll(e.MAC, ":", "")
-			if !(strings.HasPrefix(bare, q) || strings.HasSuffix(bare, q) || (len(q) >= 6 && strings.Contains(bare, q))) {
+			if !match(strings.ReplaceAll(e.MAC, ":", "")) {
 				continue
 			}
 			h := MACHit{SwitchID: in.sw.ID, SwitchName: names[in.sw.ID], Port: e.Port, PortName: portName[e.Port], VLAN: e.VLAN, MAC: e.MAC, Others: perPort[e.Port] - 1}
@@ -93,7 +146,7 @@ func (m *Manager) FindMAC(query string) []MACHit {
 			}
 			h.Edge = h.Uplink == ""
 			hits = append(hits, h)
-			if len(hits) >= 200 {
+			if len(hits) >= limit {
 				break
 			}
 		}

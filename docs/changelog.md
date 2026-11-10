@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.11
+
+- **Clients lists every device.** The Clients page now opens with all learned MAC addresses, once each, at the port they're plugged into, with how many switches saw them on the way. Type to filter by address, switch, port, description or VLAN; click an address for its full path.
+
 ## 1.0.10
 
 - **Settings uses the whole window**, like the other pages, instead of a narrow column.

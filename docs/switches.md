@@ -84,7 +84,9 @@ The exact output of every command SwitchDesk ran in the last reading. If somethi
 
 ## Clients
 
-**Clients** in the sidebar finds where a device is plugged in. Type a MAC address, or the start or end of one, and every switch that has learned it is listed. The **edge port**, the one the device is actually connected to, comes first; the other rows are uplinks on the switches along the path, named after the switch they lead to (from LLDP/CDP, or the trunk the port belongs to). Clicking the switch opens its Ports tab.
+**Clients** in the sidebar lists every device the switches have learned, once each, at the port it's plugged into: its MAC address, the switch, the port with its description, the VLAN, and how many switches learned the address on the way. Edge ports are highlighted; an address only seen on uplinks (a device behind a switch SwitchDesk doesn't manage) shows the uplink it was found on.
+
+Type in the box to filter by MAC address (any part of it), switch name, port, port description or VLAN. Click an address, or type one and press **Find path**, to see every switch that learned it, with the edge port first and each uplink named after the switch it leads to.
 
 Address tables are read with every collection, so a device that has been quiet for longer than the switch's MAC age time may be missing until it sends something.
 

@@ -164,6 +164,12 @@ password manager`;
       { id: "mobaxterm", name: "MobaXterm", found: true, command: '"C:\\Program Files (x86)\\Mobatek\\MobaXterm\\MobaXterm.exe" -newtab "ssh -p {port} {dest}"' },
       { id: "securecrt", name: "SecureCRT", found: false, command: "SecureCRT.exe /T /SSH2 /P {port} /L {user} {host}" },
       { id: "openssh", name: "OpenSSH (console window)", found: true, command: "ssh.exe -p {port} {dest}" }],
+    Clients: async () => {
+      const sw = [["acc1", "acc-2930-f1"], ["acc2", "acc-2930-f2"], ["agg1", "agg-6300-f1"]];
+      const names = ["Printer 2nd floor", "AP lobby", "", "Reception PC", "", "Camera gate", "", "Phone 214", ""];
+      return Array.from({ length: 64 }, (_, i) => { const s = sw[i % 3]; const port = s[0] === "agg1" ? "1/1/" + (i % 24 + 1) : String(i % 24 + 1);
+        return { switchId: s[0], switchName: s[1], port, portName: names[i % 9], vlan: String([10, 20, 30][i % 3]), mac: "3c:2a:f4:11:" + (16 + i).toString(16).padStart(2, "0") + ":5e", edge: i % 11 !== 0, uplink: i % 11 === 0 ? "core-cx-01" : "", others: i % 5 === 0 ? 2 : 0, seen: 2 + (i % 3) }; });
+    },
     FindMAC: async (q) => (/^(3c:?2a|.*5e$)/i.test(q) || q.length >= 6 ? [
       { switchId: "acc1", switchName: "acc-2930-f1", port: "7", portName: "Printer 2nd floor", vlan: "20", mac: "3c:2a:f4:11:22:5e", edge: true, others: 0 },
       { switchId: "agg1", switchName: "agg-6300-f1", port: "1/1/27", vlan: "20", mac: "3c:2a:f4:11:22:5e", uplink: "acc-2930-f1", edge: false, others: 311 },

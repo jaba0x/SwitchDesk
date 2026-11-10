@@ -168,6 +168,9 @@ func (a *App) GetTopology(showEndpoints bool) core.Topology { return a.mgr.Topol
 // FindMAC finds the switch and port a client is plugged into, by MAC address or part of one.
 func (a *App) FindMAC(query string) []core.MACHit { return a.mgr.FindMAC(query) }
 
+// Clients lists every learned MAC address once, at the port the client is plugged into.
+func (a *App) Clients() []core.ClientEntry { return a.mgr.Clients() }
+
 func (a *App) SaveLayout(l map[string]store.Point) error { return a.st.SaveLayout(l) }
 
 // ---- inventory ----

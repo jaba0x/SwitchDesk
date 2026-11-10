@@ -1859,33 +1859,65 @@ async function openSSH(id) {
 async function renderClients() {
   $("#main").innerHTML = `<div class="page"><div class="head"><h1>Clients</h1>${siteSub()}</div>
     <div class="panel" style="padding:16px 18px">
-      <div class="ifilter"><span class="searchbox">${ICON.search}<input type="text" id="macq" placeholder="MAC address, or the start or end of one" value="${esc(S.macq || "")}" autofocus></span>
-        <button class="btn" id="macgo">Find</button></div>
-      <p class="faint" style="font-size:13px;margin:10px 0 0">Every switch on the path learns a client's address. The edge port, where the client is actually plugged in, is listed first; ports that lead to another switch are marked as uplinks.</p>
+      <div class="ifilter"><span class="searchbox">${ICON.search}<input type="text" id="macq" placeholder="Filter by MAC address, switch, port or VLAN" value="${esc(S.macq || "")}" autofocus></span>
+        <button class="btn" id="macgo">Find path</button></div>
+      <p class="faint" style="font-size:13px;margin:10px 0 0">Each device is listed once, at the port it's plugged into. Every switch on the way learns its address too: click an address, or type one and press Find path, to see them all.</p>
     </div>
-    <div id="macres"></div></div>`;
-  const run = async () => {
-    const q = $("#macq").value.trim();
-    S.macq = q;
-    if (q.replace(/[^0-9a-f]/gi, "").length < 4) { $("#macres").innerHTML = q ? `<p class="faint">Type at least four hex digits.</p>` : ""; return; }
-    let hits;
-    try { hits = await call("FindMAC", q) || []; } catch (e) { toast(e.message, true); return; }
-    if (S.site) { const ids = new Set(siteDash().switches.map((v) => v.id)); hits = hits.filter((h) => ids.has(h.switchId)); }
-    if (!hits.length) {
-      $("#macres").innerHTML = `<div class="panel"><div class="empty"><h3>Not found</h3><p>No switch has learned ${esc(q)}. Address tables are read with every collection, so a device that was quiet for a few minutes may have aged out.</p></div></div>`;
+    <div id="macpath"></div><div id="macres"><div class="panel"><div class="empty"><p>Reading the address tables…</p></div></div></div></div>`;
+  let all = [];
+  try { all = await call("Clients") || []; } catch (e) { toast(e.message, true); }
+  if (S.site) { const ids = new Set(siteDash().switches.map((v) => v.id)); all = all.filter((h) => ids.has(h.switchId)); }
+  const LIMIT = 1000;
+  const list = () => {
+    const raw = $("#macq").value.trim();
+    S.macq = raw;
+    const q = raw.toLowerCase();
+    const hex = q.replace(/[^0-9a-f]/g, "");
+    const hits = !q ? all : all.filter((h) =>
+      (hex.length >= 2 && h.mac.replace(/:/g, "").includes(hex)) ||
+      h.switchName.toLowerCase().includes(q) || h.port.toLowerCase() === q || (h.portName || "").toLowerCase().includes(q) || h.vlan === q);
+    if (!all.length) {
+      $("#macres").innerHTML = `<div class="panel"><div class="empty"><h3>No addresses yet</h3><p>Address tables are read with every collection. Collect your switches once and the devices behind them show up here.</p></div></div>`;
       return;
     }
-    const rows = hits.map((h) => `<tr class="${h.edge ? "edge" : ""}">
-      <td class="mono">${esc(h.mac)}</td>
+    if (!hits.length) {
+      $("#macres").innerHTML = `<div class="panel"><div class="empty"><h3>Not found</h3><p>No switch has learned ${esc(raw)}. Address tables are read with every collection, so a device that was quiet for a few minutes may have aged out.</p></div></div>`;
+      return;
+    }
+    const rows = hits.slice(0, LIMIT).map((h) => `<tr class="${h.edge ? "edge" : ""}">
+      <td class="mono"><a onclick="macPath('${h.mac}')">${esc(h.mac)}</a></td>
       <td><a data-go="#/switch/${h.switchId}/ports">${esc(h.switchName)}</a></td>
       <td class="mono">${esc(h.port)}${h.portName ? ` <span class="faint">${esc(h.portName)}</span>` : ""}</td>
       <td class="num">${esc(h.vlan || "")}</td>
-      <td>${h.edge ? `<span class="ok">Edge port</span>${h.others ? ` <span class="faint">${h.others} more on this port</span>` : ""}` : `<span class="faint">Uplink to ${esc(h.uplink)}</span>`}</td></tr>`);
-    $("#macres").innerHTML = `<div class="panel"><table><thead><tr><th>MAC address</th><th>Switch</th><th>Port</th><th class="num">VLAN</th><th>Where</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+      <td>${h.edge ? `<span class="ok">Edge port</span>${h.others ? ` <span class="faint">${h.others} more on this port</span>` : ""}` : `<span class="faint">Uplink to ${esc(h.uplink)}</span>`}</td>
+      <td class="num faint">${h.seen > 1 ? h.seen : ""}</td></tr>`);
+    $("#macres").innerHTML = `<div class="panel"><table><thead><tr><th>MAC address</th><th>Switch</th><th>Port</th><th class="num">VLAN</th><th>Where</th><th class="num" title="Switches that learned this address">Seen on</th></tr></thead><tbody>${rows.join("")}</tbody></table>
+      <div class="faint" style="padding:10px 16px;font-size:12.5px">${hits.length > LIMIT ? `Showing ${LIMIT} of ${hits.length} addresses. Type to narrow the list.` : `${hits.length} of ${all.length} addresses`}</div></div>`;
   };
-  $("#macgo").onclick = run;
-  $("#macq").addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
-  if (S.macq) run();
+  $("#macq").addEventListener("input", list);
+  $("#macq").addEventListener("keydown", (e) => { if (e.key === "Enter") macPath($("#macq").value.trim()); });
+  $("#macgo").onclick = () => macPath($("#macq").value.trim());
+  list();
+}
+
+// Every switch that learned one address: the edge port first, then the uplinks on the way.
+async function macPath(q) {
+  const box = $("#macpath");
+  if (!box) return;
+  if (q.replace(/[^0-9a-f]/gi, "").length < 4) { box.innerHTML = `<p class="faint">Type at least four hex digits of the address.</p>`; return; }
+  let hits;
+  try { hits = await call("FindMAC", q) || []; } catch (e) { toast(e.message, true); return; }
+  if (S.site) { const ids = new Set(siteDash().switches.map((v) => v.id)); hits = hits.filter((h) => ids.has(h.switchId)); }
+  if (!hits.length) { box.innerHTML = `<div class="panel"><div class="empty"><h3>Not found</h3><p>No switch has learned ${esc(q)}.</p></div></div>`; return; }
+  const rows = hits.map((h) => `<tr class="${h.edge ? "edge" : ""}">
+    <td class="mono">${esc(h.mac)}</td>
+    <td><a data-go="#/switch/${h.switchId}/ports">${esc(h.switchName)}</a></td>
+    <td class="mono">${esc(h.port)}${h.portName ? ` <span class="faint">${esc(h.portName)}</span>` : ""}</td>
+    <td class="num">${esc(h.vlan || "")}</td>
+    <td>${h.edge ? `<span class="ok">Edge port</span>${h.others ? ` <span class="faint">${h.others} more on this port</span>` : ""}` : `<span class="faint">Uplink to ${esc(h.uplink)}</span>`}</td></tr>`);
+  box.innerHTML = `<section class="panel" style="margin-bottom:18px"><h2>Path of ${esc(hits[0].mac)}<span class="grow"></span><button class="btn small" onclick="$('#macpath').innerHTML=''">Close</button></h2>
+    <table><thead><tr><th>MAC address</th><th>Switch</th><th>Port</th><th class="num">VLAN</th><th>Where</th></tr></thead><tbody>${rows.join("")}</tbody></table></section>`;
+  box.scrollIntoView({ block: "nearest" });
 }
 
 async function renderVLANs(soft) {
