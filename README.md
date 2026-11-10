@@ -11,7 +11,7 @@
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1b212b?style=flat-square&logo=windows&logoColor=white">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.23+-1b212b?style=flat-square&logo=go&logoColor=white">
   <img alt="Wails" src="https://img.shields.io/badge/Wails-v2-1b212b?style=flat-square">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.8-4cc38a?style=flat-square">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.9-4cc38a?style=flat-square">
 </p>
 
 <p align="center">
@@ -55,7 +55,7 @@ Online and offline counts, a problem list sorted by severity, and every switch d
 
 System facts, a management-access checklist, spanning tree (bridge, root, port roles and states), ports with their configured names and optical levels for SFPs, VLANs, LLDP and CDP neighbors, logs, the running config, and the raw output of every command it ran. Config copies are saved whenever the config changes, and any two can be compared side by side. A console runs `show`, `ping` and `traceroute`, and nothing else.
 
-**SSH** opens any switch in your own terminal, or in the client you pick in Settings: PuTTY, MobaXterm, SecureCRT, Windows Terminal, iTerm2 and others, or a command of your own.
+**Web** opens a switch's own web interface in your browser. **SSH** opens it in your own terminal, or in the client you pick in Settings: PuTTY, MobaXterm, SecureCRT, Windows Terminal, iTerm2 and others, or a command of your own.
 
 **Clients** finds where a device is plugged in: type a MAC address and get the switch and the edge port, with the uplinks along the path told apart from it.
 

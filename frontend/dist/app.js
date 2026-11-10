@@ -33,6 +33,7 @@ const ICON = {
   trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
   chip: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
   term: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg>',
   client: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
@@ -464,7 +465,7 @@ function renderSwitches(soft) {
       <td class="num">${s.cpu >= 0 && s.cpu !== undefined ? s.cpu + "%" : ""}</td><td class="num">${s.memory >= 0 && s.memory !== undefined ? s.memory + "%" : ""}</td>
       <td class="num">${s.portsTotal ? portsUp(s) : ""}</td><td>${esc(s.stpRole || "")}</td>
       <td>${v.worst ? `<span class="sev ${v.worst}">${(v.issues || []).length}</span>` : ""}</td><td class="faint">${v.status.collecting ? "now" : ago(s.collectedAt)}</td>
-      <td class="acts nogo">${v.cloud || v.web ? "" : `<button class="ib" title="Open in your SSH client" onclick="openSSH('${v.id}')">${ICON.term}</button>`}${canUpdate(v) ? `<button class="ib" title="Update firmware to ${esc(v.firmware.available)}" onclick="openUpgradeDialog(['${v.id}'])">${ICON.up}</button>` : ""}<button class="ib" title="${v.disabled ? "Enable" : "Disable"}" onclick="setDisabled(['${v.id}'], ${!v.disabled})">${v.disabled ? ICON.play : ICON.pause}</button><button class="ib danger" title="Delete" onclick="deleteSwitches(['${v.id}'])">${ICON.trash}</button></td></tr>`;
+      <td class="acts nogo">${v.cloud ? `<span class="ib" style="visibility:hidden">${ICON.globe}</span>` : `<button class="ib" title="Open the web interface" onclick="openWeb('${v.id}')">${ICON.globe}</button>`}${v.cloud || v.web ? `<span class="ib" style="visibility:hidden">${ICON.term}</span>` : `<button class="ib" title="Open in your SSH client" onclick="openSSH('${v.id}')">${ICON.term}</button>`}${canUpdate(v) ? `<button class="ib" title="Update firmware to ${esc(v.firmware.available)}" onclick="openUpgradeDialog(['${v.id}'])">${ICON.up}</button>` : `<span class="ib" style="visibility:hidden">${ICON.up}</span>`}<button class="ib" title="${v.disabled ? "Enable" : "Disable"}" onclick="setDisabled(['${v.id}'], ${!v.disabled})">${v.disabled ? ICON.play : ICON.pause}</button><button class="ib danger" title="Delete" onclick="deleteSwitches(['${v.id}'])">${ICON.trash}</button></td></tr>`;
     }).join("")}</tbody></table>
     ${rows.length ? "" : `<div class="empty">No switches match “${esc(S.query)}”. <a onclick="clearSearch()">Clear search</a></div>`}`;
   const n = S.sel.size;
@@ -604,6 +605,7 @@ function renderDetail(soft) {
   else if (d.status.authFailed) banners.push(`<div class="banner"><div class="grow"><b>Login failed.</b> ${esc(d.status.collectError)}. Fix the credentials, then collect again.</div><button class="btn" onclick="openSwitchModal(S.detail)">Edit switch</button></div>`);
   $("#main").innerHTML = `<div class="page">
     <div class="head"><button class="btn small" data-go="#/switches" title="Back">${ICON.back}</button><h1>${esc(name)}</h1><span id="detail-status">${detailStatus(d)}</span><span class="grow"></span>
+      ${d.cloud ? "" : `<button class="btn" onclick="openWeb('${d.id}')" title="Open the switch's web interface in your browser">${ICON.globe}Web</button>`}
       ${d.cloud || d.web ? "" : `<button class="btn" onclick="openSSH('${d.id}')" title="Open in your SSH client">${ICON.term}SSH</button>`}
       ${d.disabled ? "" : `<button class="btn" onclick="collectOne(this)">${ICON.refresh}Collect now</button>`}
       <button class="btn" onclick="setDisabled(['${d.id}'], ${!d.disabled})">${d.disabled ? ICON.play + "Enable" : ICON.pause + "Disable"}</button>
@@ -1835,6 +1837,17 @@ function sshClientHint() {
   $("#sshcw").style.display = v === "custom" ? "" : "none";
   const c = (S.sshClients || []).find((x) => x.id === v);
   $("#sshhint").textContent = c ? c.command + (c.found ? "" : "  ← not installed here") : "";
+}
+
+// The switch's own web interface. HTTPS, except an Instant On switch that
+// SwitchDesk reads over plain HTTP on port 80.
+function openWeb(id) {
+  const v = (S.dash?.switches || []).find((x) => x.id === id) || (S.detail?.id === id ? S.detail : null);
+  if (!v || !v.host) return;
+  const host = v.host.includes(":") && !v.host.startsWith("[") ? `[${v.host}]` : v.host;
+  const scheme = v.web && v.port === 80 ? "http" : "https";
+  const port = v.web && v.port && v.port !== 80 && v.port !== 443 ? ":" + v.port : "";
+  openURL(`${scheme}://${host}${port}/`);
 }
 
 async function openSSH(id) {

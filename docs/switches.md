@@ -88,6 +88,10 @@ The exact output of every command SwitchDesk ran in the last reading. If somethi
 
 Address tables are read with every collection, so a device that has been quiet for longer than the switch's MAC age time may be missing until it sends something.
 
+## Opening the switch's web interface
+
+The **Web** button at the top of a switch's page, and the globe icon on each row of the switch list, open the switch's own web interface in your browser: `https://` and its address, or `http://` for an Instant On switch read over plain HTTP. Instant On switches managed from the cloud have no web button; use the Instant On portal for those.
+
 ## Opening a switch in your SSH client
 
 The **SSH** button at the top of a switch's page, and the terminal icon on each row of the switch list, open the switch in a terminal of your own, for longer sessions with tabs, logging and your own colours.

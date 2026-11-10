@@ -1035,6 +1035,8 @@
     "← not installed here": "← hier nicht installiert",
     "{host}, {port}, {user}, {dest} (user@host), {url} (ssh://…) and {name} are filled in for each switch. The password is never passed on.": "{host}, {port}, {user}, {dest} (user@host), {url} (ssh://…) und {name} werden für jeden Switch eingesetzt. Das Passwort wird nie weitergegeben.",
     "{0} (not found)": "{0} (nicht gefunden)",
-    "(not found)": "(nicht gefunden)"
+    "(not found)": "(nicht gefunden)",
+    "Open the switch's web interface in your browser": "Weboberfläche des Switches im Browser öffnen",
+    "Open the web interface": "Weboberfläche öffnen"
   }
 }
