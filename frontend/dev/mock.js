@@ -156,6 +156,7 @@ password manager`;
     Unlock: async (p) => { if (p !== "password") { await new Promise((r) => setTimeout(r, 400)); throw "wrong password"; } window.__unlocked = true; },
     LockNow: async () => { window.__unlocked = false; }, SetAppPassword: async () => {}, ForgetAppPassword: async () => { window.__unlocked = true; },
     GetDashboard: async () => dash, GetSwitch: async (id) => detail(id), GetTopology: async () => topo, SaveLayout: async () => {},
+    OpenSSH: async () => {},
     FindMAC: async (q) => (/^(3c:?2a|.*5e$)/i.test(q) || q.length >= 6 ? [
       { switchId: "acc1", switchName: "acc-2930-f1", port: "7", portName: "Printer 2nd floor", vlan: "20", mac: "3c:2a:f4:11:22:5e", edge: true, others: 0 },
       { switchId: "agg1", switchName: "agg-6300-f1", port: "1/1/27", vlan: "20", mac: "3c:2a:f4:11:22:5e", uplink: "acc-2930-f1", edge: false, others: 311 },

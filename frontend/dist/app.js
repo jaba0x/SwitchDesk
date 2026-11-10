@@ -33,6 +33,7 @@ const ICON = {
   trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
   chip: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  term: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg>',
   client: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
@@ -463,7 +464,7 @@ function renderSwitches(soft) {
       <td class="num">${s.cpu >= 0 && s.cpu !== undefined ? s.cpu + "%" : ""}</td><td class="num">${s.memory >= 0 && s.memory !== undefined ? s.memory + "%" : ""}</td>
       <td class="num">${s.portsTotal ? portsUp(s) : ""}</td><td>${esc(s.stpRole || "")}</td>
       <td>${v.worst ? `<span class="sev ${v.worst}">${(v.issues || []).length}</span>` : ""}</td><td class="faint">${v.status.collecting ? "now" : ago(s.collectedAt)}</td>
-      <td class="acts nogo">${canUpdate(v) ? `<button class="ib" title="Update firmware to ${esc(v.firmware.available)}" onclick="openUpgradeDialog(['${v.id}'])">${ICON.up}</button>` : ""}<button class="ib" title="${v.disabled ? "Enable" : "Disable"}" onclick="setDisabled(['${v.id}'], ${!v.disabled})">${v.disabled ? ICON.play : ICON.pause}</button><button class="ib danger" title="Delete" onclick="deleteSwitches(['${v.id}'])">${ICON.trash}</button></td></tr>`;
+      <td class="acts nogo">${v.cloud || v.web ? "" : `<button class="ib" title="Open in your SSH client" onclick="openSSH('${v.id}')">${ICON.term}</button>`}${canUpdate(v) ? `<button class="ib" title="Update firmware to ${esc(v.firmware.available)}" onclick="openUpgradeDialog(['${v.id}'])">${ICON.up}</button>` : ""}<button class="ib" title="${v.disabled ? "Enable" : "Disable"}" onclick="setDisabled(['${v.id}'], ${!v.disabled})">${v.disabled ? ICON.play : ICON.pause}</button><button class="ib danger" title="Delete" onclick="deleteSwitches(['${v.id}'])">${ICON.trash}</button></td></tr>`;
     }).join("")}</tbody></table>
     ${rows.length ? "" : `<div class="empty">No switches match “${esc(S.query)}”. <a onclick="clearSearch()">Clear search</a></div>`}`;
   const n = S.sel.size;
@@ -603,6 +604,7 @@ function renderDetail(soft) {
   else if (d.status.authFailed) banners.push(`<div class="banner"><div class="grow"><b>Login failed.</b> ${esc(d.status.collectError)}. Fix the credentials, then collect again.</div><button class="btn" onclick="openSwitchModal(S.detail)">Edit switch</button></div>`);
   $("#main").innerHTML = `<div class="page">
     <div class="head"><button class="btn small" data-go="#/switches" title="Back">${ICON.back}</button><h1>${esc(name)}</h1><span id="detail-status">${detailStatus(d)}</span><span class="grow"></span>
+      ${d.cloud || d.web ? "" : `<button class="btn" onclick="openSSH('${d.id}')" title="Open in your SSH client">${ICON.term}SSH</button>`}
       ${d.disabled ? "" : `<button class="btn" onclick="collectOne(this)">${ICON.refresh}Collect now</button>`}
       <button class="btn" onclick="setDisabled(['${d.id}'], ${!d.disabled})">${d.disabled ? ICON.play + "Enable" : ICON.pause + "Disable"}</button>
       <button class="btn" onclick="openSwitchModal(S.detail)">Edit</button></div>
@@ -1825,6 +1827,10 @@ function commonName(data, id) {
   return { common: Object.entries(names).sort((a, b) => b[1] - a[1])[0]?.[0] || "", names };
 }
 
+async function openSSH(id) {
+  try { await call("OpenSSH", id); } catch (e) { toast(e.message || String(e), true); }
+}
+
 // ---------- clients: where is this MAC plugged in? ----------
 
 async function renderClients() {
@@ -2114,6 +2120,8 @@ async function renderSettings() {
       <label class="check" style="margin-bottom:18px"><input type="checkbox" id="is" ${set.ignoreSnmp ? "checked" : ""}> Don't flag default SNMP communities</label>
       <label class="check" style="margin-bottom:4px"><input type="checkbox" id="hp" ${set.hardwarePhotos ? "checked" : ""}> Show front panel photos</label>
       <p class="faint" style="font-size:12.5px;margin:0 0 18px 24px">Downloaded once per model from the NetBox device type library on GitHub.</p>
+      <label class="f" style="margin-bottom:4px"><span>SSH client (empty uses this computer's terminal)</span><input type="text" id="sshc" class="mono" value="${esc(set.sshCommand || "")}" placeholder="putty.exe -ssh {user}@{host} -P {port}"></label>
+      <p class="faint" style="font-size:12.5px;margin:0 0 18px">For the SSH button on each switch. {host}, {port}, {user} and {name} are filled in; the password is never passed on. Examples are in the docs.</p>
       <div style="border-top:1px solid var(--line-soft);padding-top:14px;margin-bottom:16px"><b style="font-weight:600">Automatic firmware updates</b>
         <p class="faint" style="font-size:12.5px;margin:4px 0 10px">Uses the newest image in the firmware library for each switch. SwitchDesk has to be running for this.</p>
         <label class="check" style="margin-bottom:6px"><input type="radio" name="fa" value="off" ${set.firmwareAuto === "off" ? "checked" : ""}> Off</label>
@@ -2378,7 +2386,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "" });
+    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshCommand: $("#sshc").value.trim() });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }

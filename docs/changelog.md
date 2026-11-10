@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.7
+
+- **Open a switch in your own SSH client.** An **SSH** button on each switch's page, and a terminal icon on each row of the switch list. By default it uses the computer's terminal (Terminal on macOS, Windows Terminal or OpenSSH on Windows). Under **Settings → SSH client** you can set any program instead, such as PuTTY, MobaXterm or SecureCRT, with `{host}`, `{port}`, `{user}` and `{name}` filled in. The password is never passed on. Suggested by [@JasonZhang0320](https://github.com/JasonZhang0320) in [#23](https://github.com/jaba0x/SwitchDesk/issues/23).
+
 ## 1.0.6
 
 - **Fixed: the false stack warning from 1.0.4 stayed until the next collection.** Snapshots saved by 1.0.4 still carried the old verdict, so a standalone AOS-CX switch kept showing "Stack member 1 is conductor" after updating, until it was collected again. Saved snapshots are now re-checked when SwitchDesk starts ([#22](https://github.com/jaba0x/SwitchDesk/issues/22)).

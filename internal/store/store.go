@@ -95,6 +95,11 @@ type Settings struct {
 	LockAfter int `json:"lockAfter"`
 	// Language is the interface language ("de", "pt-BR"); empty follows the computer.
 	Language string `json:"language"`
+	// SSHCommand opens a switch in an outside SSH client. Empty uses the
+	// computer's own terminal; otherwise it's a command line with {host},
+	// {port}, {user} and {name} filled in, such as
+	// putty.exe -ssh {user}@{host} -P {port}
+	SSHCommand string `json:"sshCommand"`
 }
 
 func DefaultSettings() Settings {

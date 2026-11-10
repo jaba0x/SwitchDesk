@@ -87,3 +87,28 @@ The exact output of every command SwitchDesk ran in the last reading. If somethi
 **Clients** in the sidebar finds where a device is plugged in. Type a MAC address, or the start or end of one, and every switch that has learned it is listed. The **edge port**, the one the device is actually connected to, comes first; the other rows are uplinks on the switches along the path, named after the switch they lead to (from LLDP/CDP, or the trunk the port belongs to). Clicking the switch opens its Ports tab.
 
 Address tables are read with every collection, so a device that has been quiet for longer than the switch's MAC age time may be missing until it sends something.
+
+## Opening a switch in your SSH client
+
+The **SSH** button at the top of a switch's page, and the terminal icon on each row of the switch list, open the switch in a terminal of your own, for longer sessions with tabs, logging and your own colours.
+
+With **Settings → SSH client** empty, SwitchDesk uses what the computer already has:
+
+| Computer | Opens |
+|---|---|
+| macOS | `ssh://user@host:port`, which Terminal opens (or iTerm, if you made it the handler) |
+| Windows | Windows Terminal if it's installed, otherwise the built-in OpenSSH client in a console window |
+| Linux | The default terminal running `ssh` |
+
+To use another program, write its command line in **Settings → SSH client**. `{host}`, `{port}`, `{user}` and `{name}` are filled in for each switch:
+
+| Client | Command |
+|---|---|
+| PuTTY | `putty.exe -ssh {user}@{host} -P {port}` |
+| MobaXterm | `"C:\Program Files (x86)\Mobatek\MobaXterm\MobaXterm.exe" -newtab "ssh -p {port} {user}@{host}"` |
+| Windows Terminal, own profile | `wt.exe -p "Network" ssh -p {port} {user}@{host}` |
+| SecureCRT | `"C:\Program Files\VanDyke Software\SecureCRT\SecureCRT.exe" /T /SSH2 /P {port} /L {user} {host}` |
+| iTerm on macOS | `open -a iTerm ssh://{user}@{host}:{port}` |
+
+Put a path with spaces in double quotes. The command is run directly, not through a shell, and SwitchDesk never passes the switch's password on: the client asks for it, or uses its own keys and saved sessions. Instant On switches read through the cloud or their web interface have no SSH button.
+

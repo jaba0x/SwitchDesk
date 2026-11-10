@@ -1026,6 +1026,9 @@
     "Went down several times in the recent log: {0}.": "Im aktuellen Log mehrfach ausgefallen: {0}.",
     "Added: {0}.": "Hinzugefügt: {0}.",
     "Removed: {0}.": "Entfernt: {0}.",
-    "Seen {0}.": "Gesehen {0}."
+    "Seen {0}.": "Gesehen {0}.",
+    "Open in your SSH client": "Im eigenen SSH-Client öffnen",
+    "SSH client (empty uses this computer's terminal)": "SSH-Client (leer: Terminal dieses Computers)",
+    "For the SSH button on each switch. {host}, {port}, {user} and {name} are filled in; the password is never passed on. Examples are in the docs.": "Für die SSH-Schaltfläche an jedem Switch. {host}, {port}, {user} und {name} werden eingesetzt; das Passwort wird nie weitergegeben. Beispiele stehen in der Dokumentation."
   }
 }
