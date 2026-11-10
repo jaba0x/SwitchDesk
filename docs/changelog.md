@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.10
+
+- **Settings uses the whole window**, like the other pages, instead of a narrow column.
+
 ## 1.0.9
 
 - **Open a switch's web interface.** A **Web** button next to **SSH** on each switch's page, and a globe icon on each row of the switch list, open the switch's own web interface in your browser ([#23](https://github.com/jaba0x/SwitchDesk/issues/23)).

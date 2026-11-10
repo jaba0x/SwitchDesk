@@ -2119,7 +2119,7 @@ async function renderSettings() {
   S.sshClients = await call("SSHClients").catch(() => []);
   const langs = await I18N.languages(api);
   const cur = S.settings.language || "";
-  $("#main").innerHTML = `<div class="page" style="max-width:900px"><div class="head"><h1>Settings</h1></div>
+  $("#main").innerHTML = `<div class="page"><div class="head"><h1>Settings</h1></div>
     <section class="panel" style="margin-bottom:18px"><h2>Language</h2><div class="body">
       <div class="row" style="align-items:flex-end"><label class="f"><span>Interface language</span><select id="lang" onchange="setLanguage(this.value)" data-notr>
           <option value="" ${cur === "" ? "selected" : ""}>Automatic (${esc(langName(langs, I18N.code))})</option>
