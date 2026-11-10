@@ -157,6 +157,13 @@ password manager`;
     LockNow: async () => { window.__unlocked = false; }, SetAppPassword: async () => {}, ForgetAppPassword: async () => { window.__unlocked = true; },
     GetDashboard: async () => dash, GetSwitch: async (id) => detail(id), GetTopology: async () => topo, SaveLayout: async () => {},
     OpenSSH: async () => {},
+    SSHClients: async () => [
+      { id: "wt", name: "Windows Terminal", found: true, command: "wt.exe ssh -p {port} {dest}" },
+      { id: "putty", name: "PuTTY", found: true, command: '"C:\\Program Files\\PuTTY\\putty.exe" -ssh {dest} -P {port}' },
+      { id: "kitty", name: "KiTTY", found: false, command: "kitty.exe -ssh {dest} -P {port}" },
+      { id: "mobaxterm", name: "MobaXterm", found: true, command: '"C:\\Program Files (x86)\\Mobatek\\MobaXterm\\MobaXterm.exe" -newtab "ssh -p {port} {dest}"' },
+      { id: "securecrt", name: "SecureCRT", found: false, command: "SecureCRT.exe /T /SSH2 /P {port} /L {user} {host}" },
+      { id: "openssh", name: "OpenSSH (console window)", found: true, command: "ssh.exe -p {port} {dest}" }],
     FindMAC: async (q) => (/^(3c:?2a|.*5e$)/i.test(q) || q.length >= 6 ? [
       { switchId: "acc1", switchName: "acc-2930-f1", port: "7", portName: "Printer 2nd floor", vlan: "20", mac: "3c:2a:f4:11:22:5e", edge: true, others: 0 },
       { switchId: "agg1", switchName: "agg-6300-f1", port: "1/1/27", vlan: "20", mac: "3c:2a:f4:11:22:5e", uplink: "acc-2930-f1", edge: false, others: 311 },

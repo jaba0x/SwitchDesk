@@ -36,3 +36,4 @@ Went down several times in the recent log: {0}.
 Added: {0}.
 Removed: {0}.
 Seen {0}.
+{0} (not found)

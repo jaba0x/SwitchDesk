@@ -1827,6 +1827,16 @@ function commonName(data, id) {
   return { common: Object.entries(names).sort((a, b) => b[1] - a[1])[0]?.[0] || "", names };
 }
 
+// a 1.0.7 setting had only a custom command
+function sshPick(set) { return set.sshClient || (set.sshCommand ? "custom" : ""); }
+function sshClientHint() {
+  const v = $("#sshk")?.value;
+  if (!v && v !== "") return;
+  $("#sshcw").style.display = v === "custom" ? "" : "none";
+  const c = (S.sshClients || []).find((x) => x.id === v);
+  $("#sshhint").textContent = c ? c.command + (c.found ? "" : "  ← not installed here") : "";
+}
+
 async function openSSH(id) {
   try { await call("OpenSSH", id); } catch (e) { toast(e.message || String(e), true); }
 }
@@ -2093,6 +2103,7 @@ async function renderSettings() {
   const ver = await call("Version");
   const df = await call("DataFolder");
   const lk = await call("AppLock");
+  S.sshClients = await call("SSHClients").catch(() => []);
   const langs = await I18N.languages(api);
   const cur = S.settings.language || "";
   $("#main").innerHTML = `<div class="page" style="max-width:900px"><div class="head"><h1>Settings</h1></div>
@@ -2120,8 +2131,13 @@ async function renderSettings() {
       <label class="check" style="margin-bottom:18px"><input type="checkbox" id="is" ${set.ignoreSnmp ? "checked" : ""}> Don't flag default SNMP communities</label>
       <label class="check" style="margin-bottom:4px"><input type="checkbox" id="hp" ${set.hardwarePhotos ? "checked" : ""}> Show front panel photos</label>
       <p class="faint" style="font-size:12.5px;margin:0 0 18px 24px">Downloaded once per model from the NetBox device type library on GitHub.</p>
-      <label class="f" style="margin-bottom:4px"><span>SSH client (empty uses this computer's terminal)</span><input type="text" id="sshc" class="mono" value="${esc(set.sshCommand || "")}" placeholder="putty.exe -ssh {user}@{host} -P {port}"></label>
-      <p class="faint" style="font-size:12.5px;margin:0 0 18px">For the SSH button on each switch. {host}, {port}, {user} and {name} are filled in; the password is never passed on. Examples are in the docs.</p>
+      <div class="row"><label class="f"><span>SSH client for the SSH button</span><select id="sshk" onchange="sshClientHint()">
+          <option value="">Automatic (this computer's terminal)</option>
+          ${(S.sshClients || []).map((c) => `<option value="${esc(c.id)}" ${sshPick(set) === c.id ? "selected" : ""}>${esc(c.name)}${c.found ? "" : " (not found)"}</option>`).join("")}
+          <option value="custom" ${sshPick(set) === "custom" ? "selected" : ""}>Custom command</option></select></label><span></span></div>
+      <label class="f" id="sshcw" style="margin-bottom:4px;${sshPick(set) === "custom" ? "" : "display:none"}"><span>Command</span><input type="text" id="sshc" class="mono" value="${esc(set.sshCommand || "")}" placeholder="putty.exe -ssh {dest} -P {port}"></label>
+      <p class="faint mono" id="sshhint" style="font-size:12px;margin:0 0 4px"></p>
+      <p class="faint" style="font-size:12.5px;margin:0 0 18px">{host}, {port}, {user}, {dest} (user@host), {url} (ssh://…) and {name} are filled in for each switch. The password is never passed on.</p>
       <div style="border-top:1px solid var(--line-soft);padding-top:14px;margin-bottom:16px"><b style="font-weight:600">Automatic firmware updates</b>
         <p class="faint" style="font-size:12.5px;margin:4px 0 10px">Uses the newest image in the firmware library for each switch. SwitchDesk has to be running for this.</p>
         <label class="check" style="margin-bottom:6px"><input type="radio" name="fa" value="off" ${set.firmwareAuto === "off" ? "checked" : ""}> Off</label>
@@ -2157,6 +2173,7 @@ async function renderSettings() {
         <div class="muted" style="font-size:13px;margin-top:2px">Built by Jaba Macharashvili · <a onclick="openURL('https://clihero.com')">clihero.com</a> · <a onclick="openURL('https://jaba0x.github.io/SwitchDesk/')">Documentation</a> · <a onclick="openURL('https://github.com/jaba0x/SwitchDesk')">GitHub</a></div>
         <div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button class="btn small" onclick="checkUpdate(this)">${ICON.refresh}Check for updates</button><span id="updres" class="muted" style="font-size:13px"></span></div></div>
     </div></section></div>`;
+  sshClientHint();
 }
 
 // ---------- language ----------
@@ -2386,7 +2403,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshCommand: $("#sshc").value.trim() });
+    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim() });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }

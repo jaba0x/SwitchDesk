@@ -1028,7 +1028,13 @@
     "Removed: {0}.": "Entfernt: {0}.",
     "Seen {0}.": "Gesehen {0}.",
     "Open in your SSH client": "Im eigenen SSH-Client öffnen",
-    "SSH client (empty uses this computer's terminal)": "SSH-Client (leer: Terminal dieses Computers)",
-    "For the SSH button on each switch. {host}, {port}, {user} and {name} are filled in; the password is never passed on. Examples are in the docs.": "Für die SSH-Schaltfläche an jedem Switch. {host}, {port}, {user} und {name} werden eingesetzt; das Passwort wird nie weitergegeben. Beispiele stehen in der Dokumentation."
+    "SSH client for the SSH button": "SSH-Client für die SSH-Schaltfläche",
+    "Automatic (this computer's terminal)": "Automatisch (Terminal dieses Computers)",
+    "Custom command": "Eigener Befehl",
+    "Command": "Befehl",
+    "← not installed here": "← hier nicht installiert",
+    "{host}, {port}, {user}, {dest} (user@host), {url} (ssh://…) and {name} are filled in for each switch. The password is never passed on.": "{host}, {port}, {user}, {dest} (user@host), {url} (ssh://…) und {name} werden für jeden Switch eingesetzt. Das Passwort wird nie weitergegeben.",
+    "{0} (not found)": "{0} (nicht gefunden)",
+    "(not found)": "(nicht gefunden)"
   }
 }

@@ -92,23 +92,35 @@ Address tables are read with every collection, so a device that has been quiet f
 
 The **SSH** button at the top of a switch's page, and the terminal icon on each row of the switch list, open the switch in a terminal of your own, for longer sessions with tabs, logging and your own colours.
 
-With **Settings → SSH client** empty, SwitchDesk uses what the computer already has:
+Pick the program under **Settings → SSH client**. The list shows the clients SwitchDesk knows for your kind of computer, finds them in their usual install folders or on the PATH, and marks the ones that aren't installed. Under the list you see the exact command it will run.
 
-| Computer | Opens |
+| Computer | Clients in the list |
 |---|---|
-| macOS | `ssh://user@host:port`, which Terminal opens (or iTerm, if you made it the handler) |
-| Windows | Windows Terminal if it's installed, otherwise the built-in OpenSSH client in a console window |
-| Linux | The default terminal running `ssh` |
+| Windows | Windows Terminal, PuTTY, KiTTY, MobaXterm, SecureCRT, OpenSSH in a console window |
+| macOS | Terminal, iTerm2, Ghostty, WezTerm, SecureCRT |
+| Linux | GNOME Terminal, Konsole, WezTerm, xterm |
 
-To use another program, write its command line in **Settings → SSH client**. `{host}`, `{port}`, `{user}` and `{name}` are filled in for each switch:
+**Automatic**, the default, uses what the computer already has: on macOS the app registered for `ssh://` links (usually Terminal), on Windows Windows Terminal if it's there and otherwise OpenSSH in a console window, on Linux the default terminal.
+
+For anything else, choose **Custom command** and write the command line. These are filled in for each switch:
+
+| Placeholder | Becomes |
+|---|---|
+| `{host}` | The switch's address |
+| `{port}` | Its SSH port |
+| `{user}` | The user name of its login |
+| `{dest}` | `user@host` (just the host when there's no user) |
+| `{url}` | `ssh://user@host:port` |
+| `{name}` | The name you gave the switch |
+
+Some examples:
 
 | Client | Command |
 |---|---|
-| PuTTY | `putty.exe -ssh {user}@{host} -P {port}` |
-| MobaXterm | `"C:\Program Files (x86)\Mobatek\MobaXterm\MobaXterm.exe" -newtab "ssh -p {port} {user}@{host}"` |
-| Windows Terminal, own profile | `wt.exe -p "Network" ssh -p {port} {user}@{host}` |
-| SecureCRT | `"C:\Program Files\VanDyke Software\SecureCRT\SecureCRT.exe" /T /SSH2 /P {port} /L {user} {host}` |
-| iTerm on macOS | `open -a iTerm ssh://{user}@{host}:{port}` |
+| Windows Terminal with your own profile | `wt.exe -p "Network" ssh -p {port} {dest}` |
+| PuTTY with a saved session for its settings | `putty.exe -load "Switches" -ssh {dest} -P {port}` |
+| Termius or any app that opens ssh:// links (macOS) | `open {url}` |
+| A script of your own | `C:\Tools\open-ssh.cmd {host} {port} {user}` |
 
 Put a path with spaces in double quotes. The command is run directly, not through a shell, and SwitchDesk never passes the switch's password on: the client asks for it, or uses its own keys and saved sessions. Instant On switches read through the cloud or their web interface have no SSH button.
 

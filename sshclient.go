@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"os"
+	"os/exec"
+	goruntime "runtime"
 
 	"github.com/jaba0x/switchdesk/internal/sshopen"
 )
@@ -24,5 +27,12 @@ func (a *App) OpenSSH(id string) error {
 	if c, err := a.st.Credential(sw.CredentialID); err == nil && c.Kind == "" {
 		t.User = c.Username
 	}
-	return sshopen.Open(t, a.st.Settings().SSHCommand)
+	set := a.st.Settings()
+	return sshopen.Open(t, set.SSHClient, set.SSHCommand)
+}
+
+// SSHClients lists the SSH clients SwitchDesk knows on this kind of
+// computer, with the installed ones marked, for Settings.
+func (a *App) SSHClients() []sshopen.Client {
+	return sshopen.Clients(goruntime.GOOS, exec.LookPath, func(p string) error { _, err := os.Stat(p); return err })
 }

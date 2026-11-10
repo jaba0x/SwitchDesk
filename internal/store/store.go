@@ -95,10 +95,11 @@ type Settings struct {
 	LockAfter int `json:"lockAfter"`
 	// Language is the interface language ("de", "pt-BR"); empty follows the computer.
 	Language string `json:"language"`
-	// SSHCommand opens a switch in an outside SSH client. Empty uses the
-	// computer's own terminal; otherwise it's a command line with {host},
-	// {port}, {user} and {name} filled in, such as
-	// putty.exe -ssh {user}@{host} -P {port}
+	// SSHClient picks the outside SSH client the SSH button opens: "" for
+	// the computer's own terminal, a known client ("putty", "mobaxterm",
+	// "iterm"...) or "custom" for SSHCommand, a command line with {host},
+	// {port}, {user}, {dest}, {url} and {name} filled in.
+	SSHClient  string `json:"sshClient"`
 	SSHCommand string `json:"sshCommand"`
 }
 

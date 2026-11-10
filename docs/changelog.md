@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.8
+
+- **Choose your SSH client.** **Settings → SSH client** is now a list of the clients SwitchDesk knows for your computer: Windows Terminal, PuTTY, KiTTY, MobaXterm, SecureCRT and OpenSSH on Windows; Terminal, iTerm2, Ghostty, WezTerm and SecureCRT on macOS; the usual terminals on Linux. It finds them in their install folders, marks the ones that aren't installed, and shows the exact command it will run. **Custom command** is still there for anything else, now with `{dest}` (user@host) and `{url}` (ssh://…) too. A custom command set in 1.0.7 keeps working. ([#23](https://github.com/jaba0x/SwitchDesk/issues/23))
+
 ## 1.0.7
 
 - **Open a switch in your own SSH client.** An **SSH** button on each switch's page, and a terminal icon on each row of the switch list. By default it uses the computer's terminal (Terminal on macOS, Windows Terminal or OpenSSH on Windows). Under **Settings → SSH client** you can set any program instead, such as PuTTY, MobaXterm or SecureCRT, with `{host}`, `{port}`, `{user}` and `{name}` filled in. The password is never passed on. Suggested by [@JasonZhang0320](https://github.com/JasonZhang0320) in [#23](https://github.com/jaba0x/SwitchDesk/issues/23).
