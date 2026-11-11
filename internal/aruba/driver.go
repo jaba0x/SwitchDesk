@@ -71,7 +71,8 @@ func commandsFor(f Family) []command {
 			{key: "configstatus", cmd: "show config status"},
 			{key: "logs", cmd: "show logging -r", t: 40 * time.Second},
 			{key: "macs", cmd: "show mac-address", t: 60 * time.Second},
-			{key: "stack", cmd: "show stacking"},
+			// 3810M and 5400R stack with "stacking", 2930F and 2930M with VSF
+			{key: "stack", cmd: "show stacking", alt: []string{"show vsf"}},
 			{key: "config", cmd: "show running-config", t: 90 * time.Second},
 		}
 	}
@@ -231,6 +232,13 @@ func parseInto(s *Snapshot) {
 	s.Logs = ParseLogs(raw["logs"], 60)
 	s.MACs = ParseMACTable(raw["macs"])
 	s.Stack = ParseStack(raw["stack"])
+	// A stack reports a family name such as "hpStack_KB" as its product
+	// (issue #27); the members carry the real model.
+	if s.Stack != nil && len(PartNumbers(s.Facts.Model)) == 0 {
+		if m := s.Stack.Model(); m != "" {
+			s.Facts.Model = m
+		}
+	}
 	s.RunningConfig = raw["config"]
 	if saved, ok := ConfigStatusSaved(raw["configstatus"]); ok {
 		s.Facts.ConfigSaved = &saved

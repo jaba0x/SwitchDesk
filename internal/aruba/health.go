@@ -3,6 +3,7 @@ package aruba
 import (
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -236,6 +237,21 @@ var stackMemberMAC = regexp.MustCompile(`^(?:[0-9a-f]{6}-[0-9a-f]{6}|(?:[0-9a-f]
 var stackOKStatus = map[string]bool{"commander": true, "conductor": true, "master": true, "standby": true, "member": true, "active": true, "ready": true}
 var stackTwoWord = map[string]bool{"version mismatch": true, "not joined": true, "not present": true, "fabric mismatch": true, "in progress": true}
 
+// Model is the member model of a stack, the commander's when there is one.
+func (st *Stack) Model() string {
+	if st == nil {
+		return ""
+	}
+	for _, role := range []string{"commander", "conductor", "master", ""} {
+		for _, m := range st.Members {
+			if m.Model != "" && (role == "" || strings.EqualFold(m.Status, role)) {
+				return m.Model
+			}
+		}
+	}
+	return ""
+}
+
 // Normalize re-reads the stack against the current rules, so a snapshot saved
 // by an older version doesn't keep a wrong verdict until the next collection:
 // a single member is no stack, and each member's health follows its role.
@@ -261,8 +277,8 @@ func ParseStack(out string) *Stack {
 	}
 	st := &Stack{}
 	kv := parseKV(out)
-	st.Topology = first(kv, "Stack Topology", "Topology")
-	st.Status = first(kv, "Stack Status", "Status")
+	st.Topology = first(kv, "Stack Topology", "VSF Topology", "Topology")
+	st.Status = first(kv, "Stack Status", "VSF Status", "Status")
 	inTable := false
 	for _, line := range strings.Split(out, "\n") {
 		t := strings.TrimRight(line, " \r")
@@ -296,4 +312,52 @@ func ParseStack(out string) *Stack {
 		return nil
 	}
 	return st
+}
+
+// ---------- uptime ----------
+
+var uptimeUnitRe = regexp.MustCompile(`(?i)(\d+)\s*(years?|yrs?|weeks?|wks?|days?|d|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b`)
+var uptimeClockRe = regexp.MustCompile(`^(?:(\d+)[d ]\s*)?(\d{1,2}):(\d{2})(?::(\d{2}))?`)
+
+// UptimeSeconds reads the uptimes switches report: "23 days", "9 weeks,
+// 1 day, 19 hours, 53 minutes", "1 day 02:03:04" or "12:34:56". It returns
+// 0 when it can't tell.
+func UptimeSeconds(s string) int64 {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0
+	}
+	var total int64
+	rest := s
+	for _, m := range uptimeUnitRe.FindAllStringSubmatch(s, -1) {
+		n, _ := strconv.ParseInt(m[1], 10, 64)
+		u := strings.ToLower(m[2])
+		switch {
+		case strings.HasPrefix(u, "y"):
+			total += n * 365 * 86400
+		case strings.HasPrefix(u, "w"):
+			total += n * 7 * 86400
+		case strings.HasPrefix(u, "d"):
+			total += n * 86400
+		case strings.HasPrefix(u, "h"):
+			total += n * 3600
+		case strings.HasPrefix(u, "m"):
+			total += n * 60
+		default:
+			total += n
+		}
+		rest = strings.Replace(rest, m[0], "", 1)
+	}
+	// a clock part, alone or after the days: "1 day 02:03:04"
+	if m := uptimeClockRe.FindStringSubmatch(strings.TrimLeft(rest, " ,")); m != nil {
+		if m[1] != "" {
+			d, _ := strconv.ParseInt(m[1], 10, 64)
+			total += d * 86400
+		}
+		h, _ := strconv.ParseInt(m[2], 10, 64)
+		mi, _ := strconv.ParseInt(m[3], 10, 64)
+		sec, _ := strconv.ParseInt(m[4], 10, 64)
+		total += h*3600 + mi*60 + sec
+	}
+	return total
 }

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.13
+
+From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#27](https://github.com/jaba0x/SwitchDesk/issues/27) and [#28](https://github.com/jaba0x/SwitchDesk/issues/28):
+
+- **More front panel photos and SFP layouts.** The model list from the NetBox device type library only read files whose name starts with "Aruba", so models filed under other names (5400R, the 2930M and others) were missing. It now has 173 models, 88 with a photo, up from 108 and 68.
+- **Your own front panel photos.** For a model the library has no picture of, put one in the data folder's `hardware` folder named after its part number, such as `JL256A.png`.
+- **Fixed: a 3810M stack showed "hpStack_KB" as its model.** The model of a stack now comes from its members, so the faceplate, photo and firmware match work. 2930F and 2930M VSF stacks are now read too (`show vsf`), not only 3810M and 5400R stacking.
+- **One uptime format** for every family, such as `64d 19h`, in the list and on the switch page. Hover it for the switch's own wording. Sorting by uptime sorts by time.
+- **Resize and move columns** in the switch list: drag a header's edge to resize, drag a header onto another to move it. **Reset columns** in the Columns menu undoes it.
+- **Headers stay in view** while scrolling the switch list and the tables on the switch pages.
+- **Fold the sidebar** to its icons with **«** next to the SwitchDesk name.
+- **Ctrl + mouse wheel zoom**, and Ctrl + plus, minus and 0 (⌘ on a Mac), from 75% to 150%. It's saved as the interface size in Settings.
+- **Bigger port panel.** S, M, L and XL under the port panel on the Overview tab.
+
 ## 1.0.12
 
 - **Sort the switch list by any column.** Click a header; click again to reverse. Addresses sort by number, so `10.0.0.20` comes before `10.0.0.132`.

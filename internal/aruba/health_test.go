@@ -179,3 +179,43 @@ Mbr ID  Mac Address        Type           Status
 		t.Fatal("standalone should give nil")
 	}
 }
+
+func TestUptimeSeconds(t *testing.T) {
+	for in, want := range map[string]int64{
+		"23 days":                              23 * 86400,
+		"9 weeks, 1 day, 19 hours, 53 minutes": 64*86400 + 19*3600 + 53*60,
+		"1 year, 2 days":                       367 * 86400,
+		"13 mins":                              13 * 60,
+		"1 day 02:03:04":                       86400 + 2*3600 + 3*60 + 4,
+		"12:34:56":                             12*3600 + 34*60 + 56,
+		"":                                     0,
+		"unknown":                              0,
+	} {
+		if got := UptimeSeconds(in); got != want {
+			t.Errorf("%q = %d, want %d", in, got, want)
+		}
+	}
+}
+
+func TestStackModel(t *testing.T) {
+	st := &Stack{Members: []StackMember{{ID: "2", Status: "Standby", Model: "Aruba JL075A 3810M-16SFP+-2-slot Switch"}, {ID: "1", Status: "Commander", Model: "Aruba JL075A 3810M-16SFP+-2-slot Switch"}}}
+	if st.Model() != "Aruba JL075A 3810M-16SFP+-2-slot Switch" {
+		t.Fatalf("model = %q", st.Model())
+	}
+	vsf := ` VSF Domain ID      : 1
+ MAC Address        : 123456-789abc
+ VSF Topology       : Chain
+ VSF Status         : Active
+ Uptime             : 0d 2h 13m
+
+ Mbr
+ ID  Mac Address       Model                                      Pri Status
+ --- ----------------- ------------------------------------------ --- ---------------
+ 1   123456-789abc     Aruba JL256A 2930F-48G-PoE+-4SFP+ Switch   255 Commander
+ 2   123456-789abd     Aruba JL256A 2930F-48G-PoE+-4SFP+ Switch   128 Standby
+`
+	s := ParseStack(vsf)
+	if s == nil || s.Topology != "Chain" || len(s.Members) != 2 || s.Model() != "Aruba JL256A 2930F-48G-PoE+-4SFP+ Switch" {
+		t.Fatalf("vsf = %+v", s)
+	}
+}

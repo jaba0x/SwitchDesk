@@ -2,11 +2,15 @@
 
 ## The switch list
 
+The **«** next to the SwitchDesk name folds the sidebar down to its icons, which leaves more room for wide tables and the network map. **»** opens it again.
+
 ![Switch list](images/switches.png){ .shot }
 
 Every switch with its address, site, tags, model, software, firmware status, CPU and memory, ports up, spanning-tree role, problem count and when it was last read.
 
-**Sort** by clicking any column header; click again to reverse. Addresses sort by number, so `10.0.0.20` comes before `10.0.0.132`. **Columns** above the list chooses which columns are shown; Serial, Boot ROM and Uptime are off until you turn them on. Both choices are remembered.
+**Sort** by clicking any column header; click again to reverse. Addresses sort by number, so `10.0.0.20` comes before `10.0.0.132`. **Columns** above the list chooses which columns are shown; Serial, Boot ROM and Uptime are off until you turn them on. **Drag a header** onto another to move that column, and **drag the edge** of a header to make it wider or narrower. **Reset columns** in the Columns menu puts everything back. The header row stays in view while you scroll, and all of this is remembered on your computer.
+
+Uptime is shown the same short way for every switch, such as `64d 19h`; hover it for what the switch itself said.
 
 **Tags** are your own labels for switches, such as `core`, `access` or `building A`. Add them in a switch's **Edit** dialog, separated by commas. Click a tag in the list to show only the switches that have it, then select them all for a bulk action.
 
@@ -30,6 +34,10 @@ Click a switch to open it. The header shows its address, family, model, software
 ![Switch overview](images/switch-overview.png){ .shot }
 
 The port faceplate, this switch's problems, system facts with CPU and memory meters, the firmware banks, a checklist of management access (SSH, Telnet, HTTP/HTTPS, SNMP, manager password, time sync, syslog, RADIUS/TACACS+), spanning-tree summary, the stack members with their status (on a stacked or VSF switch) and hardware status. With **Show front panel photos** on in Settings, a photo of the model sits under the faceplate, for the models the NetBox device type library has a photo of.
+
+**S, M, L and XL** under the port panel make it larger, which helps on 48-port switches and stacks. The size is remembered.
+
+To use a front panel photo of your own, for a model the NetBox library has no picture of, put it in the `hardware` folder inside the data folder, named after the part number: `JL256A.png` or `JL256A.jpg`. It's used instead of the library's photo when **Show front panel photos** is on.
 
 ### Spanning tree
 

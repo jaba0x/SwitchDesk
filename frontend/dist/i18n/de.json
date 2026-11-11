@@ -1064,6 +1064,13 @@
     "IBM Plex Sans (default)": "IBM Plex Sans (Standard)",
     "This computer's font": "Schrift dieses Computers",
     "Verdana (wide, easy to read)": "Verdana (breit, gut lesbar)",
-    "Name, address, site, tag, model or software. Also: online, offline, disabled, problem": "Name, Adresse, Standort, Tag, Modell oder Software. Außerdem: online, offline, disabled, problem"
+    "Name, address, site, tag, model or software. Also: online, offline, disabled, problem": "Name, Adresse, Standort, Tag, Modell oder Software. Außerdem: online, offline, disabled, problem",
+    "Reset columns": "Spalten zurücksetzen",
+    "Sort by {0}. Drag to move, drag the edge to resize.": "Nach {0} sortieren. Ziehen zum Verschieben, Rand ziehen für die Breite.",
+    "Size of the port panel": "Größe der Port-Anzeige",
+    "Expand the sidebar": "Seitenleiste ausklappen",
+    "Collapse the sidebar": "Seitenleiste einklappen",
+    "Zoom {0}%": "Zoom {0}%",
+    "Also with Ctrl + mouse wheel, or Ctrl + plus, minus and 0 (⌘ on a Mac).": "Auch mit Strg + Mausrad oder Strg + Plus, Minus und 0 (⌘ auf dem Mac)."
   }
 }

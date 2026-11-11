@@ -547,6 +547,7 @@ type Summary struct {
 	Software   string `json:"software"`
 	Serial     string `json:"serial"`
 	Uptime     string `json:"uptime"`
+	UptimeSec  int64  `json:"uptimeSec,omitempty"` // the same in seconds, for one format across families (issue #27)
 	CPU        int    `json:"cpu"`
 	Memory     int    `json:"memory"`
 	VLANs      int    `json:"vlans"`
@@ -607,7 +608,7 @@ func summarize(snap *aruba.Snapshot) *Summary {
 		return nil
 	}
 	s := &Summary{Family: snap.Family.Label(), Hostname: snap.Facts.Hostname, Model: snap.Facts.Model, Software: snap.Facts.Software,
-		Serial: snap.Facts.Serial, Uptime: snap.Facts.Uptime, CPU: snap.Facts.CPU, Memory: snap.Facts.Memory,
+		Serial: snap.Facts.Serial, Uptime: snap.Facts.Uptime, UptimeSec: aruba.UptimeSeconds(snap.Facts.Uptime), CPU: snap.Facts.CPU, Memory: snap.Facts.Memory,
 		VLANs: len(snap.VLANs), Neighbors: len(snap.Neighbors), CollectedAt: snap.CollectedAt, BootROM: snap.Facts.BootROM}
 	sec := snap.Security
 	switch {

@@ -433,3 +433,33 @@ th .arrow { font-size: 9px; margin-left: 4px; opacity: .8; }
 .colmenu .check:hover { background: var(--panel-2); border-radius: 4px; }
 #swtable { overflow-x: auto; }
 .swlist td, .swlist th { white-space: nowrap; }
+
+/* ---------- issue #28: resizable, movable columns, sticky headers, folding sidebar, port panel size ---------- */
+#swtable { max-height: calc(100vh - var(--top) - 150px); overflow: auto; }
+#swtable thead th { position: sticky; top: 0; z-index: 3; background: var(--panel); }
+#swtable thead th:last-child { z-index: 4; }
+.swlist th { position: relative; }
+.swlist th .colgrip { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 2; }
+.swlist th .colgrip:hover { background: var(--line); }
+.swlist th.dropat { box-shadow: inset 2px 0 0 var(--accent); }
+.swlist td.fixw { overflow: hidden; text-overflow: ellipsis; }
+.panel > table thead th { position: sticky; top: 0; z-index: 2; background: var(--panel); }
+.ledzoom .leds.big { gap: calc(24px * var(--ledz, 1)); padding: calc(10px * var(--ledz, 1)) calc(12px * var(--ledz, 1)); }
+.ledzoom .leds.big .ledrow { gap: calc(24px * var(--ledz, 1)); }
+.ledzoom .leds.big .ledgrp { gap: calc(5px * var(--ledz, 1)); }
+.ledzoom .leds.big i { width: calc(15px * var(--ledz, 1)); height: calc(17px * var(--ledz, 1)); border-radius: calc(2px * var(--ledz, 1)); }
+.ledzoom .leds.big { max-width: none; }
+.ledzoom { max-width: 100%; overflow-x: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: none; border: 0; padding: 3px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--panel-2); color: var(--text); }
+.brand { position: relative; }
+.navfold { margin-left: auto; font-size: 14px; line-height: 1; padding: 2px 6px; color: var(--faint); --wails-draggable: no-drag; }
+body.navmini .shell { grid-template-columns: 58px 1fr; }
+body.navmini .side { padding-left: 8px; padding-right: 8px; }
+body.navmini .brand { flex-direction: column; padding: 0 0 14px; gap: 8px; }
+body.navmini .brand b, body.navmini .nav span, body.navmini .side-foot, body.navmini .side .sitepick, body.navmini .side label { display: none; }
+body.navmini .navfold { margin: 0; }
+body.navmini .nav { justify-content: center; padding-left: 0; padding-right: 0; position: relative; }
+body.navmini .nav .count { position: absolute; top: 1px; right: 2px; font-size: 10px; padding: 0 4px; margin: 0; }

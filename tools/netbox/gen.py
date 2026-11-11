@@ -13,7 +13,9 @@ lib = sys.argv[1]
 imgs = {os.path.basename(p) for p in os.listdir(os.path.join(lib, "elevation-images", "HPE"))}
 out = {}
 for f in sorted(os.listdir(os.path.join(lib, "device-types", "HPE"))):
-    if not f.lower().startswith("aruba") or not f.endswith((".yaml", ".yml")):
+    # every HPE switch with an Aruba/ProCurve part number, whatever its
+    # file is called (5406R-zl2.yaml, J9805A.yaml...), not only Aruba-*.yaml
+    if not f.endswith((".yaml", ".yml")):
         continue
     d = yaml.safe_load(open(os.path.join(lib, "device-types", "HPE", f)))
     pn = re.match(r"(J\d{4}[A-Z]|JL\d{3}[A-Z]|R\d[A-Z0-9]{2}\d{2}[A-Z]|S\d[A-Z0-9]{2}\d{2}[A-Z])", str(d.get("part_number") or "").upper())
@@ -21,7 +23,11 @@ for f in sorted(os.listdir(os.path.join(lib, "device-types", "HPE"))):
         continue
     sfp = [str(i["name"]) for i in d.get("interfaces") or []
            if not i.get("mgmt_only") and re.search(r"sfp|qsfp|-x-|-x$|xfp", i.get("type", ""))]
-    photo = next((n for n in (f'{d["slug"]}.front.png', f'{d["slug"]}.front.jpg') if n in imgs), "")
+    # the photo is usually named after the slug; a few carry an "hpe-" prefix
+    # the slug doesn't, or the other way round
+    slug = d["slug"]
+    names = [slug, "hpe-" + slug, slug.removeprefix("hpe-"), os.path.splitext(f)[0].lower()]
+    photo = next((f"{n}.front.{ext}" for n in names for ext in ("png", "jpg") if f"{n}.front.{ext}" in imgs), "")
     # ports are matched by their last number, so 49, 1/49 and 1/1/49 are one port
     last = sorted({n.split("/")[-1] for n in sfp}, key=lambda x: (len(x), x))
     out[pn.group(1)] = {"model": d["model"], "sfp": last, "photo": photo}

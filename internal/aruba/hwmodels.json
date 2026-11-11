@@ -1,4 +1,265 @@
 {
+"J4813A": {
+"model": "ProCurve 2524",
+"photo": "",
+"sfp": []
+},
+"J4819A": {
+"model": "ProCurve 5308xl",
+"photo": "",
+"sfp": []
+},
+"J4850A": {
+"model": "ProCurve 5304xl",
+"photo": "",
+"sfp": []
+},
+"J4887A": {
+"model": "ProCurve 4104GL",
+"photo": "",
+"sfp": []
+},
+"J4897A": {
+"model": "ProCurve 2724",
+"photo": "",
+"sfp": []
+},
+"J4899A": {
+"model": "ProCurve 2650 J4899A",
+"photo": "",
+"sfp": []
+},
+"J4899B": {
+"model": "ProCurve 2650 J4899B",
+"photo": "",
+"sfp": []
+},
+"J4899C": {
+"model": "ProCurve 2650 J4899C",
+"photo": "",
+"sfp": []
+},
+"J4900A": {
+"model": "ProCurve 2626 J4900A",
+"photo": "",
+"sfp": []
+},
+"J4900B": {
+"model": "ProCurve 2626 J4900B",
+"photo": "",
+"sfp": []
+},
+"J4900C": {
+"model": "ProCurve 2626 J4900C",
+"photo": "",
+"sfp": []
+},
+"J4902A": {
+"model": "ProCurve 6108",
+"photo": "",
+"sfp": []
+},
+"J4903A": {
+"model": "ProCurve 2824",
+"photo": "",
+"sfp": []
+},
+"J4904A": {
+"model": "ProCurve 2848",
+"photo": "",
+"sfp": []
+},
+"J8168A": {
+"model": "ProCurve 600",
+"photo": "",
+"sfp": []
+},
+"J8693A": {
+"model": "ProCurve 3500-48G-PoE yl",
+"photo": "",
+"sfp": []
+},
+"J8697A": {
+"model": "ProCurve 5406zl",
+"photo": "hpe-procurve-5406zl.front.png",
+"sfp": []
+},
+"J8698A": {
+"model": "ProCurve 5412zl",
+"photo": "hpe-procurve-5412zl.front.png",
+"sfp": []
+},
+"J8770A": {
+"model": "ProCurve 4204vl",
+"photo": "",
+"sfp": []
+},
+"J8772A": {
+"model": "ProCurve 4202vl-72 J8772A",
+"photo": "",
+"sfp": []
+},
+"J8772B": {
+"model": "ProCurve 4202vl-72 J8772B",
+"photo": "",
+"sfp": []
+},
+"J8773A": {
+"model": "ProCurve 4208vl",
+"photo": "",
+"sfp": []
+},
+"J8775A": {
+"model": "ProCurve 4208vl-96",
+"photo": "",
+"sfp": []
+},
+"J9019A": {
+"model": "ProCurve 2510-24A",
+"photo": "",
+"sfp": []
+},
+"J9019B": {
+"model": "ProCurve 2510-24B",
+"photo": "",
+"sfp": []
+},
+"J9020A": {
+"model": "ProCurve-2510-48",
+"photo": "",
+"sfp": [
+"51",
+"52"
+]
+},
+"J9021A": {
+"model": "ProCurve 2810-24G",
+"photo": "hpe-procurve-2810-24g.front.png",
+"sfp": [
+"21",
+"22",
+"23",
+"24"
+]
+},
+"J9022A": {
+"model": "ProCurve 2810-48G",
+"photo": "hpe-procurve-2810-48g.front.png",
+"sfp": [
+"45",
+"46",
+"47",
+"48"
+]
+},
+"J9028B": {
+"model": "ProCurve 1800-24G",
+"photo": "hpe-procurve-1800-24g.front.png",
+"sfp": [
+"25",
+"26"
+]
+},
+"J9050A": {
+"model": "ProCurve 2900-48G",
+"photo": "",
+"sfp": [
+"A1",
+"A4"
+]
+},
+"J9080A": {
+"model": "ProCurve 1700-24",
+"photo": "",
+"sfp": []
+},
+"J9085A": {
+"model": "ProCurve 2610-24",
+"photo": "",
+"sfp": []
+},
+"J9087A": {
+"model": "ProCurve 2610-24-PoE",
+"photo": "",
+"sfp": []
+},
+"J9088A": {
+"model": "ProCurve 2610-48",
+"photo": "",
+"sfp": []
+},
+"J9089A": {
+"model": "ProCurve 2610-48-PoE",
+"photo": "",
+"sfp": []
+},
+"J9137A": {
+"model": "ProCurve 2520-8-PoE",
+"photo": "hpe-procurve-2520-8-poe.front.png",
+"sfp": [
+"9",
+"10"
+]
+},
+"J9138A": {
+"model": "ProCurve 2520-24-PoE",
+"photo": "hpe-procurve-2520-24-poe.front.png",
+"sfp": [
+"27S",
+"28S"
+]
+},
+"J9145A": {
+"model": "ProCurve 2910al-24G",
+"photo": "",
+"sfp": []
+},
+"J9147A": {
+"model": "ProCurve 2910al-48G",
+"photo": "",
+"sfp": []
+},
+"J9279A": {
+"model": "ProCurve E2510-24G",
+"photo": "",
+"sfp": []
+},
+"J9280A": {
+"model": "ProCurve 2510G-48",
+"photo": "",
+"sfp": []
+},
+"J9298A": {
+"model": "ProCurve 2520G-8-PoE",
+"photo": "hpe-procurve-2520g-8-poe.front.png",
+"sfp": [
+"9",
+"10"
+]
+},
+"J9299A": {
+"model": "ProCurve 2520G-24-PoE",
+"photo": "hpe-procurve-2520g-24-poe.front.png",
+"sfp": [
+"21",
+"22",
+"23",
+"24"
+]
+},
+"J9443A": {
+"model": "ProCurve 630",
+"photo": "",
+"sfp": []
+},
+"J9450A": {
+"model": "ProCurve-1810G-24",
+"photo": "",
+"sfp": [
+"gi23-sfp",
+"gi24-sfp"
+]
+},
 "J9623A": {
 "model": "Aruba 2620-24",
 "photo": "",
@@ -35,6 +296,16 @@
 "model": "Aruba 2620-48 PoE+",
 "photo": "",
 "sfp": [
+"51",
+"52"
+]
+},
+"J9660A": {
+"model": "1810-48G",
+"photo": "hpe-1810-48g.front.png",
+"sfp": [
+"49",
+"50",
 "51",
 "52"
 ]
@@ -163,6 +434,24 @@
 "10"
 ]
 },
+"J9802A": {
+"model": "OfficeConnect 1810-8G",
+"photo": "",
+"sfp": []
+},
+"J9803A": {
+"model": "ProCurve 1810-24G",
+"photo": "",
+"sfp": [
+"25",
+"26"
+]
+},
+"J9805A": {
+"model": "Aruba 640 Redundant/External Power Supply Shelf",
+"photo": "",
+"sfp": []
+},
 "J9821A": {
 "model": "Aruba 5406R zl2",
 "photo": "hpe-aruba-5406r-zl2.front.png",
@@ -178,12 +467,70 @@
 "photo": "",
 "sfp": []
 },
+"J9850A": {
+"model": "5406R zl2",
+"photo": "hpe-5406r-zl2.front.png",
+"sfp": []
+},
+"J9851A": {
+"model": "5412R zl2",
+"photo": "hpe-5412r-zl2.front.png",
+"sfp": []
+},
 "J9855A": {
 "model": "Aruba 2530-48G-2SFP+",
 "photo": "",
 "sfp": [
 "49",
 "50"
+]
+},
+"J9979A": {
+"model": "OfficeConnect 1820-8G",
+"photo": "hpe-officeconnect-1820-8g.front.png",
+"sfp": []
+},
+"J9980A": {
+"model": "OfficeConnect 1820-24G",
+"photo": "hpe-officeconnect-1820-24g.front.png",
+"sfp": [
+"25",
+"26"
+]
+},
+"J9981A": {
+"model": "OfficeConnect 1820-48G",
+"photo": "hpe-officeconnect-1820-48g.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"J9982A": {
+"model": "OfficeConnect 1820-8G-PoE-65W",
+"photo": "hpe-officeconnect-1820-8g-poe-65w.front.png",
+"sfp": []
+},
+"J9983A": {
+"model": "OfficeConnect 1820-24G-PoE-185W",
+"photo": "hpe-officeconnect-1820-24g-poe-185w.front.png",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"J9984A": {
+"model": "OfficeConnect 1820-48G-PoE-370W",
+"photo": "hpe-officeconnect-1820-48g-poe-370w.front.png",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
 ]
 },
 "JL071A": {
@@ -344,12 +691,25 @@
 "photo": "",
 "sfp": []
 },
+"JL380A": {
+"model": "OfficeConnect 1920S-8G",
+"photo": "hpe-officeconnect-1920s-8g.front.png",
+"sfp": []
+},
 "JL381A": {
 "model": "Aruba 1920S-24G",
 "photo": "",
 "sfp": [
 "25",
 "26"
+]
+},
+"JL386A": {
+"model": "OfficeConnect 1920S-48G-4SFP-PPoE+",
+"photo": "",
+"sfp": [
+"51",
+"52"
 ]
 },
 "JL479A": {
@@ -470,6 +830,103 @@
 "52",
 "53",
 "54"
+]
+},
+"JL586A": {
+"model": "FlexFabric 5710 48SFP+ 6QSFP+ or 2QSFP28",
+"photo": "",
+"sfp": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30",
+"31",
+"32",
+"33",
+"34",
+"35",
+"36",
+"37",
+"38",
+"39",
+"40",
+"41",
+"42",
+"43",
+"44",
+"45",
+"46",
+"47",
+"48",
+"49",
+"50",
+"51",
+"52",
+"53",
+"54"
+]
+},
+"JL587A": {
+"model": "FlexFabric 5710 24SFP+ 6QSFP+ or 2QSFP28",
+"photo": "hpe-flexfabric-5710-24sfpp-6qsfpp-or-2qsfp28.front.png",
+"sfp": [
+"0",
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"7",
+"8",
+"9",
+"10",
+"11",
+"12",
+"13",
+"14",
+"15",
+"16",
+"17",
+"18",
+"19",
+"20",
+"21",
+"22",
+"23",
+"24",
+"25",
+"26",
+"27",
+"28",
+"29",
+"30"
 ]
 },
 "JL624A": {
@@ -1440,6 +1897,46 @@
 },
 "JL815A": {
 "model": "Aruba 1830 48G 4SFP PoE",
+"photo": "",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL824A": {
+"model": "FlexNetwork 5140-48G-PoE+-4SFP+ EI",
+"photo": "",
+"sfp": [
+"49",
+"50",
+"51",
+"52"
+]
+},
+"JL827A": {
+"model": "FlexNetwork 5140-24G-PoE+-4SFP+ EI",
+"photo": "",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL828A": {
+"model": "FlexNetwork 5140-24G-4SFP+ EI",
+"photo": "",
+"sfp": [
+"25",
+"26",
+"27",
+"28"
+]
+},
+"JL829A": {
+"model": "FlexNetwork 5140-48G-4SFP+ EI",
 "photo": "",
 "sfp": [
 "49",

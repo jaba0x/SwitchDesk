@@ -31,13 +31,24 @@ func (a *App) HardwarePhoto(model string) (string, error) {
 	if !a.st.Settings().HardwarePhotos {
 		return "", nil
 	}
+	dir := filepath.Join(a.st.Dir(), "hardware")
+	// A photo of your own wins: <data folder>/hardware/JL256A.png (or .jpg),
+	// for models the library has no picture of (issue #27).
+	for _, pn := range aruba.PartNumbers(model) {
+		for _, ext := range []string{".png", ".jpg", ".jpeg"} {
+			if b, err := os.ReadFile(filepath.Join(dir, pn+ext)); err == nil && len(b) <= 8<<20 {
+				if ct := http.DetectContentType(b); ct == "image/png" || ct == "image/jpeg" {
+					return "data:" + ct + ";base64," + base64.StdEncoding.EncodeToString(b), nil
+				}
+			}
+		}
+	}
 	hw, ok := aruba.LookupHW(model)
 	if !ok || hw.Photo == "" || !photoName.MatchString(hw.Photo) {
 		return "", nil
 	}
 	photoMu.Lock()
 	defer photoMu.Unlock()
-	dir := filepath.Join(a.st.Dir(), "hardware")
 	file := filepath.Join(dir, hw.Photo)
 	b, err := os.ReadFile(file)
 	if err != nil {

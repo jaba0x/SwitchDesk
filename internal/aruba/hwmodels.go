@@ -31,6 +31,11 @@ var partNumberRe = regexp.MustCompile(`\b(J\d{4}[A-Z]|JL\d{3}[A-Z]|R\d[A-Z0-9]{2
 
 // LookupHW finds the hardware facts for a model string such as
 // "JL256A 2930F-48G-PoE+-4SFP+" or "Aruba JL658A 6300M".
+// PartNumbers lists the part numbers that appear in a model string.
+func PartNumbers(model string) []string {
+	return partNumberRe.FindAllString(strings.ToUpper(model), -1)
+}
+
 func LookupHW(model string) (HWModel, bool) {
 	for _, pn := range partNumberRe.FindAllString(strings.ToUpper(model), -1) {
 		if h, ok := hwModels[pn]; ok {

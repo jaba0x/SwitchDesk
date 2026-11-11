@@ -173,6 +173,27 @@ function siteOnly(list) {
 // <datalist> would do this, but the app's web view doesn't open its arrow.
 // Interface font and size from Settings (issue #25). Defaults change nothing.
 const UI_FONTS = { "": null, system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', verdana: 'Verdana, Tahoma, sans-serif' };
+// Ctrl + mouse wheel, Ctrl + = / - / 0 zoom the interface (issue #28), 75–150 %.
+let zoomSave = null;
+function zoomBy(step) {
+  const cur = +S.settings?.uiScale || 100;
+  const z = step === 0 ? 100 : Math.min(150, Math.max(75, cur + step));
+  if (z === cur && step !== 0) return;
+  S.settings = { ...(S.settings || {}), uiScale: z };
+  applyLook(S.settings);
+  if ($("#uiz")) { if (![...$("#uiz").options].some((o) => +o.value === z)) $("#uiz").insertAdjacentHTML("beforeend", `<option value="${z}">${z}%</option>`); $("#uiz").value = z; }
+  toast(`Zoom ${z}%`);
+  clearTimeout(zoomSave);
+  zoomSave = setTimeout(() => call("SaveSettings", S.settings).catch(() => {}), 600);
+}
+window.addEventListener("wheel", (e) => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoomBy(e.deltaY < 0 ? 5 : -5); }, { passive: false });
+window.addEventListener("keydown", (e) => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  if (e.key === "=" || e.key === "+") { e.preventDefault(); zoomBy(10); }
+  else if (e.key === "-") { e.preventDefault(); zoomBy(-10); }
+  else if (e.key === "0") { e.preventDefault(); zoomBy(0); }
+});
+
 function applyLook(set) {
   const r = document.documentElement;
   const f = UI_FONTS[set?.uiFont || ""];
@@ -237,6 +258,9 @@ function sitePicker() {
 }
 
 // ---------- shell ----------
+// The sidebar can fold down to its icons for wide tables and the map (issue #28).
+function navMini() { return !!swPref("sd-nav-mini", false); }
+function toggleNav() { swSave("sd-nav-mini", !navMini()); renderSide(); }
 function renderSide() {
   const r = S.route[0] || "dashboard";
   // a remembered site that no longer exists falls back to all sites
@@ -244,10 +268,11 @@ function renderSide() {
   const sd = siteDash();
   const crit = sd?.critical || 0;
   const fwCount = (sd?.switches || []).filter((v) => !v.disabled && v.firmware?.available && !v.firmware?.staged).length;
+  document.body.classList.toggle("navmini", navMini());
   const item = (key, icon, label, extra = "") =>
-    `<button class="nav${r === key || (key === "switches" && r === "switch") ? " on" : ""}" data-go="#/${key}">${ICON[icon]}<span>${label}</span>${extra}</button>`;
+    `<button title="${label}" class="nav${r === key || (key === "switches" && r === "switch") ? " on" : ""}" data-go="#/${key}">${ICON[icon]}<span>${label}</span>${extra}</button>`;
   $("#side").innerHTML = `
-    <div class="brand"><span class="brand-mark">${"<i></i>".repeat(8)}</span><b>SwitchDesk</b></div>
+    <div class="brand"><span class="brand-mark">${"<i></i>".repeat(8)}</span><b>SwitchDesk</b><button class="ib navfold" title="${navMini() ? "Expand the sidebar" : "Collapse the sidebar"}" onclick="toggleNav()">${navMini() ? "»" : "«"}</button></div>
     ${sitePicker()}
     ${item("dashboard", "dash", "Dashboard", crit ? `<span class="count">${crit}</span>` : "")}
     ${item("switches", "list", "Switches")}
@@ -457,6 +482,22 @@ function switchMatches(v, q) {
 
 // ---------- switch list columns (issue #25) ----------
 
+// Size of the port panel on the Overview tab (issue #28), remembered on this computer.
+function ledZoom() { return +swPref("sd-led-zoom", 1) || 1; }
+function setLedZoom(z) {
+  swSave("sd-led-zoom", z);
+  document.querySelectorAll(".ledzoom").forEach((e) => e.style.setProperty("--ledz", z));
+  document.querySelectorAll(".seg button").forEach((b) => b.classList.toggle("on", b.getAttribute("onclick") === `setLedZoom(${z})`));
+}
+
+// One short uptime format for every family (issue #27): "64d 19h", "5h 12m".
+function fmtUptime(s) {
+  const t = s?.uptimeSec;
+  if (!t) return s?.uptime || "";
+  const d = Math.floor(t / 86400), h = Math.floor((t % 86400) / 3600), m = Math.floor((t % 3600) / 60);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
+}
+
 // IPv4 sorts by number (10.0.0.20 before 10.0.0.132); anything else by text.
 function ipKey(h) {
   const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(h || "");
@@ -477,7 +518,7 @@ const SW_COLS = [
   { id: "cpu", label: "CPU", num: true, cls: "num", key: (v) => (v.summary?.cpu >= 0 ? v.summary.cpu : ""), cell: (v) => (v.summary?.cpu >= 0 ? v.summary.cpu + "%" : "") },
   { id: "mem", label: "Mem", num: true, cls: "num", key: (v) => (v.summary?.memory >= 0 ? v.summary.memory : ""), cell: (v) => (v.summary?.memory >= 0 ? v.summary.memory + "%" : "") },
   { id: "ports", label: "Ports up", num: true, cls: "num", key: (v) => (v.summary?.portsTotal ? v.summary.portsUp : ""), cell: (v) => (v.summary?.portsTotal ? portsUp(v.summary) : "") },
-  { id: "uptime", label: "Uptime", hidden: true, key: (v) => v.summary?.uptime || "", cell: (v) => esc(v.summary?.uptime || "") },
+  { id: "uptime", label: "Uptime", hidden: true, key: (v) => v.summary?.uptimeSec || "", cell: (v) => `<span title="${esc(v.summary?.uptime || "")}">${esc(fmtUptime(v.summary))}</span>` },
   { id: "stp", label: "STP", key: (v) => v.summary?.stpRole || "", cell: (v) => esc(v.summary?.stpRole || "") },
   { id: "problems", label: "Problems", key: (v) => (v.worst ? sevRank[v.worst] * 1000 + (v.issues || []).length : ""), cell: (v) => (v.worst ? `<span class="sev ${v.worst}">${(v.issues || []).length}</span>` : "") },
   { id: "collected", label: "Collected", cls: "faint", key: (v) => (v.summary?.collectedAt ? -new Date(v.summary.collectedAt).getTime() : ""), cell: (v) => (v.status.collecting ? "now" : ago(v.summary?.collectedAt)) },
@@ -485,6 +526,52 @@ const SW_COLS = [
 
 function swPref(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } }
 function swSave(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+// the user's column order; columns added in later versions go where they're defined
+function swOrdered() {
+  const order = swPref("sd-cols-order", []);
+  const pos = (c) => { const i = order.indexOf(c.id); return i < 0 ? SW_COLS.indexOf(c) + 0.5 : i; };
+  return order.length ? [...SW_COLS].sort((a, b) => pos(a) - pos(b)) : SW_COLS;
+}
+// Drag a header's right edge to resize the column (issue #28).
+function colResize(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  const th = e.target.closest("th");
+  const x0 = e.clientX, w0 = th.getBoundingClientRect().width;
+  let w = w0;
+  const move = (ev) => { w = Math.max(40, Math.round(w0 + ev.clientX - x0)); th.style.width = th.style.minWidth = th.style.maxWidth = w + "px"; };
+  const up = () => {
+    document.removeEventListener("mousemove", move);
+    document.removeEventListener("mouseup", up);
+    const ws = swPref("sd-cols-width", {});
+    ws[id] = w;
+    swSave("sd-cols-width", ws);
+    renderSwitches(true);
+  };
+  document.addEventListener("mousemove", move);
+  document.addEventListener("mouseup", up);
+}
+// Drag a header onto another to move the column (issue #28).
+function wireColumnDrag() {
+  const head = document.querySelector(".swlist thead");
+  if (!head) return;
+  let from = null;
+  head.addEventListener("dragstart", (e) => { const th = e.target.closest("th[data-col]"); if (!th) return; from = th.dataset.col; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", from); });
+  head.addEventListener("dragover", (e) => { const th = e.target.closest("th[data-col]"); if (from && th) { e.preventDefault(); head.querySelectorAll(".dropat").forEach((x) => x.classList.remove("dropat")); th.classList.add("dropat"); } });
+  head.addEventListener("dragleave", (e) => e.target.closest?.("th")?.classList.remove("dropat"));
+  head.addEventListener("drop", (e) => {
+    const th = e.target.closest("th[data-col]");
+    if (!from || !th || th.dataset.col === from) return;
+    e.preventDefault();
+    const ids = swOrdered().map((c) => c.id).filter((x) => x !== from);
+    ids.splice(ids.indexOf(th.dataset.col), 0, from);
+    swSave("sd-cols-order", ids);
+    from = null;
+    renderSwitches(true);
+  });
+  head.addEventListener("dragend", () => { from = null; head.querySelectorAll(".dropat").forEach((x) => x.classList.remove("dropat")); });
+}
+
 function swHidden() { return new Set(swPref("sd-cols-hidden", SW_COLS.filter((c) => c.hidden).map((c) => c.id))); }
 function swSort() { return swPref("sd-cols-sort", { col: "name", dir: 1 }); }
 function sortSwitches(id) {
@@ -503,8 +590,8 @@ function openColumns(btn) {
   const hidden = swHidden();
   const menu = document.createElement("div");
   menu.className = "colmenu";
-  menu.innerHTML = `<div class="faint" style="font-size:12px;padding:4px 8px 6px">Columns</div>` + SW_COLS.map((c) => `<label class="check"><input type="checkbox" data-col="${c.id}" ${hidden.has(c.id) ? "" : "checked"}> ${esc(c.label)}</label>`).join("") +
-    `<div style="padding:6px 8px 2px"><a onclick="swSave('sd-cols-hidden', SW_COLS.filter((c) => c.hidden).map((c) => c.id));document.querySelector('.colmenu')?.remove();renderSwitches(true)">Reset</a></div>`;
+  menu.innerHTML = `<div class="faint" style="font-size:12px;padding:4px 8px 6px">Columns</div>` + swOrdered().map((c) => `<label class="check"><input type="checkbox" data-col="${c.id}" ${hidden.has(c.id) ? "" : "checked"}> ${esc(c.label)}</label>`).join("") +
+    `<div style="padding:6px 8px 2px"><a onclick="swSave('sd-cols-hidden', SW_COLS.filter((c) => c.hidden).map((c) => c.id));swSave('sd-cols-order', []);swSave('sd-cols-width', {});document.querySelector('.colmenu')?.remove();renderSwitches(true)">Reset columns</a></div>`;
   document.body.appendChild(menu);
   const r = btn.getBoundingClientRect();
   menu.style.top = r.bottom + 4 + "px";
@@ -528,7 +615,9 @@ function renderSwitches(soft) {
   const ids = new Set(d.switches.map((v) => v.id));
   for (const id of S.sel) if (!ids.has(id)) S.sel.delete(id);
   const allOn = rows.length > 0 && rows.every((v) => S.sel.has(v.id));
-  const cols = SW_COLS.filter((c) => !swHidden().has(c.id));
+  const cols = swOrdered().filter((c) => !swHidden().has(c.id));
+  const widths = swPref("sd-cols-width", {});
+  const wst = (c) => (widths[c.id] ? ` style="width:${widths[c.id]}px;min-width:${widths[c.id]}px;max-width:${widths[c.id]}px"` : "");
   const srt = swSort();
   const sc = SW_COLS.find((c) => c.id === srt.col);
   if (sc) {
@@ -541,7 +630,7 @@ function renderSwitches(soft) {
       return srt.dir * r;
     });
   }
-  const th = (c) => `<th class="${c.num ? "num " : ""}sortable${srt.col === c.id ? " sorted" : ""}" onclick="sortSwitches('${c.id}')" title="Sort by ${esc(c.label)}">${esc(c.label)}${srt.col === c.id ? `<span class="arrow">${srt.dir > 0 ? "▲" : "▼"}</span>` : ""}</th>`;
+  const th = (c) => `<th class="${c.num ? "num " : ""}sortable${srt.col === c.id ? " sorted" : ""}" data-col="${c.id}" draggable="true" onclick="sortSwitches('${c.id}')" title="Sort by ${esc(c.label)}. Drag to move, drag the edge to resize."${wst(c)}>${esc(c.label)}${srt.col === c.id ? `<span class="arrow">${srt.dir > 0 ? "▲" : "▼"}</span>` : ""}<span class="colgrip" onmousedown="colResize(event, '${c.id}')" onclick="event.stopPropagation()"></span></th>`;
   const table = `<table class="swlist"><thead><tr>
       <th class="cb nogo"><input type="checkbox" title="Select all shown" ${allOn ? "checked" : ""} onchange="selectAll(this.checked)"></th>
       <th></th>${cols.map(th).join("")}<th></th></tr></thead><tbody>
@@ -549,7 +638,7 @@ function renderSwitches(soft) {
       return `<tr class="click${v.disabled ? " off" : ""}${S.sel.has(v.id) ? " picked" : ""}" data-go="#/switch/${v.id}">
       <td class="cb nogo"><input type="checkbox" ${S.sel.has(v.id) ? "checked" : ""} onchange="toggleSel('${v.id}', this.checked)"></td>
       <td>${v.disabled ? `<span class="dot" title="Disabled"></span>` : statusDot(v)}</td>
-      ${cols.map((c) => `<td${c.cls ? ` class="${c.cls}"` : ""}>${c.cell(v)}</td>`).join("")}
+      ${cols.map((c) => `<td class="${c.cls || ""}${widths[c.id] ? " fixw" : ""}"${widths[c.id] ? ` style="max-width:${widths[c.id]}px"` : ""}>${c.cell(v)}</td>`).join("")}
       <td class="acts nogo">${v.cloud ? `<span class="ib" style="visibility:hidden">${ICON.globe}</span>` : `<button class="ib" title="Open the web interface" onclick="openWeb('${v.id}')">${ICON.globe}</button>`}${v.cloud || v.web ? `<span class="ib" style="visibility:hidden">${ICON.term}</span>` : `<button class="ib" title="Open in your SSH client" onclick="openSSH('${v.id}')">${ICON.term}</button>`}${canUpdate(v) ? `<button class="ib" title="Update firmware to ${esc(v.firmware.available)}" onclick="openUpgradeDialog(['${v.id}'])">${ICON.up}</button>` : `<span class="ib" style="visibility:hidden">${ICON.up}</span>`}<button class="ib" title="${v.disabled ? "Enable" : "Disable"}" onclick="setDisabled(['${v.id}'], ${!v.disabled})">${v.disabled ? ICON.play : ICON.pause}</button><button class="ib danger" title="Delete" onclick="deleteSwitches(['${v.id}'])">${ICON.trash}</button></td></tr>`;
     }).join("")}</tbody></table>
     ${rows.length ? "" : `<div class="empty">No switches match “${esc(S.query)}”. <a onclick="clearSearch()">Clear search</a></div>`}`;
@@ -566,6 +655,7 @@ function renderSwitches(soft) {
     $("#swtable").innerHTML = d.total ? table : emptyList();
     $("#selbar").innerHTML = bar;
     $("#swcount").innerHTML = counts;
+    wireColumnDrag();
     return;
   }
   $("#main").innerHTML = `<div class="page">
@@ -576,6 +666,7 @@ function renderSwitches(soft) {
       <button class="btn primary" onclick="openSwitchModal()">${ICON.plus}Add switch</button></div>
     <div id="selbar">${bar}</div>
     <div class="panel" id="swtable">${d.total ? table : emptyList()}</div></div>`;
+  wireColumnDrag();
 }
 
 function emptyList() {
@@ -697,7 +788,7 @@ function renderDetail(soft) {
       <button class="btn" onclick="setDisabled(['${d.id}'], ${!d.disabled})">${d.disabled ? ICON.play + "Enable" : ICON.pause + "Disable"}</button>
       <button class="btn" onclick="openSwitchModal(S.detail)">Edit</button></div>
     <div class="idline">${d.cloud ? `<span><b>Instant On cloud</b></span>${d.host ? `<span class="mono">${esc(d.host)}</span>` : ""}` : d.web ? `<span class="mono"><b>${esc(d.host)}</b></span><span>Web interface${d.port === 443 ? " (HTTPS)" : d.port === 80 ? " (HTTP)" : ":" + d.port}</span>` : `<span class="mono"><b>${esc(d.host)}</b>${d.port !== 22 ? ":" + d.port : ""}</span>`}
-      ${s ? `${d.cloud ? "" : `<span>${esc(s.family)}</span>`}<span><b>${esc(s.model || "Unknown model")}</b></span><span class="mono">${esc(s.software)}</span><span>Up ${esc(s.uptime || "?")}</span>` : ""}
+      ${s ? `${d.cloud ? "" : `<span>${esc(s.family)}</span>`}<span><b>${esc(s.model || "Unknown model")}</b></span><span class="mono">${esc(s.software)}</span><span title="${esc(s.uptime || "")}">Up ${esc(fmtUptime(s) || "?")}</span>` : ""}
       ${d.site ? `<span>Site <b>${esc(d.site)}</b></span>` : ""}
       ${s ? `<span class="faint">Collected ${ago(s.collectedAt)}${snap?.duration ? ` in ${snap.duration}` : ""}</span>` : ""}</div>
     ${banners.join("")}
@@ -777,14 +868,15 @@ function tabOverview(d, snap) {
   const isS = snap.family === "aos-s";
   const env = snap.env || [];
   if (set.hardwarePhotos && f.model) setTimeout(() => frontPhoto(f.model), 0);
-  return `${leds(snap.ports, st, true, snap.optics)}<div style="margin:8px 0 16px">${ledKey(snap.ports)}</div>
+  const lz = ledZoom();
+  return `<div class="ledzoom" style="--ledz:${lz}">${leds(snap.ports, st, true, snap.optics)}</div><div style="margin:8px 0 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">${ledKey(snap.ports)}<span class="seg" style="margin-left:auto" title="Size of the port panel">${[[1, "S"], [1.4, "M"], [1.8, "L"], [2.3, "XL"]].map(([z, l]) => `<button class="${lz === z ? "on" : ""}" onclick="setLedZoom(${z})">${l}</button>`).join("")}</span></div>
   <div id="frontphoto"></div>
   <div class="grid2">
     <section class="panel"><h2>Problems on this switch</h2>
       ${d.issues?.length ? d.issues.map(issueRow).join("") : `<div class="empty" style="padding:22px"><h3>Nothing to fix</h3></div>`}</section>
     <section class="panel"><h2>System</h2><div class="body"><dl class="kv">
       <dt>Hostname</dt><dd>${esc(f.hostname)}</dd><dt>Model</dt><dd>${esc(f.model)}</dd><dt>Serial</dt><dd class="mono">${esc(f.serial)}</dd>
-      <dt>Base MAC</dt><dd class="mono">${esc(f.baseMac)}</dd><dt>Software</dt><dd class="mono">${esc(f.software)}</dd><dt>Uptime</dt><dd>${esc(f.uptime)}</dd>
+      <dt>Base MAC</dt><dd class="mono">${esc(f.baseMac)}</dd><dt>Software</dt><dd class="mono">${esc(f.software)}</dd><dt>Uptime</dt><dd title="${esc(f.uptime)}">${esc(fmtUptime(d.summary) || f.uptime)}</dd>
       ${f.cpu < 0 && f.memory < 0 ? "" : `<dt>CPU</dt><dd>${meter(f.cpu, set.cpuWarn)}</dd><dt>Memory</dt><dd>${meter(f.memory, set.memWarn)}</dd>`}
       ${f.location ? `<dt>Location</dt><dd>${esc(f.location)}</dd>` : ""}${f.contact ? `<dt>Contact</dt><dd>${esc(f.contact)}</dd>` : ""}
       ${f.configSaved !== undefined && f.configSaved !== null ? `<dt>Startup config</dt><dd>${f.configSaved ? `<span class="ok">Saved</span>` : `<span class="warnc">Unsaved changes</span>`}</dd>` : ""}
@@ -2278,7 +2370,8 @@ async function renderSettings() {
           <option value="system" ${set.uiFont === "system" ? "selected" : ""}>This computer's font</option>
           <option value="verdana" ${set.uiFont === "verdana" ? "selected" : ""}>Verdana (wide, easy to read)</option></select></label>
         <label class="f"><span>Interface size</span><select id="uiz" onchange="applyLook({uiFont:$('#uif').value,uiScale:this.value})">
-          ${[90, 100, 110, 125, 150].map((z) => `<option value="${z}" ${(+set.uiScale || 100) === z ? "selected" : ""}>${z}%${z === 100 ? " (default)" : ""}</option>`).join("")}</select></label></div>
+          ${[...new Set([75, 90, 100, 110, 125, 150, +set.uiScale || 100])].sort((a, b) => a - b).map((z) => `<option value="${z}" ${(+set.uiScale || 100) === z ? "selected" : ""}>${z}%${z === 100 ? " (default)" : ""}</option>`).join("")}</select></label></div>
+      <p class="faint" style="font-size:12.5px;margin:-8px 0 18px">Also with Ctrl + mouse wheel, or Ctrl + plus, minus and 0 (⌘ on a Mac).</p>
       <div style="border-top:1px solid var(--line-soft);padding-top:14px;margin-bottom:16px"><b style="font-weight:600">Automatic firmware updates</b>
         <p class="faint" style="font-size:12.5px;margin:4px 0 10px">Uses the newest image in the firmware library for each switch. SwitchDesk has to be running for this.</p>
         <label class="check" style="margin-bottom:6px"><input type="radio" name="fa" value="off" ${set.firmwareAuto === "off" ? "checked" : ""}> Off</label>
