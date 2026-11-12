@@ -1073,6 +1073,16 @@
     "Zoom {0}%": "Zoom {0}%",
     "Also with Ctrl + mouse wheel, or Ctrl + plus, minus and 0 (⌘ on a Mac).": "Auch mit Strg + Mausrad oder Strg + Plus, Minus und 0 (⌘ auf dem Mac).",
     "Check for new versions automatically": "Automatisch nach neuen Versionen suchen",
-    "(asks GitHub every few hours; nothing about you or your switches is sent)": "(fragt alle paar Stunden bei GitHub nach; nichts über Sie oder Ihre Switches wird gesendet)"
+    "(asks GitHub every few hours; nothing about you or your switches is sent)": "(fragt alle paar Stunden bei GitHub nach; nichts über Sie oder Ihre Switches wird gesendet)",
+    "{0} more of this platform are offered a newer image.": "{0} weiteren Switches dieser Plattform wird ein neueres Image angeboten.",
+    "{0} to update": "{0} zu aktualisieren",
+    "Back to top": "Nach oben",
+    "Its platform's switches are offered a newer image from your library.": "Den Switches dieser Plattform wird ein neueres Image aus Ihrer Bibliothek angeboten.",
+    "No switch would be updated with this image": "Mit diesem Image würde kein Switch aktualisiert",
+    "None of your switches is on its platform, or they already run it.": "Keiner Ihrer Switches gehört zu dieser Plattform, oder sie haben es bereits.",
+    "Show all": "Alle anzeigen",
+    "Show the switches this image would update": "Switches anzeigen, die dieses Image aktualisieren würde",
+    "Showing the switches": "Angezeigt werden die Switches, die",
+    "would update: {0} of {1}.": "aktualisieren würde: {0} von {1}."
   }
 }

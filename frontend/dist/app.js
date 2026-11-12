@@ -178,6 +178,26 @@ async function saveAutoUpdate(on) {
 
 // Interface font and size from Settings (issue #25). Defaults change nothing.
 const UI_FONTS = { "": null, system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', verdana: 'Verdana, Tahoma, sans-serif' };
+// A floating "back to top" button for whatever is scrolled far down: the
+// page itself, or a table that scrolls on its own (issue #31).
+(() => {
+  let target = null;
+  const btn = document.createElement("button");
+  btn.className = "totop";
+  btn.title = "Back to top";
+  btn.innerHTML = "↑";
+  btn.onclick = () => { target?.scrollTo({ top: 0, behavior: "smooth" }); };
+  const place = () => { if (!document.body.contains(btn)) document.body.appendChild(btn); };
+  document.addEventListener("scroll", (e) => {
+    const el = e.target === document ? document.scrollingElement : e.target;
+    if (!(el instanceof Element) || el.closest?.(".modal, .colmenu, pre")) return;
+    place();
+    if (el.scrollTop > 400) { target = el; btn.classList.add("on"); }
+    else if (el === target) { btn.classList.remove("on"); target = null; }
+  }, true);
+  window.addEventListener("hashchange", () => { btn.classList.remove("on"); target = null; });
+})();
+
 // Ctrl + mouse wheel, Ctrl + = / - / 0 zoom the interface (issue #28), 75–150 %.
 let zoomSave = null;
 function zoomBy(step) {

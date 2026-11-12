@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.17
+
+From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#31](https://github.com/jaba0x/SwitchDesk/issues/31):
+
+- **Firmware page: Address column and sorting.** The Updates list shows each switch's address, and every column sorts with a click on its header. The order is remembered.
+- **Headers stay in view** in the Updates list and the firmware library while scrolling.
+- **Pick an image to see its switches.** Click an image in the firmware library to list only the switches it would update. Click it again, or **Show all**, to go back.
+- **Back to top.** A button appears in the corner of any long page once you scroll down, and takes you back to the top.
+
 ## 1.0.16
 
 - **Turn off the automatic update check.** **Settings → Check for new versions automatically** stops SwitchDesk asking GitHub for new versions in the background. **Check for updates** still works when you click it.

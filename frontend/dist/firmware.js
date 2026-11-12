@@ -2,7 +2,31 @@
 /* Firmware: library, available updates, update jobs. Uses helpers from app.js. */
 
 
-const FW = { images: [], jobs: [], dl: null, sel: new Set(), openLog: new Set() };
+const FW = { images: [], jobs: [], dl: null, sel: new Set(), openLog: new Set(), image: "" };
+
+// sortable columns of the Updates table (issue #31), the same way as the switch list
+const FW_COLS = [
+  { id: "name", label: "Switch", key: (v) => (v.name || v.summary?.hostname || v.host || "").toLowerCase() },
+  { id: "host", label: "Address", key: (v) => ipKey(v.host) },
+  { id: "model", label: "Model", key: (v) => v.summary?.model || "" },
+  { id: "running", label: "Running", key: (v) => v.firmware.running || "" },
+  { id: "available", label: "Available", key: (v) => v.firmware.available || "" },
+  { id: "primary", label: "Primary", key: (v) => v.firmware.banks?.primary || "" },
+  { id: "secondary", label: "Secondary", key: (v) => v.firmware.banks?.secondary || "" },
+  { id: "status", label: "Status", key: (v) => { const j = v.firmware.job; return j ? j.state : v.firmware.staged ? "staged" : "available"; } },
+];
+function fwSort(id) {
+  const s = swPref("sd-fw-sort", { col: "name", dir: 1 });
+  swSave("sd-fw-sort", s.col === id ? { col: id, dir: -s.dir } : { col: id, dir: 1 });
+  $("#fw-updates").innerHTML = updatesPanel();
+}
+// Click an image in the library to see only the switches it would update (issue #31).
+function fwPickImage(file) {
+  FW.image = FW.image === file ? "" : file;
+  $("#fw-updates").innerHTML = updatesPanel();
+  $("#fw-lib").innerHTML = libraryTable();
+  if (FW.image) $("#fw-updates").scrollIntoView({ block: "start", behavior: "smooth" });
+}
 
 const shortVer = (v) => (v || "").replace(/^[A-Z]{2}\./, "");
 const mb = (n) => (n >= 1 << 20 ? (n / (1 << 20)).toFixed(n > 100 << 20 ? 0 : 1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
@@ -64,9 +88,23 @@ async function renderFirmware(soft) {
 
 function updatesPanel() {
   const vs = (siteDash()?.switches || []).filter((v) => !v.disabled && v.firmware?.supported);
-  const avail = vs.filter((v) => v.firmware.available);
+  if (FW.image && !FW.images.some((i) => i.file === FW.image)) FW.image = "";
+  const img = FW.images.find((i) => i.file === FW.image);
+  const all0 = vs.filter((v) => v.firmware.available);
+  const avail = img ? all0.filter((v) => v.firmware.image === img.file) : all0;
+  // the image is for these switches' platform, but they're offered a newer one
+  const newer = img ? vs.filter((v) => v.firmware.running?.slice(0, 2) === img.version.branch && v.firmware.image && v.firmware.image !== img.file).length : 0;
+  const imgBar = img ? `<div class="fwfilter"><span>Showing the switches</span> <b class="mono">${esc(img.file)}</b> <span>would update: ${avail.length} of ${all0.length}.</span>${newer ? ` <span>${newer} more of this platform are offered a newer image.</span>` : ""} <a onclick="fwPickImage('')">Show all</a></div>` : "";
+  const srt = swPref("sd-fw-sort", { col: "name", dir: 1 });
+  const sc = FW_COLS.find((c) => c.id === srt.col);
+  if (sc) avail.sort((a, b) => { const x = sc.key(a), y = sc.key(b); const r = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: "base" }); return srt.dir * r; });
+  const th = (c) => `<th class="sortable${srt.col === c.id ? " sorted" : ""}" onclick="fwSort('${c.id}')" title="Sort by ${esc(c.label)}">${esc(c.label)}${srt.col === c.id ? `<span class="arrow">${srt.dir > 0 ? "▲" : "▼"}</span>` : ""}</th>`;
   for (const id of FW.sel) if (!avail.find((v) => v.id === id)) FW.sel.delete(id);
   const upToDate = vs.filter((v) => !v.firmware.available && v.firmware.running).length;
+  if (!avail.length && img) {
+    return `<section class="panel" style="margin-bottom:18px"><h2>Updates</h2>${imgBar}<div class="empty" style="padding:22px"><h3>No switch would be updated with this image</h3>
+      <p>${newer ? "Its platform's switches are offered a newer image from your library." : "None of your switches is on its platform, or they already run it."}</p></div></section>`;
+  }
   if (!avail.length) {
     return `<section class="panel" style="margin-bottom:18px"><h2>Updates</h2><div class="empty" style="padding:22px"><h3>${vs.length ? "Every switch runs the newest firmware in your library" : "No switches read yet"}</h3>
       <p>${vs.length ? `${upToDate} switch${upToDate === 1 ? "" : "es"} checked. Add newer images to the library below to see updates here.` : "Firmware shows up once switches have been collected."}</p></div></section>`;
@@ -74,19 +112,19 @@ function updatesPanel() {
   const all = avail.every((v) => FW.sel.has(v.id));
   return `<section class="panel" style="margin-bottom:18px"><h2>Updates available<span class="sub muted" style="font-weight:400">${avail.length}</span><span class="grow"></span>
       ${FW.sel.size ? `<button class="btn small primary" onclick="openUpgradeDialog([...FW.sel])">${ICON.up}Update ${FW.sel.size} selected</button>` : `<span class="faint" style="font-weight:400;font-size:13px">Tick switches to update them</span>`}</h2>
-    <div style="overflow-x:auto"><table class="swlist fwlist"><thead><tr><th class="cb nogo"><input type="checkbox" ${all ? "checked" : ""} onchange="fwSelAll(this.checked)"></th><th>Switch</th><th>Model</th><th>Running</th><th>Available</th><th>Primary</th><th>Secondary</th><th>Status</th></tr></thead><tbody>
+    ${imgBar}<div class="fwscroll"><table class="swlist fwlist"><thead><tr><th class="cb nogo"><input type="checkbox" ${all ? "checked" : ""} onchange="fwSelAll(this.checked)"></th>${FW_COLS.map(th).join("")}</tr></thead><tbody>
     ${avail.map((v) => {
       const f = v.firmware, b = f.banks || {};
       const mark = (bank) => `${esc(b[bank] || "–")}${b.running === bank ? ' <span class="tag">running</span>' : ""}${b.default === bank && b.running !== bank ? ' <span class="tag">next boot</span>' : ""}`;
       return `<tr class="click${FW.sel.has(v.id) ? " picked" : ""}" data-go="#/switch/${v.id}"><td class="cb nogo"><input type="checkbox" ${FW.sel.has(v.id) ? "checked" : ""} onchange="fwSel('${v.id}', this.checked)"></td>
-        <td title="${esc(v.host)}">${statusDot(v)} ${esc(v.name || v.summary?.hostname || v.host)}</td><td>${esc(v.summary?.model || "")}</td>
+        <td>${statusDot(v)} ${esc(v.name || v.summary?.hostname || v.host)}</td><td class="mono">${esc(v.host)}</td><td>${esc(v.summary?.model || "")}</td>
         <td class="mono">${esc(f.running)}</td><td class="mono ok">${esc(f.available)}</td><td class="mono">${mark("primary")}</td><td class="mono">${mark("secondary")}</td><td>${fwCell(v)}</td></tr>`;
     }).join("")}</tbody></table></div></section>`;
 }
 
 function fwSel(id, on) { on ? FW.sel.add(id) : FW.sel.delete(id); $("#fw-updates").innerHTML = updatesPanel(); }
 function fwSelAll(on) {
-  for (const v of siteDash().switches.filter((v) => !v.disabled && v.firmware?.available)) on ? FW.sel.add(v.id) : FW.sel.delete(v.id);
+  for (const v of siteDash().switches.filter((v) => !v.disabled && v.firmware?.available && (!FW.image || v.firmware.image === FW.image))) on ? FW.sel.add(v.id) : FW.sel.delete(v.id);
   $("#fw-updates").innerHTML = updatesPanel();
 }
 
@@ -121,12 +159,12 @@ function libraryTable() {
   if (!FW.images.length) return `<div class="empty" style="padding:22px">No images yet.</div>`;
   const used = {};
   for (const v of S.dash?.switches || []) if (v.firmware?.running) used[v.firmware.running.slice(0, 2)] = (used[v.firmware.running.slice(0, 2)] || 0) + 1;
-  return `<table><thead><tr><th>File</th><th>Version</th><th>For</th><th class="num">Size</th><th>Added</th><th>From</th><th></th></tr></thead><tbody>
-    ${FW.images.map((i) => `<tr><td class="mono">${esc(i.file)}</td><td class="mono">${esc(i.version.text)}</td>
-      <td class="muted">${used[i.version.branch] ? `${used[i.version.branch]} of your switches` : `<span class="faint">none of your switches</span>`}</td>
+  return `<div class="fwscroll lib"><table><thead><tr><th>File</th><th>Version</th><th>For</th><th class="num">Size</th><th>Added</th><th>From</th><th></th></tr></thead><tbody>
+    ${FW.images.map((i) => `<tr class="click${FW.image === i.file ? " picked" : ""}" title="Show the switches this image would update" onclick="if(!event.target.closest('button'))fwPickImage(this.dataset.file)" data-file="${esc(i.file)}"><td class="mono">${esc(i.file)}</td><td class="mono">${esc(i.version.text)}</td>
+      <td class="muted">${used[i.version.branch] ? `${used[i.version.branch]} of your switches` : `<span class="faint">none of your switches</span>`}${(S.dash?.switches || []).some((v) => v.firmware?.image === i.file) ? ` · <span class="ok">${(S.dash?.switches || []).filter((v) => v.firmware?.image === i.file && !v.disabled).length} to update</span>` : ""}</td>
       <td class="num">${mb(i.size)}</td><td class="faint">${ago(i.addedAt)}</td><td class="faint">${esc(i.source === "file" ? "added file" : i.source)}</td>
       <td style="text-align:right"><button class="ib danger" title="Delete" data-fw-delete="${esc(i.file)}">${ICON.trash}</button></td></tr>`).join("")}
-    </tbody></table>`;
+    </tbody></table></div>`;
 }
 
 async function addFirmwareFiles() {

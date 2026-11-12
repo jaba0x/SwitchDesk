@@ -37,7 +37,7 @@ HPE doesn't offer firmware downloads without signing in to the HPE Networking Su
 - **Download** takes a download link copied from the support portal and fetches it. Portal links expire after a while; if the download fails, copy a fresh one.
 - **Open folder** shows the library folder. Files you drop there by hand are picked up too, a few seconds after SwitchDesk starts or when you open the Firmware page. A file whose version SwitchDesk can't find is skipped, and isn't read again until it changes.
 
-Each image is matched to switches by its platform code, the two letters at the start of the version: `WC` for 2930F, `YA` for 2530, `KB` for 3810 and 5400R, `FL` for 6300 and 6400, `PL` for 6000 and 6100, and so on. SwitchDesk reads the code from the file name (like `WC_16_11_0021.swi`), from AOS-CX file names (like `ArubaOS-CX_6400-6300_10_14_0001.swi`), or from inside the image. The **For** column shows how many of your switches an image fits.
+Each image is matched to switches by its platform code, the two letters at the start of the version: `WC` for 2930F, `YA` for 2530, `KB` for 3810 and 5400R, `FL` for 6300 and 6400, `PL` for 6000 and 6100, and so on. SwitchDesk reads the code from the file name (like `WC_16_11_0021.swi`), from AOS-CX file names (like `ArubaOS-CX_6400-6300_10_14_0001.swi`), or from inside the image. The **For** column shows how many of your switches an image fits. Click an image's row to list only the switches that image would update; click it again, or **Show all**, to see every switch.
 
 Each switch is offered the newest image for its platform. In the switch list, the **Firmware** column shows:
 
@@ -50,7 +50,7 @@ Each switch is offered the newest image for its platform. In the switch list, th
 
 ## Update switches
 
-Start an update from the **Firmware** page (tick switches, then **Update selected**), from the switch list (the up-arrow at the end of a row, or **Update firmware** for selected switches), or from the firmware card on a switch page.
+Start an update from the **Firmware** page (tick switches, then **Update selected**; click a column header to sort, by address for example), from the switch list (the up-arrow at the end of a row, or **Update firmware** for selected switches), or from the firmware card on a switch page.
 
 ![Update dialog](images/firmware-update.png){ .shot }
 
