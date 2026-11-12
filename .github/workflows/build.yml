@@ -133,7 +133,7 @@ jobs:
           (cd dist && sha256sum *.zip > SHA256SUMS.txt)
           cat >> notes.md <<'EOF'
 
-          [Code signing policy](https://github.com/jaba0x/SwitchDesk/blob/main/CODE_SIGNING_POLICY.md) · [Privacy policy](https://github.com/jaba0x/SwitchDesk/blob/main/PRIVACY.md)
+          Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). [Code signing policy](https://github.com/jaba0x/SwitchDesk/blob/main/CODE_SIGNING_POLICY.md) · [Privacy policy](https://github.com/jaba0x/SwitchDesk/blob/main/PRIVACY.md)
 
           **Checking a download.** `SHA256SUMS.txt` lists the SHA-256 of each zip. Every file here is built by GitHub Actions from this repository's source and carries a signed build attestation; check it with `gh attestation verify <file> --repo jaba0x/SwitchDesk`. The Windows exe isn't code-signed yet, so some antivirus products flag it by heuristics; see [SECURITY.md](https://github.com/jaba0x/SwitchDesk/blob/main/SECURITY.md).
           EOF

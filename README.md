@@ -118,7 +118,7 @@ If your model isn't listed or reads wrong, open an [issue](https://github.com/ja
 
 ## Install
 
-Download the latest build from **[Releases](https://github.com/jaba0x/SwitchDesk/releases/latest)**. Each release lists SHA-256 checksums and carries a signed build attestation; see the [code signing policy](CODE_SIGNING_POLICY.md) and the [privacy policy](PRIVACY.md).
+Download the latest build from **[Releases](https://github.com/jaba0x/SwitchDesk/releases/latest)**. Each release lists SHA-256 checksums and carries a signed build attestation; see the [code signing policy](CODE_SIGNING_POLICY.md) and the [privacy policy](PRIVACY.md). Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
 ### macOS
 
