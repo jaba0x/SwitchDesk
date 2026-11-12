@@ -94,6 +94,8 @@ nav:
       - Troubleshooting: troubleshooting.md
       - Translating: translating.md
       - Changelog: changelog.md
+      - Code signing policy: code-signing-policy.md
+      - Privacy policy: privacy.md
   - Development: development.md
   - About: about.md
   - Website: https://jaba0x.github.io/SwitchDesk/

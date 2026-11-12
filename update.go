@@ -81,8 +81,11 @@ func (a *App) LastUpdateCheck() *UpdateInfo {
 func (a *App) updateLoop() {
 	time.Sleep(5 * time.Second)
 	for {
-		if info, err := a.CheckForUpdate(); err == nil && info.Available {
-			runtime.EventsEmit(a.ctx, "update-available", info)
+		// only when the user hasn't turned it off in Settings
+		if !a.st.Settings().NoUpdateCheck {
+			if info, err := a.CheckForUpdate(); err == nil && info.Available {
+				runtime.EventsEmit(a.ctx, "update-available", info)
+			}
 		}
 		time.Sleep(6 * time.Hour)
 	}

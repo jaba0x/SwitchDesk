@@ -18,7 +18,8 @@
   <a href="https://jaba0x.github.io/SwitchDesk/"><b>Website</b></a> ·
   <a href="https://jaba0x.github.io/SwitchDesk/docs/"><b>Documentation</b></a> ·
   <a href="https://github.com/jaba0x/SwitchDesk/releases/latest"><b>Download</b></a> ·
-  <a href="https://github.com/jaba0x/SwitchDesk/discussions"><b>Discussions</b></a>
+  <a href="https://github.com/jaba0x/SwitchDesk/discussions"><b>Discussions</b></a> ·
+  <a href="CODE_SIGNING_POLICY.md"><b>Code signing policy</b></a>
 </p>
 
 <p align="center">
@@ -117,7 +118,7 @@ If your model isn't listed or reads wrong, open an [issue](https://github.com/ja
 
 ## Install
 
-Download the latest build from **[Releases](https://github.com/jaba0x/SwitchDesk/releases/latest)**.
+Download the latest build from **[Releases](https://github.com/jaba0x/SwitchDesk/releases/latest)**. Each release lists SHA-256 checksums and carries a signed build attestation; see the [code signing policy](CODE_SIGNING_POLICY.md) and the [privacy policy](PRIVACY.md).
 
 ### macOS
 
@@ -220,6 +221,6 @@ Built by **Jaba Macharashvili**. More of my infra, homelab and hardware projects
 
 Thanks to [Arne Naessens](https://github.com/ArneNaessens) for mass VLAN editing, port access, the site filter, the disabled-port display and the `ntp server-name` fix, and to everyone who reports issues or helps translate.
 
-SwitchDesk is released under the [MIT License](LICENSE).
+SwitchDesk is released under the [MIT License](LICENSE). [Code signing policy](CODE_SIGNING_POLICY.md) · [Privacy policy](PRIVACY.md) · [Code of conduct](CODE_OF_CONDUCT.md)
 
 Built with [Wails](https://wails.io). Fonts are [IBM Plex](https://github.com/IBM/plex), under the SIL Open Font License. Port layouts and front panel photos come from the [NetBox device type library](https://github.com/netbox-community/devicetype-library) (CC0).

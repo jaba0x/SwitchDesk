@@ -55,6 +55,36 @@ jobs:
         run: |
           codesign --force --deep --sign - build/bin/SwitchDesk.app
           cd build/bin && ditto -c -k --keepParent SwitchDesk.app "SwitchDesk-${{ steps.ver.outputs.version }}-macos-universal.zip"
+      # Code signing through SignPath Foundation (CODE_SIGNING_POLICY.md).
+      # Off until the repository variable SIGNPATH_ORGANIZATION_ID and the
+      # secret SIGNPATH_API_TOKEN are set; each request is approved by hand
+      # in SignPath before the signed exe comes back.
+      - name: Upload unsigned exe for signing
+        id: unsigned
+        if: runner.os == 'Windows' && vars.SIGNPATH_ORGANIZATION_ID != '' && (github.ref_type == 'tag' || inputs.version != '')
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwitchDesk-unsigned
+          path: build/bin/SwitchDesk.exe
+      - name: Sign with SignPath
+        if: steps.unsigned.outcome == 'success'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: SwitchDesk
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: build/signed
+      - name: Use the signed exe
+        if: steps.unsigned.outcome == 'success'
+        shell: bash
+        run: |
+          signed=$(find build/signed -iname 'SwitchDesk.exe' | head -1)
+          test -n "$signed"
+          cp "$signed" build/bin/SwitchDesk.exe
       - name: Package Windows exe
         if: runner.os == 'Windows'
         shell: bash
@@ -102,6 +132,8 @@ jobs:
           EOF
           (cd dist && sha256sum *.zip > SHA256SUMS.txt)
           cat >> notes.md <<'EOF'
+
+          [Code signing policy](https://github.com/jaba0x/SwitchDesk/blob/main/CODE_SIGNING_POLICY.md) · [Privacy policy](https://github.com/jaba0x/SwitchDesk/blob/main/PRIVACY.md)
 
           **Checking a download.** `SHA256SUMS.txt` lists the SHA-256 of each zip. Every file here is built by GitHub Actions from this repository's source and carries a signed build attestation; check it with `gh attestation verify <file> --repo jaba0x/SwitchDesk`. The Windows exe isn't code-signed yet, so some antivirus products flag it by heuristics; see [SECURITY.md](https://github.com/jaba0x/SwitchDesk/blob/main/SECURITY.md).
           EOF

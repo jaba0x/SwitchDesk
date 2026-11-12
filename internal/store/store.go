@@ -106,6 +106,9 @@ type Settings struct {
 	// "system" or "verdana"; a size in percent, 0 meaning 100.
 	UIFont  string `json:"uiFont"`
 	UIScale int    `json:"uiScale"`
+	// NoUpdateCheck turns off the automatic check for new versions on
+	// GitHub; "Check for updates" in Settings still works.
+	NoUpdateCheck bool `json:"noUpdateCheck"`
 }
 
 func DefaultSettings() Settings {

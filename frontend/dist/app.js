@@ -171,6 +171,11 @@ function siteOnly(list) {
 }
 // The site field: free text, plus a list of the sites already in use. A
 // <datalist> would do this, but the app's web view doesn't open its arrow.
+async function saveAutoUpdate(on) {
+  S.settings = { ...(S.settings || {}), noUpdateCheck: !on };
+  try { await call("SaveSettings", S.settings); } catch (e) { toast(e.message, true); }
+}
+
 // Interface font and size from Settings (issue #25). Defaults change nothing.
 const UI_FONTS = { "": null, system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', verdana: 'Verdana, Tahoma, sans-serif' };
 // Ctrl + mouse wheel, Ctrl + = / - / 0 zoom the interface (issue #28), 75–150 %.
@@ -2405,6 +2410,7 @@ async function renderSettings() {
       <a class="about-logo" onclick="openURL('https://clihero.com')" title="clihero.com"><img src="clihero-logo-white.png" alt="clihero.com"></a>
       <div><b>SwitchDesk ${esc(ver)}</b>
         <div class="muted" style="font-size:13px;margin-top:2px">Built by Jaba Macharashvili · <a onclick="openURL('https://clihero.com')">clihero.com</a> · <a onclick="openURL('https://jaba0x.github.io/SwitchDesk/')">Documentation</a> · <a onclick="openURL('https://github.com/jaba0x/SwitchDesk')">GitHub</a></div>
+        <label class="check" style="margin-top:12px"><input type="checkbox" id="autoupd" ${set.noUpdateCheck ? "" : "checked"} onchange="saveAutoUpdate(this.checked)"> Check for new versions automatically <span class="faint">(asks GitHub every few hours; nothing about you or your switches is sent)</span></label>
         <div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button class="btn small" onclick="checkUpdate(this)">${ICON.refresh}Check for updates</button><span id="updres" class="muted" style="font-size:13px"></span></div></div>
     </div></section></div>`;
   sshClientHint();
@@ -2637,7 +2643,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
+    await call("SaveSettings", { ...S.settings, checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }
