@@ -304,6 +304,10 @@ func ParseStack(out string) *Stack {
 		if len(rest) > 1 && isNumber(rest[len(rest)-1]) {
 			rest = rest[:len(rest)-1]
 		}
+		// AOS-S cuts long models short: "... 3810M-16SFP+-2-slot S..." drops the cut word
+		if n := len(rest); n > 1 && strings.HasSuffix(rest[n-1], "...") {
+			rest = rest[:n-1]
+		}
 		st.Members = append(st.Members, StackMember{ID: fs[0], MAC: NormMAC(fs[1]), Model: strings.Join(rest, " "), Status: status, OK: stackOKStatus[strings.ToLower(status)]})
 	}
 	// A standalone AOS-CX switch still answers "show vsf" with itself as

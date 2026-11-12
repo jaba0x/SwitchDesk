@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.14
+
+- **Stack models read cleanly.** AOS-S cuts long member models short in `show stacking` ("…3810M-16SFP+-2-slot S..."); the cut-off word is dropped, so a 3810M stack shows as "Aruba JL075A 3810M-16SFP+-2-slot". Checked against real output from [@JasonZhang0320](https://github.com/JasonZhang0320) in [#27](https://github.com/jaba0x/SwitchDesk/issues/27).
+
 ## 1.0.13
 
 From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#27](https://github.com/jaba0x/SwitchDesk/issues/27) and [#28](https://github.com/jaba0x/SwitchDesk/issues/28):

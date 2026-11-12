@@ -219,3 +219,35 @@ func TestStackModel(t *testing.T) {
 		t.Fatalf("vsf = %+v", s)
 	}
 }
+
+// issue #27: a 3810M stack, as the switch prints it, with the model cut short
+func TestStack3810M(t *testing.T) {
+	out := `Stack ID         : 0005445b-ed9e9e00
+MAC Address      : 445bed-9e9e65
+Stack Topology   : Ring
+Stack Status     : Active
+Split Policy     : One-Fragment-Up
+Uptime           : 157d 18h 0m
+Software Version : KB.16.11.0029
+
+ Mbr
+ ID  Mac Address       Model                                 Pri Status
+ --- ----------------- ------------------------------------- --- ---------------
+  1  445bed-9e9e00     Aruba JL075A 3810M-16SFP+-2-slot S... 255 Commander
+  2  9020c2-e26b00     Aruba JL075A 3810M-16SFP+-2-slot S... 128 Standby
+`
+	st := ParseStack(out)
+	if st == nil || st.Topology != "Ring" || len(st.Members) != 2 {
+		t.Fatalf("stack = %+v", st)
+	}
+	if m := st.Model(); m != "Aruba JL075A 3810M-16SFP+-2-slot" {
+		t.Fatalf("model = %q", m)
+	}
+	if pn := PartNumbers(st.Model()); len(pn) != 1 || pn[0] != "JL075A" {
+		t.Fatalf("part numbers = %v", pn)
+	}
+	if !st.Members[0].OK || !st.Members[1].OK || st.Members[1].Status != "Standby" {
+		t.Fatalf("members = %+v", st.Members)
+	}
+}
+
