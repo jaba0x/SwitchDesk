@@ -11,6 +11,10 @@ on:
 
 permissions:
   contents: write
+  # signed build provenance: anyone can check that a download was built here,
+  # from this repository's source (gh attestation verify, see SECURITY.md)
+  id-token: write
+  attestations: write
 
 jobs:
   build:
@@ -55,6 +59,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: cd build/bin && 7z a "SwitchDesk-${{ steps.ver.outputs.version }}-windows-x64.zip" SwitchDesk.exe
+      - name: Attest build provenance
+        if: github.ref_type == 'tag' || inputs.version != ''
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            build/bin/*.zip
+            build/bin/SwitchDesk.exe
       - uses: actions/upload-artifact@v4
         with:
           name: SwitchDesk-${{ runner.os }}
@@ -89,4 +100,9 @@ jobs:
 
           Data from an earlier version is picked up automatically.
           EOF
-          gh release create "$tag" dist/*.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "SwitchDesk ${tag#v}" --notes-file notes.md
+          (cd dist && sha256sum *.zip > SHA256SUMS.txt)
+          cat >> notes.md <<'EOF'
+
+          **Checking a download.** `SHA256SUMS.txt` lists the SHA-256 of each zip. Every file here is built by GitHub Actions from this repository's source and carries a signed build attestation; check it with `gh attestation verify <file> --repo jaba0x/SwitchDesk`. The Windows exe isn't code-signed yet, so some antivirus products flag it by heuristics; see [SECURITY.md](https://github.com/jaba0x/SwitchDesk/blob/main/SECURITY.md).
+          EOF
+          gh release create "$tag" dist/*.zip dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "SwitchDesk ${tag#v}" --notes-file notes.md

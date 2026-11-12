@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.15
+
+- **Verifiable downloads.** Each release now comes with `SHA256SUMS.txt` and a signed build attestation from GitHub, so anyone can check that a download was built by this repository's workflow from its source: `gh attestation verify <file> --repo jaba0x/SwitchDesk`. See [SECURITY.md](https://github.com/jaba0x/SwitchDesk/blob/main/SECURITY.md) for why some antivirus products flag the unsigned Windows exe ([#30](https://github.com/jaba0x/SwitchDesk/issues/30)).
+
 ## 1.0.14
 
 - **Stack models read cleanly.** AOS-S cuts long member models short in `show stacking` ("…3810M-16SFP+-2-slot S..."); the cut-off word is dropped, so a 3810M stack shows as "Aruba JL075A 3810M-16SFP+-2-slot". Checked against real output from [@JasonZhang0320](https://github.com/JasonZhang0320) in [#27](https://github.com/jaba0x/SwitchDesk/issues/27).
