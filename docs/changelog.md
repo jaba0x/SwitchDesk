@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.16
+
+- **Turn off the automatic update check.** **Settings → Check for new versions automatically** stops SwitchDesk asking GitHub for new versions in the background. **Check for updates** still works when you click it.
+- **Privacy policy and code signing policy.** [PRIVACY.md](https://github.com/jaba0x/SwitchDesk/blob/main/PRIVACY.md) lists everything SwitchDesk connects to and when; [CODE_SIGNING_POLICY.md](https://github.com/jaba0x/SwitchDesk/blob/main/CODE_SIGNING_POLICY.md) describes how releases are built and signed. Code signing for the Windows exe through SignPath Foundation is on its way ([#30](https://github.com/jaba0x/SwitchDesk/issues/30)).
+
 ## 1.0.15
 
 - **Verifiable downloads.** Each release now comes with `SHA256SUMS.txt` and a signed build attestation from GitHub, so anyone can check that a download was built by this repository's workflow from its source: `gh attestation verify <file> --repo jaba0x/SwitchDesk`. See [SECURITY.md](https://github.com/jaba0x/SwitchDesk/blob/main/SECURITY.md) for why some antivirus products flag the unsigned Windows exe ([#30](https://github.com/jaba0x/SwitchDesk/issues/30)).

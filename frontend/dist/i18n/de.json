@@ -1071,6 +1071,8 @@
     "Expand the sidebar": "Seitenleiste ausklappen",
     "Collapse the sidebar": "Seitenleiste einklappen",
     "Zoom {0}%": "Zoom {0}%",
-    "Also with Ctrl + mouse wheel, or Ctrl + plus, minus and 0 (⌘ on a Mac).": "Auch mit Strg + Mausrad oder Strg + Plus, Minus und 0 (⌘ auf dem Mac)."
+    "Also with Ctrl + mouse wheel, or Ctrl + plus, minus and 0 (⌘ on a Mac).": "Auch mit Strg + Mausrad oder Strg + Plus, Minus und 0 (⌘ auf dem Mac).",
+    "Check for new versions automatically": "Automatisch nach neuen Versionen suchen",
+    "(asks GitHub every few hours; nothing about you or your switches is sent)": "(fragt alle paar Stunden bei GitHub nach; nichts über Sie oder Ihre Switches wird gesendet)"
   }
 }
