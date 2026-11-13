@@ -474,3 +474,8 @@ body.navmini .nav .count { position: absolute; top: 1px; right: 2px; font-size: 
 .totop { position: fixed; right: 22px; bottom: 22px; z-index: 50; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 17px; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,.35); opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .15s, transform .15s; }
 .totop.on { opacity: .9; transform: none; pointer-events: auto; }
 .totop:hover { opacity: 1; border-color: var(--accent); }
+
+/* port names (issue #32) */
+td.pname { cursor: pointer; }
+td.pname:hover { background: var(--line-soft); }
+input.pn.lldp { border-color: var(--info); }

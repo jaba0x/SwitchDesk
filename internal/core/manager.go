@@ -485,6 +485,9 @@ func (m *Manager) collect(id string) {
 	}
 	m.st.SaveSnapshot(id, snap)
 	m.st.SaveBackup(id, snap.RunningConfig, m.st.Settings().KeepBackups)
+	if m.autoPortNames(ctx, sess, sw, &snap) {
+		go m.Enqueue(id) // read the new names back, and back up the config with them
+	}
 }
 
 // Resume checks a re-enabled switch right away and reads it if it answers.

@@ -392,6 +392,19 @@ func (a *App) ApplyPortAccess(id string, ch aruba.PortAccessChange) (aruba.Apply
 	return a.mgr.ApplyPortAccess(id, ch)
 }
 
+// PortNameSuggestions lists names for ports from their LLDP neighbors.
+func (a *App) PortNameSuggestions(id string) []aruba.PortNameSuggestion {
+	return a.mgr.PortNameSuggestions(id)
+}
+
+func (a *App) PreviewPortNames(id string, ch aruba.PortNameChange) ([]string, error) {
+	return a.mgr.PreviewPortNames(id, ch)
+}
+
+func (a *App) ApplyPortNames(id string, ch aruba.PortNameChange) (aruba.ApplyResult, error) {
+	return a.mgr.ApplyPortNames(id, ch)
+}
+
 func (a *App) RefreshPortClients(id string) ([]aruba.PortClient, error) {
 	return a.mgr.RefreshPortClients(id)
 }

@@ -46,6 +46,10 @@ type Switch struct {
 	// Web is set for Instant On switches in local management mode, read
 	// through their web interface (port 443 for HTTPS, 80 for HTTP).
 	Web bool `json:"web,omitempty"`
+	// LLDPNames are the port names SwitchDesk took from LLDP neighbors
+	// (issue #32). Only these may be renamed when the neighbor changes;
+	// a name someone typed never is.
+	LLDPNames map[string]string `json:"lldpNames,omitempty"`
 }
 
 type CloudRef struct {
@@ -109,6 +113,10 @@ type Settings struct {
 	// NoUpdateCheck turns off the automatic check for new versions on
 	// GitHub; "Check for updates" in Settings still works.
 	NoUpdateCheck bool `json:"noUpdateCheck"`
+	// AutoPortNames names ports after their LLDP neighbor each time a switch
+	// is read, and saves the config (issue #32). Ports with a name someone
+	// typed are never renamed.
+	AutoPortNames bool `json:"autoPortNames"`
 }
 
 func DefaultSettings() Settings {
@@ -361,6 +369,8 @@ func (s *Store) SaveSwitch(sw Switch) (Switch, error) {
 					// never by what the UI sends back
 					sw.CertFP, sw.WebEncrypted = o.CertFP, o.WebEncrypted
 				}
+				// only SetLLDPNames changes these
+				sw.LLDPNames = o.LLDPNames
 				sw.CreatedAt = o.CreatedAt
 				s.d.Switches[i] = sw
 				found = true
@@ -417,6 +427,36 @@ func (s *Store) SetWebEncrypted(id string, on bool) {
 			s.d.Switches[i].WebEncrypted = on
 			s.saveLocked()
 		}
+	}
+}
+
+// SetLLDPNames records the ports named after their LLDP neighbor (set) and
+// forgets ports whose name was changed by hand (drop).
+func (s *Store) SetLLDPNames(id string, set map[string]string, drop []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.d.Switches {
+		sw := &s.d.Switches[i]
+		if sw.ID != id {
+			continue
+		}
+		if sw.LLDPNames == nil {
+			sw.LLDPNames = map[string]string{}
+		}
+		for _, p := range drop {
+			delete(sw.LLDPNames, p)
+		}
+		for p, n := range set {
+			if n == "" {
+				delete(sw.LLDPNames, p)
+			} else {
+				sw.LLDPNames[p] = n
+			}
+		}
+		if len(sw.LLDPNames) == 0 {
+			sw.LLDPNames = nil
+		}
+		s.saveLocked()
 	}
 }
 

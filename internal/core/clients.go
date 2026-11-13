@@ -2,8 +2,9 @@ package core
 
 import (
 	"sort"
-	"strconv"
 	"strings"
+
+	"github.com/jaba0x/switchdesk/internal/aruba"
 )
 
 // Finding where a client is plugged in. Every switch on the path learns the
@@ -68,21 +69,7 @@ func (m *Manager) Clients() []ClientEntry {
 }
 
 // portLess orders 1/1/2 before 1/1/10.
-func portLess(a, b string) bool {
-	pa, pb := strings.FieldsFunc(a, func(r rune) bool { return r == '/' }), strings.FieldsFunc(b, func(r rune) bool { return r == '/' })
-	for i := 0; i < len(pa) && i < len(pb); i++ {
-		if pa[i] == pb[i] {
-			continue
-		}
-		na, ea := strconv.Atoi(pa[i])
-		nb, eb := strconv.Atoi(pb[i])
-		if ea == nil && eb == nil {
-			return na < nb
-		}
-		return pa[i] < pb[i]
-	}
-	return len(pa) < len(pb)
-}
+func portLess(a, b string) bool { return aruba.PortLess(a, b) }
 
 func (m *Manager) macHits(match func(bare string) bool, limit int) []MACHit {
 	_, infos, _, _ := m.views()

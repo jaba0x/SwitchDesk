@@ -38,6 +38,7 @@ const ICON = {
   term: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg>',
   client: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
 };
 
@@ -969,13 +970,15 @@ function tabSTP(snap) {
 function tabPorts(snap) {
   const p = snap.ports || [];
   const memb = portVLANs(snap);
+  const canEdit = snap.family !== "instant-on" && p.length;
   // a disabled port is down too; say which, so a shut port isn't taken for a dead link
   const state = (x) => (!x.enabled ? ["x", "Disabled", ""] : x.up ? ["u", "Up", "ok"] : ["", "Down", "faint"]);
   return `${leds(p, snap.stp, true, snap.optics)}<div style="margin:8px 0 16px">${ledKey(p)}</div>${opticsPanel(snap)}<section class="panel">
+    ${canEdit ? `<h2>Ports<span class="grow"></span><button class="btn small" onclick="openPortNames()">${ICON.edit}Edit names</button></h2>` : ""}
     <table><thead><tr><th>Port</th><th>Name</th><th>Status</th><th>Speed</th><th>Type</th><th>VLANs</th></tr></thead><tbody>
     ${p.map((x) => {
       const [c, label, cls] = state(x);
-      return `<tr><td class="mono">${esc(x.name)}</td><td>${esc(x.description)}</td><td class="${cls}"><span class="ledkey" style="color:inherit;font-size:inherit"><span><i class="${c}"></i>${label}</span></span></td>
+      return `<tr><td class="mono">${esc(x.name)}</td><td${canEdit ? ` class="pname" title="Click to rename" onclick="openPortNames('${esc(x.name)}')"` : ""}>${esc(x.description)}</td><td class="${cls}"><span class="ledkey" style="color:inherit;font-size:inherit"><span><i class="${c}"></i>${label}</span></span></td>
       <td>${esc(x.speed)}</td><td>${esc(x.type)}</td><td class="mono">${esc(memb[x.name] || x.vlan || "")}</td></tr>`;
     }).join("")}
     </tbody></table></section>`;
@@ -1187,6 +1190,62 @@ function tabRaw(snap) {
 function afterTab() {
   if (S.tab === "config") drawConfig();
   if (S.tab === "console") $("#cmd")?.focus();
+}
+
+// ---------- port names (issue #32) ----------
+// Every port's name in one list. "Fill from LLDP" takes the name of the device
+// LLDP sees on a port, for ports without a name or named from LLDP before;
+// names typed by hand are left alone.
+async function openPortNames(focus) {
+  const snap = S.detail.snapshot;
+  const ports = (snap.ports || []).slice();
+  const nb = {};
+  for (const n of snap.neighbors || []) if (n.sysName && !nb[n.localPort]) nb[n.localPort] = n.sysName;
+  let sugg = [];
+  try { sugg = (await call("PortNameSuggestions", S.detail.id)) || []; } catch (e) { /* the list still works without */ }
+  const fromLLDP = new Set();
+  const m = modal(`<h2>Port names</h2><div class="body">
+    <div class="row" style="align-items:center;margin-bottom:10px"><span class="muted" style="font-size:13px">Up to 64 characters; " ? and \\ can't be used.</span><span class="grow"></span>
+      <button class="btn small" style="flex:0 0 auto" id="pnlldp" ${sugg.length ? "" : "disabled"} title="${sugg.length ? "" : "No port without a name has an LLDP neighbor"}">Fill from LLDP${sugg.length ? `<span> (${sugg.length})</span>` : ""}</button></div>
+    <div class="fwscroll" style="max-height:52vh"><table><thead><tr><th>Port</th><th>Neighbor</th><th style="width:55%">Name</th></tr></thead><tbody>
+    ${ports.map((x) => `<tr><td class="mono">${esc(x.name)}</td><td class="faint">${esc(nb[x.name] || "")}</td>
+      <td style="padding-top:4px;padding-bottom:4px"><input type="text" class="pn" data-p="${esc(x.name)}" maxlength="64" value="${esc(x.description || "")}" style="width:100%"></td></tr>`).join("")}
+    </tbody></table></div>
+    <div style="height:14px"></div><label class="check"><input type="checkbox" id="pnsave" checked> Save to startup config (write memory)</label>
+    <div id="pnerr"></div></div>
+    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="pnprev">Review changes</button></div>`, true);
+  const input = (p) => [...m.querySelectorAll("input.pn")].find((i) => i.dataset.p === p);
+  m.querySelector("tbody").addEventListener("input", (e) => { if (e.target.dataset.p) fromLLDP.delete(e.target.dataset.p); });
+  $("#pnlldp", m).onclick = () => {
+    for (const s of sugg) {
+      const i = input(s.port);
+      if (i && i.value === (s.current || "")) {
+        i.value = s.name;
+        i.classList.add("lldp");
+        fromLLDP.add(s.port);
+      }
+    }
+  };
+  if (focus) setTimeout(() => { const i = input(focus); if (i) { i.focus(); i.select(); } }, 0);
+  $("#pnprev", m).onclick = async () => {
+    const names = {};
+    for (const x of ports) {
+      const v = input(x.name).value.trim();
+      if (v !== (x.description || "")) names[x.name] = v;
+    }
+    if (!Object.keys(names).length) {
+      $("#pnerr", m).innerHTML = `<div class="msg err">Nothing changed.</div>`;
+      return;
+    }
+    const ch = { names, lldp: [...fromLLDP].filter((p) => p in names), save: $("#pnsave", m).checked };
+    try {
+      const cmds = await call("PreviewPortNames", S.detail.id, ch);
+      closeModal();
+      confirmCommands(ch, cmds, "ApplyPortNames");
+    } catch (e) {
+      $("#pnerr", m).innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    }
+  };
 }
 
 // ---------- VLAN editor ----------
@@ -2383,6 +2442,8 @@ async function renderSettings() {
       <label class="check" style="margin-bottom:18px"><input type="checkbox" id="is" ${set.ignoreSnmp ? "checked" : ""}> Don't flag default SNMP communities</label>
       <label class="check" style="margin-bottom:4px"><input type="checkbox" id="hp" ${set.hardwarePhotos ? "checked" : ""}> Show front panel photos</label>
       <p class="faint" style="font-size:12.5px;margin:0 0 18px 24px">Downloaded once per model from the NetBox device type library on GitHub.</p>
+      <label class="check" style="margin-bottom:4px"><input type="checkbox" id="apn" ${set.autoPortNames ? "checked" : ""}> Name ports after their LLDP neighbors automatically</label>
+      <p class="faint" style="font-size:12.5px;margin:0 0 18px 24px">Each time a switch is read, ports without a name get the name of the device LLDP sees on them, and the config is saved. Names you set yourself are never changed.</p>
       <div class="row"><label class="f"><span>SSH client for the SSH button</span><select id="sshk" onchange="sshClientHint()">
           <option value="">Automatic (this computer's terminal)</option>
           ${(S.sshClients || []).map((c) => `<option value="${esc(c.id)}" ${sshPick(set) === c.id ? "selected" : ""}>${esc(c.name)}${c.found ? "" : " (not found)"}</option>`).join("")}
@@ -2663,7 +2724,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { ...S.settings, checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
+    await call("SaveSettings", { ...S.settings, checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, autoPortNames: $("#apn").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }

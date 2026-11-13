@@ -1083,6 +1083,14 @@
     "Show all": "Alle anzeigen",
     "Show the switches this image would update": "Switches anzeigen, die dieses Image aktualisieren würde",
     "Showing the switches": "Angezeigt werden die Switches, die",
-    "would update: {0} of {1}.": "aktualisieren würde: {0} von {1}."
+    "would update: {0} of {1}.": "aktualisieren würde: {0} von {1}.",
+    "{0}Edit names": "{0}Namen bearbeiten",
+    "Click to rename": "Zum Umbenennen klicken",
+    "Each time a switch is read, ports without a name get the name of the device LLDP sees on them, and the config is saved. Names you set yourself are never changed.": "Bei jeder Abfrage eines Switches erhalten Ports ohne Namen den Namen des Geräts, das LLDP an ihnen sieht, und die Konfiguration wird gespeichert. Von Ihnen vergebene Namen werden nie geändert.",
+    "Fill from LLDP": "Aus LLDP übernehmen",
+    "Name ports after their LLDP neighbors automatically": "Ports automatisch nach ihren LLDP-Nachbarn benennen",
+    "No port without a name has an LLDP neighbor": "Kein Port ohne Namen hat einen LLDP-Nachbarn",
+    "Port names": "Portnamen",
+    "Up to 64 characters; \" ? and \\ can't be used.": "Bis zu 64 Zeichen; \" ? und \\ sind nicht erlaubt."
   }
 }

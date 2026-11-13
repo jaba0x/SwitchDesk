@@ -23,6 +23,7 @@ Shared username and password sets. Add as many as you need and pick one per swit
 | Warn above memory % | 90 | |
 | Don't flag default SNMP communities | off | For networks where `public` is expected. |
 | Show front panel photos | off | Shows a photo of the switch model on its Overview tab. Each photo is downloaded once from the [NetBox device type library](https://github.com/netbox-community/devicetype-library) on GitHub and kept in the data folder's `hardware` folder. Nothing is downloaded while this is off. |
+| Name ports after their LLDP neighbors automatically | off | Each time a switch is read, ports without a name get the name of the device LLDP or CDP sees on them, and the config is saved (`write memory`). A port named this way is renamed when a different device shows up on it. Names you set yourself are never changed. See [Ports](switches.md#ports). |
 | SSH client | Automatic | The program the **SSH** button on each switch opens: this computer's terminal, one of the clients SwitchDesk knows (marked when it isn't installed), or a custom command. See [Opening a switch in your SSH client](switches.md#opening-a-switch-in-your-ssh-client). |
 | Check for new versions automatically | on | Asks GitHub every few hours whether a newer SwitchDesk is out. Nothing about you or your switches is sent. **Check for updates** still works with this off. |
 | Interface font | IBM Plex Sans | The font of the interface: IBM Plex Sans, this computer's own font, or Verdana. Switch output stays in a fixed-width font. |

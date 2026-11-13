@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.18
+
+From [@Marcel1285](https://github.com/Marcel1285) in [#32](https://github.com/jaba0x/SwitchDesk/issues/32):
+
+- **Rename ports.** On a switch's Ports tab, click **Edit names** or a port's name to change it. SwitchDesk shows the commands before it sends them (`name` on AOS-S, `description` on AOS-CX).
+- **Port names from LLDP.** **Fill from LLDP** names ports after the device seen on them. Only ports without a name are filled, plus ports SwitchDesk named from LLDP before whose neighbor has changed; names you typed are never overwritten.
+- **Automatic LLDP names**, off by default: **Settings → Name ports after their LLDP neighbors automatically** does the same each time a switch is read, and saves the config.
+
 ## 1.0.17
 
 From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#31](https://github.com/jaba0x/SwitchDesk/issues/31):
