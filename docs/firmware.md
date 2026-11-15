@@ -56,8 +56,10 @@ Start an update from the **Firmware** page (tick switches, then **Update selecte
 
 Choose:
 
-- **Copy, then save the config and reboot.** The full update. With several switches, only one reboots at a time, so the network is never missing more than one switch.
+- **Copy, then save the config and reboot.** The full update. With several switches, only one reboots at a time, so the network is never missing more than one switch, and they go bottom-up: the switches furthest from the core (the spanning-tree root on the network map) first, the core last. Third-party switches seen over LLDP count as links on the way. **Update jobs** numbers them in that order. If a switch doesn't come back properly after its reboot (it stays unreachable, or comes back on the wrong version), the reboots still waiting in that batch stop, so you can look at it before anything else restarts. Start them again when you're ready. **Settings → Wait between reboots** adds a pause after each switch is back, for spanning tree to settle.
 - **Copy only.** The new version is staged and starts the next time the switch reboots, whenever suits you. A staged switch shows **Install now** on its page, which does just the reboot.
+
+To keep a switch on the version it runs, click the lock next to its name in the **Updates** list. A held switch can't be ticked, and automatic updates skip it, until you click the lock again. The search box above the list finds switches by name, address, model or version.
 
 **Update jobs** shows each update's progress, current step, and a log with every command and answer. Jobs that haven't started can be cancelled.
 

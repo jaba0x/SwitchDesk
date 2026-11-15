@@ -50,6 +50,9 @@ type Switch struct {
 	// (issue #32). Only these may be renamed when the neighbor changes;
 	// a name someone typed never is.
 	LLDPNames map[string]string `json:"lldpNames,omitempty"`
+	// FirmwareHold keeps the switch on its firmware: no update is started
+	// for it, by hand or automatically (issue #33).
+	FirmwareHold bool `json:"firmwareHold,omitempty"`
 }
 
 type CloudRef struct {
@@ -117,6 +120,9 @@ type Settings struct {
 	// is read, and saves the config (issue #32). Ports with a name someone
 	// typed are never renamed.
 	AutoPortNames bool `json:"autoPortNames"`
+	// RebootPause is how long, in seconds, a firmware update waits after a
+	// switch is back before the next switch reboots (issue #34).
+	RebootPause int `json:"rebootPause"`
 }
 
 func DefaultSettings() Settings {
@@ -369,8 +375,9 @@ func (s *Store) SaveSwitch(sw Switch) (Switch, error) {
 					// never by what the UI sends back
 					sw.CertFP, sw.WebEncrypted = o.CertFP, o.WebEncrypted
 				}
-				// only SetLLDPNames changes these
+				// only SetLLDPNames and SetFirmwareHold change these
 				sw.LLDPNames = o.LLDPNames
+				sw.FirmwareHold = o.FirmwareHold
 				sw.CreatedAt = o.CreatedAt
 				s.d.Switches[i] = sw
 				found = true
@@ -458,6 +465,22 @@ func (s *Store) SetLLDPNames(id string, set map[string]string, drop []string) {
 		}
 		s.saveLocked()
 	}
+}
+
+// SetFirmwareHold holds the given switches on their firmware, or releases them.
+func (s *Store) SetFirmwareHold(ids []string, hold bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	want := map[string]bool{}
+	for _, id := range ids {
+		want[id] = true
+	}
+	for i := range s.d.Switches {
+		if want[s.d.Switches[i].ID] {
+			s.d.Switches[i].FirmwareHold = hold
+		}
+	}
+	return s.saveLocked()
 }
 
 // SetDisabled pauses or resumes the given switches.

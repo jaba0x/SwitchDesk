@@ -110,7 +110,7 @@ input:disabled { opacity: .5; cursor: default; }
 .spin svg { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-input[type=text], input[type=password], input[type=number], select, textarea {
+input[type=text], input[type=search], input[type=password], input[type=number], select, textarea {
   background: #1a2029; border: 1px solid var(--line); border-radius: 6px;
   padding: 6px 9px; outline: none; width: 100%; user-select: text;
 }
@@ -479,3 +479,30 @@ body.navmini .nav .count { position: absolute; top: 1px; right: 2px; font-size: 
 td.pname { cursor: pointer; }
 td.pname:hover { background: var(--line-soft); }
 input.pn.lldp { border-color: var(--info); }
+
+/* ports table toolbar and menus (#33) */
+.panel > h2 input.psearch { width: 220px; font-size: 13px; font-weight: 400; padding: 5px 8px; }
+.panel > h2 select { font-size: 13px; font-weight: 400; padding: 4px 6px; width: auto; }
+.colmenu .menuitem { display: flex; justify-content: space-between; gap: 18px; padding: 5px 8px; font-size: 13px; border-radius: 5px; cursor: pointer; }
+.colmenu .menuitem:hover { background: var(--line-soft); }
+.fwchip.held { background: rgba(139,149,167,.18); color: var(--muted); font-family: var(--sans); }
+tr.held td { color: var(--muted); }
+.panel > h2 .fwsearch { font-weight: 400; width: 280px; }
+.panel > h2 .fwsearch input { font-size: 13px; padding: 5px 8px 5px 30px; }
+
+/* every search and filter box gets a clear button (#33) */
+input[type=search] { -webkit-appearance: none; appearance: none; }
+input[type=search]::-webkit-search-decoration { display: none; }
+input[type=search]::-webkit-search-cancel-button {
+  -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-left: 6px; cursor: pointer; opacity: .65;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aab3c2' stroke-width='2.6' stroke-linecap='round'><path d='M6 6l12 12M18 6L6 18'/></svg>") center / 14px no-repeat;
+}
+input[type=search]::-webkit-search-cancel-button:hover { opacity: 1; }
+
+/* every table row lights up under the pointer, so a row isn't misread (#33) */
+table tbody tr:hover > td { background: rgba(143,179,255,.06); }
+.ib.hold { width: 22px; height: 22px; opacity: 0; vertical-align: -5px; }
+tr:hover .ib.hold, .ib.hold:focus-visible { opacity: .55; }
+.ib.hold.on { opacity: 1; color: var(--warn); }
+.ib.hold svg { width: 13px; height: 13px; }
+.panel > h2 .fwsearch { width: 220px; }

@@ -85,6 +85,7 @@ password manager`;
     stp: { known: true, enabled: true, mode: "MSTP-operation", bridgePriority: "32768", bridgeMac: "00:11:22:33:44:55", rootPriority: "4096", rootMac: "00:11:22:aa:bb:cc", rootPort: "49", isRoot: false, topologyChanges: 18, lastChange: "2 hours", ports: [{ port: "49", role: "Root", state: "Forwarding", cost: "2000" }, { port: "50", role: "Alternate", state: "Blocking", cost: "2000" }, { port: "1", role: "Designated", state: "Forwarding", cost: "20000" }] },
     security: { sshEnabled: true, sshPort: "22", sshVersion: "2", telnetEnabled: true, httpPlain: false, httpsEnabled: true, snmpCommunities: ["netops"], snmpDefault: false, ntpServers: ["10.10.0.53"], logServers: [], aaa: ["aaa authentication ssh login radius local"], managerPassword: true },
     vlans, ports: sws[2].p.map((p, i) => ({ ...p, description: i === 48 ? "uplink core" : "" })),
+    macs: [{ mac: "00:1a:2b:3c:4d:03", port: "3", vlan: "1" }, { mac: "a4:5e:60:12:34:56", port: "4", vlan: "30" }, ...Array.from({ length: 14 }, (_, i) => ({ mac: "3c:52:82:00:00:" + (16 + i).toString(16), port: "49", vlan: "1" }))],
     neighbors: [
       { protocol: "lldp", localPort: "49", sysName: "core-cx-01", chassisId: "00:11:22:aa:bb:cc", portId: "1/1/3", mgmtIp: "10.10.0.1", capabilities: "bridge, router", description: "Aruba JL658A 6300M FL.10.13.1000" },
       { protocol: "lldp", localPort: "50", sysName: "agg-cx-a", portId: "1/1/25", mgmtIp: "10.10.0.2", capabilities: "bridge", description: "Aruba JL678A 6100" },
@@ -221,7 +222,7 @@ password manager`;
       { id: "j1", switchName: "acc-2930-f1", from: "WC.16.11.0015", to: "WC.16.11.0021", reboot: true, state: "running", progress: 0.42, step: "Copying WC_16_11_0021.swi to the secondary bank from 10.10.1.50", log: ["23:41:02  Reading firmware banks", "23:41:03  Primary WC.16.11.0015, secondary WC.16.10.0012, running from primary", "23:41:03  Copying WC_16_11_0021.swi to the secondary bank from 10.10.1.50"] },
       { id: "j2", switchName: "acc-2930-f2", from: "WC.16.11.0015", to: "WC.16.11.0021", reboot: false, auto: true, state: "staged", step: "Ready: WC.16.11.0021 boots on the next restart" },
       { id: "j3", switchName: "core-cx-01", from: "FL.10.12.1010", to: "FL.10.13.1000", reboot: true, state: "done", step: "Updated to FL.10.13.1000" }],
-    StartUpgrade: async (ids) => ids.map((id) => ({ id })), ClearFinishedUpgrades: async () => {}, OpenFirmwareFolder: async () => {}, SetDisabled: async () => {}, DeleteSwitches: async () => {}, OpenDataFolder: async () => {},
+    StartUpgrade: async (ids) => ids.map((id) => ({ id })), ClearFinishedUpgrades: async () => {}, OpenFirmwareFolder: async () => {}, SetDisabled: async () => {}, SetFirmwareHold: async (ids, hold) => { for (const v of dash.switches) if (ids.includes(v.id)) v.firmwareHold = hold; }, DeleteSwitches: async () => {}, OpenDataFolder: async () => {},
   } } };
   window.runtime = { EventsOn: () => {} };
 })();

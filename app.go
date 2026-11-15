@@ -405,6 +405,15 @@ func (a *App) ApplyPortNames(id string, ch aruba.PortNameChange) (aruba.ApplyRes
 	return a.mgr.ApplyPortNames(id, ch)
 }
 
+// SetFirmwareHold keeps switches on their firmware, or lets them be updated again.
+func (a *App) SetFirmwareHold(ids []string, hold bool) error {
+	if err := a.st.SetFirmwareHold(ids, hold); err != nil {
+		return err
+	}
+	a.emit("")
+	return nil
+}
+
 func (a *App) RefreshPortClients(id string) ([]aruba.PortClient, error) {
 	return a.mgr.RefreshPortClients(id)
 }

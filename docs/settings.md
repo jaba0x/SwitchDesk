@@ -38,6 +38,7 @@ Shared username and password sets. Add as many as you need and pick one per swit
 ## Automatic firmware updates
 
 Off, copy only, or install inside a maintenance window. See [Firmware updates](firmware.md#automatic-updates).
+| Wait between reboots (seconds) | 0 | How long a firmware update waits after a switch is back before the next switch reboots, so spanning tree can settle. See [Firmware updates](firmware.md#update-switches). |
 
 ## App password
 

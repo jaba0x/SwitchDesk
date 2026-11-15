@@ -37,6 +37,13 @@ type Job struct {
 	CreatedAt  time.Time `json:"createdAt"`
 	EndedAt    time.Time `json:"endedAt"`
 	Log        []string  `json:"log"`
+	// Batch ties the updates started together; when one of them fails after
+	// its reboot, the batch's other reboots don't start (issue #34).
+	Batch string `json:"batch,omitempty"`
+	Order int    `json:"order,omitempty"` // 1-based place in the batch, downstream switches first
+
+	rebooted bool // the reboot command was sent
+	halted   bool // stopped by haltBatch
 }
 
 func (j *Job) active() bool { return j.State == "queued" || j.State == "running" }
@@ -128,11 +135,20 @@ func (m *Manager) logf(j *Job, format string, a ...any) {
 }
 
 // StartUpgrade queues updates. image "" means the newest matching image in the library.
+//
+// Several switches are queued bottom-up (issue #34): the ones furthest from
+// the spanning-tree root (or the busiest switch) first, so a switch never
+// reboots while a switch behind it still waits for its turn.
 func (m *Manager) StartUpgrade(ids []string, image string, reboot, auto bool) ([]Job, error) {
 	var out []Job
 	var errs []string
-	for _, id := range ids {
-		j, err := m.newJob(id, image, reboot, auto)
+	batch := ""
+	if len(ids) > 1 {
+		batch = store.NewID()
+		ids = m.upgradeOrder(ids)
+	}
+	for i, id := range ids {
+		j, err := m.newJob(id, image, reboot, auto, batch, i+1)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
@@ -145,7 +161,7 @@ func (m *Manager) StartUpgrade(ids []string, image string, reboot, auto bool) ([
 	return out, nil
 }
 
-func (m *Manager) newJob(id, image string, reboot, auto bool) (*Job, error) {
+func (m *Manager) newJob(id, image string, reboot, auto bool, batch string, order int) (*Job, error) {
 	if m.lib == nil {
 		return nil, errors.New("the firmware library folder couldn't be opened")
 	}
@@ -162,6 +178,9 @@ func (m *Manager) newJob(id, image string, reboot, auto bool) (*Job, error) {
 	}
 	if sw.Disabled {
 		return nil, fmt.Errorf("%s is disabled", name)
+	}
+	if sw.FirmwareHold {
+		return nil, fmt.Errorf("%s is held on its current firmware; release it on the Firmware page first", name)
 	}
 	if snap == nil || snap.CollectedAt.IsZero() {
 		return nil, fmt.Errorf("%s hasn't been read yet", name)
@@ -197,6 +216,9 @@ func (m *Manager) newJob(id, image string, reboot, auto bool) (*Job, error) {
 	}
 	j := &Job{ID: store.NewID(), SwitchID: id, SwitchName: name, Image: img.File, From: cur.Text, To: img.Version.Text,
 		Reboot: reboot, Auto: auto, State: "queued", Step: "Waiting to start", CreatedAt: time.Now()}
+	if batch != "" {
+		j.Batch, j.Order = batch, order
+	}
 	m.up.jobs = append(m.up.jobs, j)
 	if len(m.up.jobs) > 200 {
 		m.up.jobs = m.up.jobs[len(m.up.jobs)-200:]
@@ -260,6 +282,7 @@ func (m *Manager) jobWorker(rebootLock *sync.Mutex, slot chan struct{}) {
 			}
 			m.runJob(j)
 			if j.Reboot {
+				m.pauseAfterReboot(j)
 				rebootLock.Unlock()
 			}
 			<-slot
@@ -270,6 +293,123 @@ func (m *Manager) jobWorker(rebootLock *sync.Mutex, slot chan struct{}) {
 func (m *Manager) fail(j *Job, err error) {
 	m.logf(j, "Failed: %v", err)
 	m.update(j, func(j *Job) { j.State, j.Error, j.Step, j.EndedAt = "failed", err.Error(), "Failed", time.Now() })
+	m.up.mu.Lock()
+	halt := j.Batch != "" && j.rebooted
+	m.up.mu.Unlock()
+	if halt {
+		m.haltBatch(j)
+	}
+}
+
+// haltBatch is the circuit breaker of issue #34: a switch that didn't come
+// back properly stops the reboots still waiting in its batch. Copies that
+// don't reboot carry on. Start the stopped ones again once the cause is known.
+func (m *Manager) haltBatch(failed *Job) {
+	m.up.mu.Lock()
+	var stopped []*Job
+	for _, j := range m.up.jobs {
+		if j != failed && j.Batch == failed.Batch && j.State == "queued" && j.Reboot {
+			j.State, j.EndedAt, j.halted = "cancelled", time.Now(), true
+			j.Step = fmt.Sprintf("Stopped: %s didn't come back properly. Check it, then start this update again", failed.SwitchName)
+			stopped = append(stopped, j)
+		}
+	}
+	m.up.mu.Unlock()
+	for _, j := range stopped {
+		m.logf(j, "%s", j.Step)
+	}
+	if len(stopped) > 0 {
+		m.logf(failed, "Stopped %d more reboot(s) of this batch", len(stopped))
+	}
+}
+
+// pauseAfterReboot waits Settings → Wait between reboots before the next
+// queued reboot may start, so spanning tree settles (issue #34).
+func (m *Manager) pauseAfterReboot(j *Job) {
+	wait := time.Duration(m.st.Settings().RebootPause) * time.Second
+	if wait <= 0 {
+		return
+	}
+	m.up.mu.Lock()
+	ok := j.State == "done"
+	next := false
+	for _, o := range m.up.jobs {
+		if o.State == "queued" && o.Reboot {
+			next = true
+		}
+	}
+	m.up.mu.Unlock()
+	if !ok || !next {
+		return
+	}
+	m.logf(j, "Waiting %s before the next reboot", wait)
+	m.sleep(wait)
+}
+
+// upgradeOrder sorts switches downstream first: by hop distance from the
+// spanning-tree root over the LLDP/CDP map, furthest first. Switches the map
+// can't place keep their order and go last. Third-party switches seen over
+// LLDP are part of the map, so they bridge the gaps between managed ones.
+func (m *Manager) upgradeOrder(ids []string) []string {
+	_, infos, _, _ := m.views()
+	return orderByDepth(ids, topoDepth(buildTopology(infos, nil, false)))
+}
+
+func orderByDepth(ids []string, depth map[string]int) []string {
+	out := append([]string(nil), ids...)
+	sort.SliceStable(out, func(a, b int) bool {
+		da, oka := depth[out[a]]
+		db, okb := depth[out[b]]
+		if oka != okb {
+			return oka
+		}
+		return da > db
+	})
+	return out
+}
+
+// topoDepth is each node's hop distance from the spanning-tree root(s), or
+// from the managed switch with the most links when no root is known.
+func topoDepth(t Topology) map[string]int {
+	adj := map[string][]string{}
+	for _, e := range t.Edges {
+		adj[e.From] = append(adj[e.From], e.To)
+		adj[e.To] = append(adj[e.To], e.From)
+	}
+	var roots []string
+	for _, n := range t.Nodes {
+		if n.StpRoot {
+			roots = append(roots, n.ID)
+		}
+	}
+	if len(roots) == 0 {
+		best, most := "", -1
+		for _, n := range t.Nodes {
+			if n.Managed && len(adj[n.ID]) > most {
+				best, most = n.ID, len(adj[n.ID])
+			}
+		}
+		if best != "" {
+			roots = []string{best}
+		}
+	}
+	d := map[string]int{}
+	q := []string{}
+	for _, r := range roots {
+		d[r] = 0
+		q = append(q, r)
+	}
+	for len(q) > 0 {
+		id := q[0]
+		q = q[1:]
+		for _, nb := range adj[id] {
+			if _, seen := d[nb]; !seen {
+				d[nb] = d[id] + 1
+				q = append(q, nb)
+			}
+		}
+	}
+	return d
 }
 
 func (m *Manager) step(j *Job, s string) {
@@ -456,6 +596,7 @@ func (m *Manager) runJob(j *Job) {
 		}
 		if j.Reboot {
 			m.step(j, "Saving config and rebooting from "+spare)
+			m.update(j, func(j *Job) { j.rebooted = true })
 			return aruba.Reboot(ctx, s, f, spare)
 		}
 		return nil
@@ -627,6 +768,8 @@ func (m *Manager) autoTick(now time.Time) {
 	install := set.FirmwareAuto == "install" && inWindow(now, set.WindowStart, set.WindowEnd)
 	sws := m.st.Switches()
 	sort.Slice(sws, func(i, k int) bool { return sws[i].ID < sws[k].ID })
+	var reboots []string
+	images := map[string]string{}
 	for _, sw := range sws {
 		if sw.Disabled {
 			continue
@@ -638,6 +781,9 @@ func (m *Manager) autoTick(now time.Time) {
 		if !online || snap == nil {
 			continue
 		}
+		if sw.FirmwareHold {
+			continue
+		}
 		fi := m.firmwareFor(sw, snap)
 		if !fi.Supported || fi.Available == "" {
 			continue
@@ -646,17 +792,27 @@ func (m *Manager) autoTick(now time.Time) {
 			if last.active() {
 				continue
 			}
-			// don't retry a failed version for a day
-			if last.State == "failed" && last.To == fi.Available && now.Sub(last.EndedAt) < 24*time.Hour {
+			// don't retry a failed version for a day, nor a reboot a failure stopped
+			if (last.State == "failed" || last.halted) && last.To == fi.Available && now.Sub(last.EndedAt) < 24*time.Hour {
 				continue
 			}
 		}
 		switch {
 		case install:
-			m.newJob(sw.ID, fi.Image, true, true) // copies if needed, then reboots
+			reboots = append(reboots, sw.ID)
+			images[sw.ID] = fi.Image
 		case !fi.Staged:
-			m.newJob(sw.ID, fi.Image, false, true) // copy to the spare bank only
+			m.newJob(sw.ID, fi.Image, false, true, "", 0) // copy to the spare bank only
 		}
+	}
+	// copies if needed, then reboots: downstream switches first, as one batch (#34)
+	batch := ""
+	if len(reboots) > 1 {
+		batch = store.NewID()
+		reboots = m.upgradeOrder(reboots)
+	}
+	for i, id := range reboots {
+		m.newJob(id, images[id], true, true, batch, i+1)
 	}
 }
 

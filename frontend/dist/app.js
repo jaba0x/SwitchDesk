@@ -38,6 +38,8 @@ const ICON = {
   term: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg>',
   client: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+  port: '<svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1.5"/><path d="M8 18v-4h8v4M10 14v-3h4v3"/></svg>',
+  lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
   edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
 };
@@ -304,6 +306,7 @@ function renderSide() {
     ${item("switches", "list", "Switches")}
     ${item("map", "map", "Network map")}
     ${item("vlans", "vlan", "VLANs")}
+    ${item("ports", "port", "Ports")}
     ${item("clients", "client", "Clients")}
     ${item("firmware", "chip", "Firmware", fwCount ? `<span class="count info">${fwCount}</span>` : "")}
     ${item("settings", "gear", "Settings")}
@@ -353,17 +356,31 @@ async function showRoute() {
   renderSide();
   const [page, a, b] = S.route;
   const main = $("#main");
+  // a switch opened from another page goes back there, scrolled where it was (#33)
+  S.scrollMem ||= {};
+  if (S.here) S.scrollMem[S.here] = main.scrollTop;
+  if (page !== "switch") S.from = location.hash || "#/dashboard";
+  S.here = location.hash;
   main.scrollTop = 0;
   if (page === "switch") {
     S.tab = b || "overview";
     await loadDetail(a);
   } else if (page === "switches") renderSwitches();
   else if (page === "map") renderMap();
-  else if (page === "vlans") renderVLANs();
-  else if (page === "clients") renderClients();
+  else if (page === "vlans") await renderVLANs();
+  else if (page === "ports") renderAllPorts();
+  else if (page === "clients") await renderClients();
   else if (page === "firmware") renderFirmware();
   else if (page === "settings") renderSettings();
   else renderDashboard();
+  if (S.restore === location.hash) main.scrollTop = S.scrollMem[location.hash] || 0;
+  S.restore = null;
+}
+const BACK_TO = { dashboard: "Dashboard", switches: "Switches", map: "Network map", vlans: "VLANs", ports: "Ports", clients: "Clients", firmware: "Firmware" };
+function goBack() {
+  const to = S.from && S.from.replace(/^#\/?/, "").split("/")[0] in BACK_TO ? S.from : "#/switches";
+  S.restore = to;
+  location.hash = to;
 }
 
 async function refreshData() {
@@ -379,12 +396,15 @@ async function refreshData() {
     const live = ["overview", "stp", "ports", "neighbors", "logs"].includes(S.tab);
     const v = S.dash?.switches.find((x) => x.id === S.detail.id);
     const fresh = v?.summary?.collectedAt && v.summary.collectedAt !== S.detail.summary?.collectedAt;
-    if (live || (fresh && !["console", "config"].includes(S.tab))) loadDetail(S.route[1], true);
+    // typing in the Ports search: only its rows are redrawn, so the box keeps focus
+    if (S.tab === "ports" && document.activeElement?.closest?.("#ptools")) call("GetSwitch", S.route[1]).then((d) => { S.detail = d; portRows(); }).catch(() => {});
+    else if (live || (fresh && !["console", "config"].includes(S.tab))) loadDetail(S.route[1], true);
     updateDetailHead();
   }
   if (page === "map") SDMap.reload();
   if (page === "firmware") renderFirmware(true);
   if (page === "vlans") renderVLANs(true);
+  if (page === "ports") allPortRows();
 }
 
 // ---------- dashboard ----------
@@ -428,7 +448,7 @@ function renderDashboard() {
     <div class="dash">
       <section class="panel">
         <h2>Problems<span class="grow"></span><span class="chips">${chip("all", "Critical and warnings")}${chip("critical", "Critical", d.critical)}${chip("warning", "Warnings", d.warning)}${chip("info", "Notes", d.info)}</span></h2>
-        <div class="ifilter"><span class="searchbox">${ICON.search}<input type="text" id="iq" placeholder="Filter problems  /" value="${esc(S.iq || "")}" title="Matches the problem, the switch name and the details, e.g. telnet, fan, core, optical"></span>
+        <div class="ifilter"><span class="searchbox">${ICON.search}<input type="search" id="iq" placeholder="Filter problems  /" value="${esc(S.iq || "")}" title="Matches the problem, the switch name and the details, e.g. telnet, fan, core, optical"></span>
           <select id="icat"><option value="">All categories</option>${Object.keys(cats).sort().map((c) => `<option value="${esc(c)}" ${c === S.icat ? "selected" : ""}>${esc(c)} (${cats[c]})</option>`).join("")}</select>
           <span class="faint" id="icount"></span></div>
         <div class="issues-scroll" id="issuelist"></div>
@@ -686,7 +706,7 @@ function renderSwitches(soft) {
   }
   $("#main").innerHTML = `<div class="page">
     <div class="head"><h1>Switches</h1>${siteSub()}<span class="sub" id="swcount">${counts}</span><span class="grow"></span>
-      <span class="searchbox">${ICON.search}<input type="text" id="swsearch" placeholder="Search switches  /" value="${esc(S.query)}" oninput="S.query=this.value;renderSwitches(true)" title="Name, address, site, tag, model or software. Also: online, offline, disabled, problem"></span>
+      <span class="searchbox">${ICON.search}<input type="search" id="swsearch" placeholder="Search switches  /" value="${esc(S.query)}" oninput="S.query=this.value;renderSwitches(true)" title="Name, address, site, tag, model or software. Also: online, offline, disabled, problem"></span>
       <button class="btn" title="Choose columns" onclick="event.stopPropagation();openColumns(this)">${ICON.cols}Columns</button>
       <button class="btn" onclick="openBulkModal()">Add many</button>
       <button class="btn primary" onclick="openSwitchModal()">${ICON.plus}Add switch</button></div>
@@ -807,7 +827,7 @@ function renderDetail(soft) {
   if (d.status.authFailed && d.cloud) banners.push(`<div class="banner"><div class="grow"><b>Instant On sign-in failed.</b> ${esc(d.status.collectError)}</div><button class="btn" data-go="#/settings">Open settings</button></div>`);
   else if (d.status.authFailed) banners.push(`<div class="banner"><div class="grow"><b>Login failed.</b> ${esc(d.status.collectError)}. Fix the credentials, then collect again.</div><button class="btn" onclick="openSwitchModal(S.detail)">Edit switch</button></div>`);
   $("#main").innerHTML = `<div class="page">
-    <div class="head"><button class="btn small" data-go="#/switches" title="Back">${ICON.back}</button><h1>${esc(name)}</h1><span id="detail-status">${detailStatus(d)}</span><span class="grow"></span>
+    <div class="head"><button class="btn small" onclick="goBack()" title="Back">${ICON.back}</button><h1>${esc(name)}</h1><span id="detail-status">${detailStatus(d)}</span><span class="grow"></span>
       ${d.cloud ? "" : `<button class="btn" onclick="openWeb('${d.id}')" title="Open the switch's web interface in your browser">${ICON.globe}Web</button>`}
       ${d.cloud || d.web ? "" : `<button class="btn" onclick="openSSH('${d.id}')" title="Open in your SSH client">${ICON.term}SSH</button>`}
       ${d.disabled ? "" : `<button class="btn" onclick="collectOne(this)">${ICON.refresh}Collect now</button>`}
@@ -969,19 +989,108 @@ function tabSTP(snap) {
 
 function tabPorts(snap) {
   const p = snap.ports || [];
-  const memb = portVLANs(snap);
   const canEdit = snap.family !== "instant-on" && p.length;
-  // a disabled port is down too; say which, so a shut port isn't taken for a dead link
-  const state = (x) => (!x.enabled ? ["x", "Disabled", ""] : x.up ? ["u", "Up", "ok"] : ["", "Down", "faint"]);
+  const speeds = [...new Set(p.map((x) => x.speed).filter(Boolean))].sort();
+  if (S.pf?.id !== S.detail?.id) S.pf = { id: S.detail?.id, q: "", status: "", speed: "" };
+  const f = S.pf;
+  if (f.speed && !speeds.includes(f.speed)) f.speed = "";
   return `${leds(p, snap.stp, true, snap.optics)}<div style="margin:8px 0 16px">${ledKey(p)}</div>${opticsPanel(snap)}<section class="panel">
-    ${canEdit ? `<h2>Ports<span class="grow"></span><button class="btn small" onclick="openPortNames()">${ICON.edit}Edit names</button></h2>` : ""}
-    <table><thead><tr><th>Port</th><th>Name</th><th>Status</th><th>Speed</th><th>Type</th><th>VLANs</th></tr></thead><tbody>
-    ${p.map((x) => {
-      const [c, label, cls] = state(x);
-      return `<tr><td class="mono">${esc(x.name)}</td><td${canEdit ? ` class="pname" title="Click to rename" onclick="openPortNames('${esc(x.name)}')"` : ""}>${esc(x.description)}</td><td class="${cls}"><span class="ledkey" style="color:inherit;font-size:inherit"><span><i class="${c}"></i>${label}</span></span></td>
-      <td>${esc(x.speed)}</td><td>${esc(x.type)}</td><td class="mono">${esc(memb[x.name] || x.vlan || "")}</td></tr>`;
-    }).join("")}
-    </tbody></table></section>`;
+    <h2 id="ptools">Ports<span class="grow"></span>
+      <input type="search" class="psearch" placeholder="Search port, name, MAC…" value="${esc(f.q)}" oninput="S.pf.q=this.value;portRows()">
+      <select onchange="S.pf.status=this.value;portRows()"><option value="">Any status</option>${["Up", "Down", "Disabled"].map((v) => `<option ${f.status === v ? "selected" : ""}>${v}</option>`).join("")}</select>
+      <select onchange="S.pf.speed=this.value;portRows()"><option value="">Any speed</option>${speeds.map((v) => `<option ${f.speed === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+      ${canEdit ? `<button class="btn small" onclick="openPortNames()">${ICON.edit}Edit names</button>` : ""}</h2>
+    <table class="ptable"><thead><tr><th>Port</th><th>Name</th><th>Status</th><th>Speed</th><th>Type</th><th>VLANs</th><th>MAC</th></tr></thead><tbody id="ptbody">${portRowsHTML(snap)}</tbody></table></section>`;
+}
+
+// a disabled port is down too; say which, so a shut port isn't taken for a dead link
+const portState = (x) => (!x.enabled ? ["x", "Disabled", ""] : x.up ? ["u", "Up", "ok"] : ["", "Down", "faint"]);
+
+function portMACs(snap) {
+  const m = {};
+  for (const e of snap.macs || []) (m[e.port] = m[e.port] || []).push(e.mac);
+  return m;
+}
+
+// Rows of the Ports table, filtered by the search box and the two lists (#33).
+function portRowsHTML(snap) {
+  const memb = portVLANs(snap), macs = portMACs(snap);
+  const canEdit = snap.family !== "instant-on";
+  const f = S.pf || {};
+  const q = (f.q || "").trim().toLowerCase(), qmac = q.replace(/[^0-9a-f]/g, "");
+  const rows = (snap.ports || []).filter((x) => {
+    const [, label] = portState(x);
+    if (f.status && label !== f.status) return false;
+    if (f.speed && x.speed !== f.speed) return false;
+    if (!q) return true;
+    const hay = [x.name, x.description, label, x.speed, x.type, memb[x.name] || x.vlan].join(" ").toLowerCase();
+    return hay.includes(q) || (qmac.length >= 4 && (macs[x.name] || []).some((m) => m.replace(/:/g, "").includes(qmac)));
+  });
+  if (!rows.length) return `<tr><td colspan="7" class="faint" style="text-align:center;padding:18px">No port matches</td></tr>`;
+  return rows.map((x) => {
+    const [c, label, cls] = portState(x);
+    const ms = macs[x.name] || [];
+    const name = canEdit
+      ? `<td class="pname" title="${x.description ? "Click to copy, double-click to rename" : "Click to rename"}" data-port="${esc(x.name)}" onclick="portNameClick(this)" ondblclick="clearTimeout(S.clk);openPortNames(this.dataset.port)">${esc(x.description)}</td>`
+      : `<td class="pname" title="Click to copy" onclick="if(this.textContent)copyText(this.textContent)">${esc(x.description)}</td>`;
+    const mac = !ms.length ? "" : ms.length === 1
+      ? `<a class="mono" onclick="macMenu(this,'${ms[0]}')">${esc(ms[0])}</a>`
+      : `<a onclick="macList(this,'${esc(x.name)}')">${ms.length} MACs</a>`;
+    return `<tr><td class="mono">${esc(x.name)}</td>${name}<td class="${cls}"><span class="ledkey" style="color:inherit;font-size:inherit"><span><i class="${c}"></i>${label}</span></span></td>
+      <td>${esc(x.speed)}</td><td>${esc(x.type)}</td><td class="mono">${esc(memb[x.name] || x.vlan || "")}</td><td>${mac}</td></tr>`;
+  }).join("");
+}
+function portRows() {
+  const b = $("#ptbody");
+  if (b && S.detail?.snapshot) b.innerHTML = portRowsHTML(S.detail.snapshot);
+}
+// one click copies the name, two open the editor; the copy waits so a double click doesn't also copy
+function portNameClick(td) {
+  if (!td.textContent) { openPortNames(td.dataset.port); return; }
+  delayCopy(td.textContent);
+}
+function delayCopy(text) {
+  clearTimeout(S.clk);
+  S.clk = setTimeout(() => copyText(text), 250);
+}
+
+// popMenu opens a small menu by an element; it closes on the next click elsewhere.
+function popMenu(anchor, html) {
+  document.querySelector(".colmenu")?.remove();
+  const menu = document.createElement("div");
+  menu.className = "colmenu";
+  menu.innerHTML = html;
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8) + "px";
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8)) + "px";
+  menu.addEventListener("click", (e) => { if (e.target.closest("[data-copy]")) { copyText(e.target.closest("[data-copy]").dataset.copy); menu.remove(); } });
+  setTimeout(() => document.addEventListener("click", function off(e) { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener("click", off); } }), 0);
+  return menu;
+}
+
+// The ways people write a MAC address (#33).
+function macFormats(mac) {
+  const h = mac.toLowerCase().replace(/[^0-9a-f]/g, "");
+  if (h.length !== 12) return [["As shown", mac]];
+  const pairs = h.match(/../g), quads = h.match(/..../g);
+  return [
+    ["Colon (Aruba, Linux)", pairs.join(":")],
+    ["Hyphen (Windows)", pairs.join("-").toUpperCase()],
+    ["Dotted (Cisco)", quads.join(".")],
+    ["HPE (AOS-S)", h.slice(0, 6) + "-" + h.slice(6)],
+    ["Plain", h],
+  ];
+}
+function macMenu(anchor, mac) {
+  popMenu(anchor, `<div class="faint" style="font-size:12px;padding:4px 8px 6px">Copy ${esc(mac)} as</div>` +
+    macFormats(mac).map(([k, v]) => `<div class="menuitem" data-copy="${esc(v)}"><span>${esc(k)}</span><span class="mono faint">${esc(v)}</span></div>`).join(""));
+}
+function macList(anchor, port) {
+  const ms = portMACs(S.detail.snapshot)[port] || [];
+  const menu = popMenu(anchor, `<div class="faint" style="font-size:12px;padding:4px 8px 6px">${ms.length} MACs on port ${esc(port)}</div><div style="max-height:300px;overflow:auto">` +
+    ms.map((m) => `<div class="menuitem mono" data-mac="${esc(m)}">${esc(m)}</div>`).join("") + "</div>");
+  menu.addEventListener("click", (e) => { const it = e.target.closest("[data-mac]"); if (it) { e.stopPropagation(); macMenu(anchor, it.dataset.mac); } });
 }
 
 // Transceivers with their optical levels. Thresholds are the optic's own when
@@ -1051,7 +1160,7 @@ function tabVLANs(d, snap) {
   const canEdit = snap.family !== "instant-on";
   return `<section class="panel"><h2>VLANs<span class="grow"></span>${canEdit ? `<button class="btn small primary" onclick="openVLANEditor()">${ICON.plus}New VLAN</button>` : `<span class="faint" style="font-weight:400;font-size:13px">Instant On VLANs are changed ${d.web ? "on the switch's web page" : "in the Instant On app or portal"}</span>`}</h2>
     ${v.length ? `<table><thead><tr><th class="num">ID</th><th>Name</th><th>IP address</th><th>Untagged</th><th>Tagged</th><th></th></tr></thead><tbody>
-    ${v.map((x) => `<tr><td class="num mono">${x.id}</td><td>${esc(x.name)}</td><td class="mono">${esc(x.ip)}</td><td class="mono">${esc(compress(x.untagged))}</td><td class="mono">${esc(compress(x.tagged))}</td>
+    ${v.map((x) => `<tr${canEdit ? ` class="click" title="Double-click to edit" ondblclick="clearTimeout(S.clk);openVLANEditor(${x.id})"` : ""}><td class="num mono">${x.id}</td><td class="pname" title="Click to copy" onclick="if(this.textContent)delayCopy(this.textContent)">${esc(x.name)}</td><td class="mono">${esc(x.ip)}</td><td class="mono">${esc(compress(x.untagged))}</td><td class="mono">${esc(compress(x.tagged))}</td>
       <td style="white-space:nowrap;text-align:right">${canEdit ? `<button class="btn small" onclick="openVLANEditor(${x.id})">Edit</button> ${x.id !== 1 ? `<button class="btn small danger" onclick="deleteVLAN(${x.id})">Delete</button>` : ""}` : ""}</td></tr>`).join("")}
     </tbody></table>` : `<div class="empty">No VLANs found in the configuration.</div>`}</section>`;
 }
@@ -1083,7 +1192,7 @@ function tabConfig(d, snap) {
   return `<div class="split"><section class="panel"><h2>Saved copies</h2><div class="list-pick">${list.join("")}</div>
     <div class="faint" style="padding:10px 12px;font-size:12.5px">A copy is kept each time the config changes.</div></section>
     <section><div class="row" style="margin-bottom:10px;align-items:center">
-      <input type="text" id="cfgsearch" placeholder="Find in config" value="${esc(cfgView.search)}" oninput="cfgView.search=this.value;drawConfig()">
+      <input type="search" id="cfgsearch" placeholder="Find in config" value="${esc(cfgView.search)}" oninput="cfgView.search=this.value;drawConfig()">
       <select id="cfgcmp" onchange="compareBackup(this.value)" style="max-width:260px"><option value="">Compare with…</option>${(d.backups || []).filter((b) => b.name !== cfgView.name).map((b) => `<option value="${b.name}" ${cfgView.compare === b.name ? "selected" : ""}>${new Date(b.at).toLocaleString()}</option>`).join("")}</select>
       <span style="flex:none"><button class="btn" onclick="exportConfig()">Save as file</button></span></div>
       <pre class="code mono" id="cfgpre"></pre></section></div>`;
@@ -1209,7 +1318,7 @@ async function openPortNames(focus) {
       <button class="btn small" style="flex:0 0 auto" id="pnlldp" ${sugg.length ? "" : "disabled"} title="${sugg.length ? "" : "No port without a name has an LLDP neighbor"}">Fill from LLDP${sugg.length ? `<span> (${sugg.length})</span>` : ""}</button></div>
     <div class="fwscroll" style="max-height:52vh"><table><thead><tr><th>Port</th><th>Neighbor</th><th style="width:55%">Name</th></tr></thead><tbody>
     ${ports.map((x) => `<tr><td class="mono">${esc(x.name)}</td><td class="faint">${esc(nb[x.name] || "")}</td>
-      <td style="padding-top:4px;padding-bottom:4px"><input type="text" class="pn" data-p="${esc(x.name)}" maxlength="64" value="${esc(x.description || "")}" style="width:100%"></td></tr>`).join("")}
+      <td style="padding-top:4px;padding-bottom:4px"><input type="text" class="pn" data-p="${esc(x.name)}" maxlength="64" value="${esc(x.description || "")}" style="width:100%"${x.name === focus ? " autofocus" : ""}></td></tr>`).join("")}
     </tbody></table></div>
     <div style="height:14px"></div><label class="check"><input type="checkbox" id="pnsave" checked> Save to startup config (write memory)</label>
     <div id="pnerr"></div></div>
@@ -1226,7 +1335,6 @@ async function openPortNames(focus) {
       }
     }
   };
-  if (focus) setTimeout(() => { const i = input(focus); if (i) { i.focus(); i.select(); } }, 0);
   $("#pnprev", m).onclick = async () => {
     const names = {};
     for (const x of ports) {
@@ -1429,7 +1537,7 @@ function clientsPanel(snap, pa) {
   const t = cs.length > 5 ? (S.paq || "").trim().toLowerCase() : ""; // the filter box only shows above 5
   const head = `<h2>Connected clients&nbsp;<span class="faint" style="font-weight:400">${cs.length}</span><span class="grow"></span>
     <span class="faint" style="font-size:12.5px;font-weight:400">Read ${ago(pa.clientsAt)}</span>
-    ${cs.length > 5 ? `<span class="searchbox" style="font-weight:400">${ICON.search}<input type="text" id="paq" placeholder="Filter clients" value="${esc(S.paq || "")}" oninput="paFilter(this.value)" style="width:200px"></span>` : ""}
+    ${cs.length > 5 ? `<span class="searchbox" style="font-weight:400">${ICON.search}<input type="search" id="paq" placeholder="Filter clients" value="${esc(S.paq || "")}" oninput="paFilter(this.value)" style="width:200px"></span>` : ""}
     <button class="btn small" id="pacref" onclick="refreshPortClients()">${ICON.refresh}Refresh</button></h2>`;
   if (!pa.clientsRead) return `<section class="panel" style="margin-top:16px">${head}<div class="empty" style="padding:22px"><h3>Clients weren't read</h3><p>The switch didn't answer <span class="mono">show port-access clients</span> at the last collection. Click Refresh to try again.</p></div></section>`;
   if (!cs.length) return `<section class="panel" style="margin-top:16px">${head}<div class="empty" style="padding:22px"><h3>No clients</h3><p>Nobody is logged in on a port with 802.1X or MAC authentication right now.</p></div></section>`;
@@ -1778,7 +1886,13 @@ function modal(html, wide) {
   v.addEventListener("click", (e) => { if (e.target === v || e.target.closest("[data-close]")) closeModal(); });
   document.body.appendChild(v);
   S.modalOpen = true;
-  setTimeout(() => v.querySelector("input:not([disabled]),select,textarea")?.focus(), 30);
+  // [autofocus] picks the field to start in, e.g. the port that was clicked (#35)
+  setTimeout(() => {
+    const f = v.querySelector("[autofocus]") || v.querySelector("input:not([disabled]),select,textarea");
+    if (!f) return;
+    f.focus();
+    if (f.hasAttribute("autofocus")) { f.select?.(); f.scrollIntoView({ block: "center" }); }
+  }, 30);
   return v;
 }
 // askConfirm replaces window.confirm(), which the app's embedded web view on
@@ -2039,6 +2153,7 @@ function renderMap() {
       <button class="btn small" onclick="SDMap.fit()">Fit to window</button>
       <button class="btn small" onclick="SDMap.relayout()">Arrange again</button>
       <label class="check btn small"><input type="checkbox" ${S.showEndpoints ? "checked" : ""} onchange="S.showEndpoints=this.checked;SDMap.reload()"> Phones and hosts</label>
+      <span id="maphidden">${mapHiddenBtn()}</span>
       <span style="flex:1"></span><span class="faint" id="mapstat" style="font-size:13px"></span></div>
     <div class="maplegend"><span><i style="border-color:#5d7088"></i>Link</span><span><i style="border-color:var(--warn);border-top-style:dashed"></i>STP blocking</span><span><i style="border-color:var(--crit)"></i>Port down</span><span>Hover or select a switch to see port numbers</span></div>
     <div class="panel mapcard" id="mapcard" style="display:none"></div></div></div>`;
@@ -2055,8 +2170,39 @@ function renderMap() {
   });
 }
 
+// Devices hidden from the map (#33), by id, with the label to list them by.
+const mapHidden = () => swPref("sd-map-hidden", {});
+function mapHiddenBtn() {
+  const n = Object.keys(mapHidden()).length;
+  return n ? `<button class="btn small" onclick="mapHiddenMenu(this)">Hidden (${n})</button>` : "";
+}
+function hideOnMap(id, label, hide) {
+  const h = mapHidden();
+  if (hide) h[id] = label; else delete h[id];
+  swSave("sd-map-hidden", h);
+  if (hide) showMapCard(null);
+  const b = $("#maphidden");
+  if (b) b.innerHTML = mapHiddenBtn();
+  SDMap.reload();
+}
+function mapHiddenMenu(btn) {
+  const h = mapHidden();
+  const menu = popMenu(btn, `<div class="faint" style="font-size:12px;padding:4px 8px 6px">Hidden from the map</div>` +
+    Object.entries(h).map(([id, label]) => `<div class="menuitem" data-unhide="${esc(id)}"><span>${esc(label || id)}</span><span class="faint">Show</span></div>`).join("") +
+    `<div style="padding:6px 8px 2px"><a data-unhide="*">Show all</a></div>`);
+  menu.addEventListener("click", (e) => {
+    const u = e.target.closest("[data-unhide]");
+    if (!u) return;
+    if (u.dataset.unhide === "*") { swSave("sd-map-hidden", {}); const b = $("#maphidden"); if (b) b.innerHTML = ""; SDMap.reload(); }
+    else hideOnMap(u.dataset.unhide, "", false);
+    menu.remove();
+  });
+}
+
 // siteTopo keeps the site's switches, the devices they see, and the links between those
 function siteTopo(t) {
+  const hidden = mapHidden();
+  if (t && Object.keys(hidden).length) t = { ...t, nodes: t.nodes.filter((n) => !(n.id in hidden)), edges: t.edges.filter((e) => !(e.from in hidden) && !(e.to in hidden)) };
   if (!S.site || !t) return t || { nodes: [], edges: [] };
   const mine = new Set(siteDash().switches.map((v) => v.id));
   const keep = new Set(mine);
@@ -2082,7 +2228,9 @@ function showMapCard(n, topo) {
   c.style.display = "block";
   c.innerHTML = `<h3>${esc(n.label)}</h3><div class="muted" style="font-size:13px;margin-bottom:10px">${n.managed ? (n.online ? `<span class="ok">Online</span>` : `<span class="bad">Offline</span>`) + " " : ""}<span class="mono">${esc(n.host)}</span>${n.model ? "<br>" + esc(n.model) : ""}${n.stpRoot ? "<br>Spanning-tree root" : ""}</div>
     ${links.length ? `<table style="font-size:13px"><thead><tr><th style="padding:4px 6px">Port</th><th style="padding:4px 6px">To</th><th style="padding:4px 6px">Port</th></tr></thead><tbody>${links.join("").replaceAll("<td", '<td style="padding:4px 6px"')}</tbody></table>` : ""}
-    ${n.managed ? `<div style="margin-top:12px"><button class="btn small primary" data-go="#/switch/${n.id}">Open switch</button></div>` : `<div class="faint" style="font-size:12.5px;margin-top:10px">Seen by LLDP/CDP, not in your inventory.</div>`}`;
+    ${n.managed ? "" : `<div class="faint" style="font-size:12.5px;margin-top:10px">Seen by LLDP/CDP, not in your inventory.</div>`}
+    <div style="margin-top:12px;display:flex;gap:8px">${n.managed ? `<button class="btn small primary" data-go="#/switch/${n.id}">Open switch</button>` : ""}<button class="btn small" id="maphide" title="Leave this device off the map. Hidden devices can be shown again from the Hidden button.">Hide from map</button></div>`;
+  $("#maphide", c).onclick = () => hideOnMap(n.id, n.label, true);
 }
 
 // ---------- VLAN matrix ----------
@@ -2125,7 +2273,7 @@ async function openSSH(id) {
 async function renderClients() {
   $("#main").innerHTML = `<div class="page"><div class="head"><h1>Clients</h1>${siteSub()}</div>
     <div class="panel" style="padding:16px 18px">
-      <div class="ifilter"><span class="searchbox">${ICON.search}<input type="text" id="macq" placeholder="Filter by MAC address, switch, port or VLAN" value="${esc(S.macq || "")}" autofocus></span>
+      <div class="ifilter"><span class="searchbox">${ICON.search}<input type="search" id="macq" placeholder="Filter by MAC address, switch, port or VLAN" value="${esc(S.macq || "")}" autofocus></span>
         <button class="btn" id="macgo">Find path</button></div>
       <p class="faint" style="font-size:13px;margin:10px 0 0">Each device is listed once, at the port it's plugged into. Every switch on the way learns its address too: click an address, or type one and press Find path, to see them all.</p>
     </div>
@@ -2164,6 +2312,45 @@ async function renderClients() {
   $("#macq").addEventListener("keydown", (e) => { if (e.key === "Enter") macPath($("#macq").value.trim()); });
   $("#macgo").onclick = () => macPath($("#macq").value.trim());
   list();
+}
+
+// ---------- every port of every switch (#33) ----------
+function renderAllPorts() {
+  const f = S.apf || (S.apf = { q: "", status: "", speed: "" });
+  const speeds = [...new Set(siteDash().switches.flatMap((v) => (v.summary?.ports || []).map((p) => p.speed)).filter(Boolean))].sort();
+  $("#main").innerHTML = `<div class="page"><div class="head"><h1>Ports</h1>${siteSub()}</div>
+    <div class="panel" style="padding:14px 18px;margin-bottom:16px"><div class="ifilter">
+      <span class="searchbox">${ICON.search}<input type="search" id="apq" placeholder="Search port names, switches, ports, speed…" value="${esc(f.q)}" autofocus></span>
+      <select id="aps"><option value="">Any status</option>${["Up", "Down", "Disabled"].map((v) => `<option ${f.status === v ? "selected" : ""}>${v}</option>`).join("")}</select>
+      <select id="apv"><option value="">Any speed</option>${speeds.map((v) => `<option ${f.speed === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></div>
+      <p class="faint" style="font-size:13px;margin:10px 0 0">Every port of every switch, from the last time each switch was read. Click a switch to open its Ports tab.</p></div>
+    <div id="apres"></div></div>`;
+  $("#apq").addEventListener("input", (e) => { f.q = e.target.value; allPortRows(); });
+  $("#aps").onchange = (e) => { f.status = e.target.value; allPortRows(); };
+  $("#apv").onchange = (e) => { f.speed = e.target.value; allPortRows(); };
+  allPortRows();
+}
+function allPortRows() {
+  const box = $("#apres");
+  if (!box) return;
+  const f = S.apf, q = f.q.trim().toLowerCase(), LIMIT = 1500;
+  const all = [];
+  for (const v of siteDash().switches) for (const p of v.summary?.ports || []) all.push([v, p]);
+  const hits = all.filter(([v, p]) => {
+    const [, label] = portState(p);
+    if (f.status && label !== f.status) return false;
+    if (f.speed && p.speed !== f.speed) return false;
+    return !q || [v.name, v.summary?.hostname, v.host, p.name, p.description, label, p.speed, p.type, p.trunk].join(" ").toLowerCase().includes(q);
+  });
+  if (!all.length) { box.innerHTML = `<div class="panel"><div class="empty"><h3>No ports yet</h3><p>Ports show up here once switches have been read.</p></div></div>`; return; }
+  box.innerHTML = `<div class="panel"><div class="fwscroll" style="max-height:calc(100vh - 290px)"><table><thead><tr><th>Switch</th><th>Port</th><th>Name</th><th>Status</th><th>Speed</th><th>Type</th></tr></thead><tbody>
+    ${hits.slice(0, LIMIT).map(([v, p]) => {
+      const [c, label, cls] = portState(p);
+      return `<tr><td><a data-go="#/switch/${v.id}/ports">${esc(v.summary?.hostname || v.name || v.host)}</a></td><td class="mono">${esc(p.name)}${p.trunk ? ` <span class="faint">${esc(p.trunk)}</span>` : ""}</td>
+        <td class="pname" title="Click to copy" onclick="if(this.textContent)copyText(this.textContent)">${esc(p.description || "")}</td>
+        <td class="${cls}"><span class="ledkey" style="color:inherit;font-size:inherit"><span><i class="${c}"></i>${label}</span></span></td><td>${esc(p.speed)}</td><td>${esc(p.type)}</td></tr>`;
+    }).join("") || `<tr><td colspan="6" class="faint" style="text-align:center;padding:18px">No port matches</td></tr>`}</tbody></table></div>
+    <div class="faint" style="padding:10px 16px;font-size:12.5px">${hits.length > LIMIT ? `Showing ${LIMIT} of ${hits.length} ports. Type to narrow the list.` : `${hits.length} of ${all.length} ports`}</div></div>`;
 }
 
 // Every switch that learned one address: the edge port first, then the uplinks on the way.
@@ -2464,7 +2651,9 @@ async function renderSettings() {
         <label class="check" style="margin-bottom:6px"><input type="radio" name="fa" value="stage" ${set.firmwareAuto === "stage" ? "checked" : ""}> Copy new firmware to the spare bank, but don't reboot</label>
         <label class="check" style="margin-bottom:10px"><input type="radio" name="fa" value="install" ${set.firmwareAuto === "install" ? "checked" : ""}> Install: copy any time, reboot one switch at a time during the maintenance window</label>
         <div class="row" style="max-width:360px"><label class="f"><span>Window starts</span><input type="text" id="ws" class="mono" value="${esc(set.windowStart)}" placeholder="02:00"></label>
-          <label class="f"><span>Window ends</span><input type="text" id="we" class="mono" value="${esc(set.windowEnd)}" placeholder="05:00"></label></div></div>
+          <label class="f"><span>Window ends</span><input type="text" id="we" class="mono" value="${esc(set.windowEnd)}" placeholder="05:00"></label></div>
+        <div class="row" style="max-width:360px;margin-top:4px"><label class="f"><span>Wait between reboots (seconds)</span><input type="number" id="rp" min="0" max="3600" value="${+set.rebootPause || 0}"></label><span></span></div>
+        <p class="faint" style="font-size:12.5px;margin:0">When several switches are updated with a reboot, those furthest from the core go first, one at a time. After a switch is back, SwitchDesk waits this long before the next one restarts, so spanning tree can settle. If a switch doesn't come back properly, the reboots still waiting stop.</p></div>
       <button class="btn primary" onclick="saveSettings()">Save settings</button></div></section>
     <section class="panel" style="margin-top:18px"><h2>App password<span class="grow"></span>${lk.enabled ? `<span class="okchip sev" style="font-weight:400">On</span>` : `<span class="faint" style="font-weight:400;font-size:13px">Off</span>`}</h2><div class="body">
       <p class="muted" style="font-size:13px;margin:0 0 12px">Optional. With a password, SwitchDesk asks for it when it starts, and the saved switch passwords can't be read without it, not even from the data folder. Without one, anyone who can use this computer account can open SwitchDesk.</p>
@@ -2724,7 +2913,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { ...S.settings, checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, autoPortNames: $("#apn").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
+    await call("SaveSettings", { ...S.settings, checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, autoPortNames: $("#apn").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), rebootPause: Math.max(0, +$("#rp").value || 0), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }

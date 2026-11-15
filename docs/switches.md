@@ -51,7 +51,9 @@ Bridge and root MAC and priority, this switch's role, topology changes, and ever
 
 A large faceplate laid out like the hardware: copper ports, SFP ports and module ports (`A1`…) are separate blocks, and each member of a stacked switch (2930M, 3810, VSF on 2930F and 6300) gets its own row. Which ports are SFP cages comes from the model's hardware list (from the NetBox device type library), so an empty SFP cage is drawn as one. Then its colour key, and a table with each port's name, status (Up, Down or Disabled), speed, type and VLAN membership (`20u` is untagged in VLAN 20, `30t` tagged in VLAN 30). The name is the one set on the switch: `name "..."` on AOS-S, `description` on AOS-CX. Hover a port on any faceplate to see it too, for example "Port 3 · Printer-2nd-floor".
 
-To rename ports, click **Edit names** above the table, or click a name in it. Every port is listed with the device LLDP or CDP sees on it. Type the names, or click **Fill from LLDP** to name ports after their neighbors. It only fills ports that have no name yet, or whose name came from LLDP before and whose neighbor has changed; a name you typed is never replaced. **Review changes** shows the commands before anything is sent. Names can be up to 64 characters, without `"`, `?` or `\`. Instant On switches are renamed in the Instant On app or on their web page.
+Above the table, a search box finds ports by number, name, status, speed, VLAN or MAC address, and two lists show only ports with one status (Up, Down, Disabled) or one speed. The **MAC** column shows the address learned on the port, or how many when there are several; click one to copy it in the format you need: colon (Aruba, Linux), hyphen (Windows), dotted (Cisco), HPE `xxxxxx-xxxxxx`, or plain. Click a port's name to copy it.
+
+To rename ports, click **Edit names** above the table, or double-click a name in it (a port without a name opens the editor with one click). The editor opens at the port you clicked. Every port is listed with the device LLDP or CDP sees on it. Type the names, or click **Fill from LLDP** to name ports after their neighbors. It only fills ports that have no name yet, or whose name came from LLDP before and whose neighbor has changed; a name you typed is never replaced. **Review changes** shows the commands before anything is sent. Names can be up to 64 characters, without `"`, `?` or `\`. Instant On switches are renamed in the Instant On app or on their web page.
 
 Switches with transceivers also get an **Optics** table: Rx and Tx power in dBm (one value per lane on QSFP), temperature, model and serial. On AOS-CX it shows the optic's own warning range and judges against it. AOS-S doesn't report those levels, so its recent optical alarms are shown instead. A port that's down with no light shows as *Not connected*, and DAC cables show *No DOM*. The readings come from `show interface dom detail` on AOS-CX and `show interfaces transceiver detail` on AOS-S.
 
@@ -95,6 +97,10 @@ Run `show`, `ping` and `traceroute` commands on the switch. Anything else is ref
 ### Raw output
 
 The exact output of every command SwitchDesk ran in the last reading. If something on the other tabs looks wrong, this shows what the switch actually said.
+
+## Ports
+
+**Ports** in the sidebar lists every port of every switch, from the last time each switch was read: switch, port, name, status, speed and type. Search across all of them, for example for a port name, or narrow the list to one status or speed. Click a switch to open its **Ports** tab. Click a name to copy it.
 
 ## Clients
 

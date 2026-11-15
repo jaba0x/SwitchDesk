@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.19
+
+From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#33](https://github.com/jaba0x/SwitchDesk/issues/33), [#34](https://github.com/jaba0x/SwitchDesk/issues/34) and [#35](https://github.com/jaba0x/SwitchDesk/issues/35):
+
+- **The port name editor opens at the port you clicked** (#35).
+- **Ports tab:** search, filters for status and speed, and a **MAC** column. Click a MAC to copy it as colon, hyphen, Cisco dotted, HPE or plain. Click a port name to copy it, double-click to rename.
+- **VLANs tab:** click a VLAN name to copy it, double-click a row to edit it.
+- **Ports page** in the sidebar: every port of every switch in one searchable list.
+- **Back button** on a switch page returns to the page you came from (VLANs, Ports, Firmware…), scrolled where you were.
+- **Firmware page:** a search box, and a lock to hold a switch on its current firmware. Held switches can't be ticked and automatic updates skip them.
+- **Network map:** hide devices you don't want to see; **Hidden** brings them back.
+- **Clear button** in every search box, and every table row lights up under the pointer.
+- **Safer batch firmware updates** (#34): switches reboot bottom-up, furthest from the core first; if one doesn't come back properly, the reboots still waiting stop; and **Settings → Wait between reboots** adds a pause for spanning tree after each switch.
+
 ## 1.0.18
 
 From [@Marcel1285](https://github.com/Marcel1285) in [#32](https://github.com/jaba0x/SwitchDesk/issues/32):
