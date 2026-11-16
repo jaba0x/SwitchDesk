@@ -18,6 +18,7 @@ Uptime is shown the same short way for every switch, such as `64d 19h`; hover it
 
 **Select switches** with the checkboxes (the header one selects everything shown). A bar appears with actions for all of them:
 
+- **Web** and **SSH** open the web interface, or an SSH session, for each of them. More than ten asks first.
 - **Collect now** reads them immediately.
 - **Update firmware** opens the [update dialog](firmware.md#update-switches).
 - **Disable** pauses them: no checks, no SSH, no alerts. They keep their last data and stay greyed out until you **Enable** them again. Handy for a switch that's being replaced or is on the bench.

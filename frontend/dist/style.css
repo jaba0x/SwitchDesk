@@ -518,3 +518,13 @@ tr.flash > td { animation: rowflash 1.6s ease-out; }
 /* changes sent without write memory (#38) */
 .unsaved { display: inline-flex; align-items: center; gap: 8px; margin-left: 10px; padding: 2px 4px 2px 10px; border-radius: 6px; background: rgba(240,180,80,.14); color: var(--warn); font-size: 13px; }
 .unsaved .btn { padding: 2px 10px; }
+
+/* VLAN matrix: switch names stay at the top, VLANs at the left, and both
+   scrollbars stay on screen (#39) */
+.vlmx { overflow: auto; max-height: calc(100vh - 210px); padding: 0; }
+.vlmx table.matrix thead th { position: sticky; top: 0; z-index: 2; background: var(--panel); box-shadow: inset 0 -1px 0 var(--line); }
+.vlmx table.matrix td:first-child, .vlmx table.matrix th:first-child { position: sticky; left: 0; z-index: 1; background: var(--panel); white-space: nowrap; box-shadow: inset -1px 0 0 var(--line); }
+.vlmx table.matrix thead th:first-child { z-index: 3; }
+.vlmx.panning { cursor: grabbing; user-select: none; }
+/* disabled ports in the Switches table (#40) */
+.offn { color: var(--warn); }

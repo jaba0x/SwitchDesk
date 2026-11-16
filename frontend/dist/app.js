@@ -144,9 +144,11 @@ function ledKey(ports) {
   return `<span class="ledkey">${k.map(([c, l]) => `<span><i class="${c}"></i>${l}</span>`).join("")}</span>`;
 }
 
-// "12/48", plus how many of the rest are disabled rather than down
-function portsUp(s) {
+// "12/48", plus how many of the rest are disabled rather than down; in the
+// Switches table as "12/48/1" with the details on hover (#40)
+function portsUp(s, compact) {
   const off = (s.ports || []).filter((p) => !p.enabled).length;
+  if (compact) return `<span title="${s.portsUp}/${s.portsTotal} up${off ? ` · ${off} disabled` : ""}">${s.portsUp}/${s.portsTotal}${off ? `/<span class="offn">${off}</span>` : ""}</span>`;
   return `${s.portsUp}/${s.portsTotal}${off ? ` <span class="faint" title="${plural(off, "port")} disabled on the switch">· ${off} disabled</span>` : ""}`;
 }
 
@@ -606,7 +608,8 @@ const SW_COLS = [
   { id: "firmware", label: "Firmware", key: (v) => (canUpdate(v) ? 0 : 1), cell: (v) => fwCell(v) },
   { id: "cpu", label: "CPU", num: true, cls: "num", key: (v) => (v.summary?.cpu >= 0 ? v.summary.cpu : ""), cell: (v) => (v.summary?.cpu >= 0 ? v.summary.cpu + "%" : "") },
   { id: "mem", label: "Mem", num: true, cls: "num", key: (v) => (v.summary?.memory >= 0 ? v.summary.memory : ""), cell: (v) => (v.summary?.memory >= 0 ? v.summary.memory + "%" : "") },
-  { id: "ports", label: "Ports up", num: true, cls: "num", key: (v) => (v.summary?.portsTotal ? v.summary.portsUp : ""), cell: (v) => (v.summary?.portsTotal ? portsUp(v.summary) : "") },
+  { id: "ports", label: "Ports up", num: true, cls: "num", key: (v) => (v.summary?.portsTotal ? v.summary.portsUp : ""), cell: (v) => (v.summary?.portsTotal ? portsUp(v.summary, true) : "") },
+  { id: "vlans", label: "VLANs", num: true, cls: "num", key: (v) => (v.summary?.vlans ? v.summary.vlans : ""), cell: (v) => (v.summary?.vlans ? `<a class="nogo" style="color:inherit" data-go="#/switch/${v.id}/vlans" title="Open the VLANs tab">${v.summary.vlans}</a>` : "") },
   { id: "uptime", label: "Uptime", hidden: true, key: (v) => v.summary?.uptimeSec || "", cell: (v) => `<span title="${esc(v.summary?.uptime || "")}">${esc(fmtUptime(v.summary))}</span>` },
   { id: "stp", label: "STP", key: (v) => v.summary?.stpRole || "", cell: (v) => esc(v.summary?.stpRole || "") },
   { id: "problems", label: "Problems", key: (v) => (v.worst ? sevRank[v.worst] * 1000 + (v.issues || []).length : ""), cell: (v) => (v.worst ? `<span class="sev ${v.worst}">${(v.issues || []).length}</span>` : "") },
@@ -733,6 +736,8 @@ function renderSwitches(soft) {
     ${rows.length ? "" : `<div class="empty">No switches match “${esc(S.query)}”. <a onclick="clearSearch()">Clear search</a></div>`}`;
   const n = S.sel.size;
   const bar = n ? `<div class="selbar"><b>${n} selected</b><span class="grow"></span>
+      <button class="btn small" onclick="openMany([...S.sel], 'web')" title="Open each selected switch's web interface in the browser">${ICON.globe}Web</button>
+      <button class="btn small" onclick="openMany([...S.sel], 'ssh')" title="Open an SSH session to each selected switch">${ICON.term}SSH</button>
       <button class="btn small" onclick="refreshSel()">${ICON.refresh}Collect now</button>
       <button class="btn small" onclick="openUpgradeDialog([...S.sel])">${ICON.up}Update firmware</button>
       <button class="btn small" onclick="setDisabled([...S.sel], true)">${ICON.pause}Disable</button>
@@ -2373,6 +2378,19 @@ async function openSSH(id) {
   try { await call("OpenSSH", id); } catch (e) { toast(e.message || String(e), true); }
 }
 
+// Web or SSH for several switches at once (#39). Instant On cloud switches
+// have neither, web-managed ones have no SSH. A short pause between them keeps
+// the browser and the SSH client from dropping some.
+async function openMany(ids, what) {
+  const vs = ids.map((id) => (S.dash?.switches || []).find((v) => v.id === id)).filter((v) => v && v.host && !v.cloud && !(what === "ssh" && v.web));
+  if (!vs.length) { toast(what === "ssh" ? "None of these switches is reached over SSH" : "None of these switches has a web interface", true); return; }
+  if (vs.length > 10 && !(await askConfirm(what === "ssh" ? `Open ${vs.length} SSH sessions?` : `Open ${vs.length} browser tabs?`, "Open", false))) return;
+  for (const v of vs) {
+    what === "ssh" ? await openSSH(v.id) : openWeb(v.id);
+    await new Promise((r) => setTimeout(r, 250));
+  }
+}
+
 // ---------- clients: where is this MAC plugged in? ----------
 
 async function renderClients() {
@@ -2508,8 +2526,32 @@ async function renderVLANs(soft) {
   $("#main").innerHTML = `<div class="page"><div class="head"><h1>VLANs</h1>${siteSub()}<span class="sub">${ids.length} across ${plural(data.length, "switch").replace("switchs", "switches")}</span><span class="grow"></span>
       ${canEdit ? `<button class="btn primary" onclick="openNetVLAN()">${ICON.plus}New VLAN</button>` : ""}</div>
     <p class="muted" style="margin-top:-6px">Each cell shows how many ports carry the VLAN on that switch. Click one to edit it there${canEdit ? ", or use Edit to change the VLAN on every switch at once" : ""}.</p>
-    <div class="panel" id="vlmx" style="overflow:auto"><table class="matrix"><thead><tr><th>VLAN</th>${data.map((s) => `<th><a data-go="#/switch/${s.id}/vlans" style="color:inherit" title="${esc(s.family)}${s.editable ? "" : ": VLANs " + esc(s.readOnly)}">${esc(s.name)}</a></th>`).join("")}${canEdit ? "<th></th>" : ""}</tr></thead><tbody>${rows.join("")}</tbody></table></div></div>`;
+    <div class="panel vlmx" id="vlmx" title=""><table class="matrix"><thead><tr><th>VLAN</th>${data.map((s) => `<th><a data-go="#/switch/${s.id}/vlans" style="color:inherit" title="${esc(s.family)}${s.editable ? "" : ": VLANs " + esc(s.readOnly)}">${esc(s.name)}</a></th>`).join("")}${canEdit ? "<th></th>" : ""}</tr></thead><tbody>${rows.join("")}</tbody></table></div></div>`;
   if (scroll) [$("#vlmx").scrollLeft, $("#vlmx").scrollTop] = scroll;
+  dragPan($("#vlmx"));
+}
+
+// Hold the middle mouse button (or Space with the left one) and drag to pan a
+// wide table in any direction (#39); the wheel keeps scrolling up and down,
+// Shift+wheel sideways.
+let panSpace = false;
+addEventListener("keydown", (e) => { if (e.code === "Space" && e.target === document.body && document.querySelector("[data-pan]")) { panSpace = true; e.preventDefault(); } });
+addEventListener("keyup", (e) => { if (e.code === "Space") panSpace = false; });
+function dragPan(el) {
+  if (!el || el.dataset.pan) return;
+  el.dataset.pan = "1";
+  el.addEventListener("mousedown", (e) => {
+    if (!(e.button === 1 || (e.button === 0 && panSpace))) return;
+    e.preventDefault();
+    const x = e.clientX, y = e.clientY, l = el.scrollLeft, t = el.scrollTop;
+    el.classList.add("panning");
+    const move = (ev) => { el.scrollLeft = l - (ev.clientX - x); el.scrollTop = t - (ev.clientY - y); };
+    const up = () => { el.classList.remove("panning"); removeEventListener("mousemove", move); removeEventListener("mouseup", up); };
+    addEventListener("mousemove", move);
+    addEventListener("mouseup", up);
+  });
+  // no autoscroll circle or paste on middle click
+  el.addEventListener("auxclick", (e) => { if (e.button === 1) e.preventDefault(); });
 }
 
 // With all sites shown, the multi-switch editors mark each switch's site and

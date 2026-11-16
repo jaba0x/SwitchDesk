@@ -4,6 +4,8 @@
 
 The **VLANs** tab of a switch lists its VLANs with name, IP address, and untagged and tagged ports. **New VLAN**, **Edit** and **Delete** change them; double-clicking a VLAN's row opens it for editing too, and clicking its name copies it. VLAN 1 can't be deleted.
 
+The table keeps the switch names at the top and the VLANs at the left while you scroll, and its scrollbars stay in the window. Shift+wheel scrolls sideways; holding the middle mouse button (or Space) and dragging pans in any direction.
+
 Opening a switch from the network-wide table below, and coming back with the switch page's back button, returns to the table where you left it.
 
 ### Edit ports by clicking

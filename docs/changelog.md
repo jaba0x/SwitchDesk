@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.21
+
+From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#39](https://github.com/jaba0x/SwitchDesk/issues/39) and [#40](https://github.com/jaba0x/SwitchDesk/issues/40):
+
+- **VLANs page:** the switch names stay at the top and the VLAN names at the left while scrolling, and the table scrolls inside the window, so its sideways scrollbar is always on screen. Hold the middle mouse button (or Space) and drag to pan in any direction; Shift+wheel scrolls sideways.
+- **Open several switches at once:** select switches in the Switches list and click **Web** or **SSH** in the selection bar.
+- **Ports up** in the Switches list is shorter: `14/52/1`, with the disabled count in amber and the details on hover.
+- **VLANs column** in the Switches list: how many VLANs each switch has. Click it to open the switch's VLANs tab.
+
 ## 1.0.20
 
 From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#33](https://github.com/jaba0x/SwitchDesk/issues/33), [#36](https://github.com/jaba0x/SwitchDesk/issues/36), [#37](https://github.com/jaba0x/SwitchDesk/issues/37) and [#38](https://github.com/jaba0x/SwitchDesk/issues/38):

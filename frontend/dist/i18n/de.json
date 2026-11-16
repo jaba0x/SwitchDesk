@@ -1151,6 +1151,13 @@
     "Select a device on the map and click Hide from map to leave it off.": "Wählen Sie ein Gerät auf der Karte und klicken Sie auf „Auf der Karte ausblenden“.",
     "Show port numbers under the ports": "Portnummern unter den Ports anzeigen",
     "SwitchDesk sent changes without saving them. They are lost if the switch restarts.": "SwitchDesk hat Änderungen gesendet, ohne sie zu speichern. Sie gehen verloren, wenn der Switch neu startet.",
-    "Undo show all": "„Alle einblenden“ rückgängig"
+    "Undo show all": "„Alle einblenden“ rückgängig",
+    "None of these switches has a web interface": "Keiner dieser Switches hat eine Weboberfläche",
+    "None of these switches is reached over SSH": "Keiner dieser Switches wird über SSH erreicht",
+    "Open {0} SSH sessions?": "{0} SSH-Sitzungen öffnen?",
+    "Open {0} browser tabs?": "{0} Browser-Tabs öffnen?",
+    "Open an SSH session to each selected switch": "Zu jedem ausgewählten Switch eine SSH-Sitzung öffnen",
+    "Open each selected switch's web interface in the browser": "Die Weboberfläche jedes ausgewählten Switches im Browser öffnen",
+    "Open the VLANs tab": "Den VLANs-Reiter öffnen"
   }
 }
