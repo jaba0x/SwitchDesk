@@ -27,7 +27,7 @@ The map starts at the spanning-tree root (marked **STP root**) at the top and pl
 
 Devices that aren't in SwitchDesk appear as circles: **R** for routers and firewalls, **AP** for access points, **S** for other switches. Phones (**P**) and hosts (**H**) are hidden unless you tick **Phones and hosts**.
 
-To keep the map tidy, select a device and click **Hide from map** on its card. **Hidden** in the toolbar lists the hidden devices and shows them again. Hidden devices are remembered on this computer.
+To keep the map tidy, select a device and click **Hide from map** on its card. The **Hide…** menu in the toolbar (**Hidden** once something is hidden) can also hide all access points, all other switches, or all routers and firewalls at once, including ones that show up later. It lists the devices hidden one by one, each with **Show**. **Show all** brings everything back, and **Undo show all** in the toolbar hides it all again. Hidden devices are remembered on this computer.
 
 Hover or click a switch to show port numbers on its links. Clicking also opens a card listing each link (this port, the other device, its port) with **Open switch**. Double-click a switch to go straight to its page.
 

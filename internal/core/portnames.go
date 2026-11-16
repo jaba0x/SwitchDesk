@@ -59,6 +59,7 @@ func (m *Manager) ApplyPortNames(id string, ch aruba.PortNameChange) (aruba.Appl
 		res = aruba.ApplyCommands(ctx, s, cmds)
 		return nil
 	})
+	m.noteApplied(id, cmds, res)
 	if err != nil {
 		return res, err
 	}
@@ -116,6 +117,7 @@ func (m *Manager) autoPortNames(ctx context.Context, sess *sshx.Session, sw stor
 		return false
 	}
 	res := aruba.ApplyCommands(ctx, sess, cmds)
+	m.noteApplied(sw.ID, cmds, res)
 	if res.OK {
 		m.namesApplied(sw.ID, ch)
 	}

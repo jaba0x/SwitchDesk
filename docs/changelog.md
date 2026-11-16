@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.20
+
+From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#33](https://github.com/jaba0x/SwitchDesk/issues/33), [#36](https://github.com/jaba0x/SwitchDesk/issues/36), [#37](https://github.com/jaba0x/SwitchDesk/issues/37) and [#38](https://github.com/jaba0x/SwitchDesk/issues/38):
+
+- **Fixed: dialogs closed when selecting text by dragging** past the edge of a field (#36).
+- **Fixed: the port panel of stacks with SFP+ ports** (such as the 3810M 16SFP+) broke into pieces wherever a cage was empty. Empty cages now sit with their neighbours, and module slots A and B are separate blocks (#36).
+- **Network map:** hide all access points, other switches, or routers and firewalls at once; **Show all** can be undone (#37).
+- **Port panel:** size buttons on the Ports tab too, an option to show port numbers under the ports, and a click on a port jumps to its row in the table (#37).
+- **Unsaved changes:** a switch with changes sent without `write memory` shows **Unsaved changes** with a **Save** button, and the **Save to startup config** box keeps its last state until SwitchDesk is closed (#38).
+- **MAC copy:** plain uppercase (`AABBCCDDEEFF`) added (#33).
+
 ## 1.0.19
 
 From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#33](https://github.com/jaba0x/SwitchDesk/issues/33), [#34](https://github.com/jaba0x/SwitchDesk/issues/34) and [#35](https://github.com/jaba0x/SwitchDesk/issues/35):

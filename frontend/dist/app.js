@@ -95,17 +95,33 @@ function leds(ports, stp, big, optics) {
   // copper or fiber depending on what's plugged in. When fiber shows up only
   // among a member's last four ports, those four stay one block whatever is
   // in them, so the layout doesn't change with the media.
+  // An empty SFP cage reports no type at all, so on its own it would look
+  // like copper and split a row of SFP ports into pieces (#36, a 3810M 16SFP+
+  // stack). A port without a type takes the kind of its neighbours instead.
+  const fib = new Map();
+  for (const m of members) {
+    const ps = phys.filter((p) => member(p.name) === m && !isMod(p));
+    const known = ps.map((p) => (p.cage || (p.type || "").trim() ? isFiber(p) : null));
+    for (let i = 0; i < ps.length; i++) {
+      let k = known[i];
+      for (let j = i - 1; k === null && j >= 0; j--) k = known[j];
+      for (let j = i + 1; k === null && j < ps.length; j++) k = known[j];
+      fib.set(ps[i], !!k);
+    }
+  }
   const tail = new Set();
   for (const m of members) {
     const ps = phys.filter((p) => member(p.name) === m && !isMod(p));
-    const first = ps.findIndex(isFiber);
+    const first = ps.findIndex((p) => fib.get(p));
     if (ps.length > 8 && first >= 0 && first >= ps.length - 4) ps.slice(-4).forEach((p) => tail.add(p));
   }
+  // module ports in a block per slot: A1-A4, then B1-B4
+  const slot = (p) => (isMod(p) ? p.name.replace(/^.*\//, "")[0].toUpperCase() : "");
   const groups = [];
   for (const p of phys) {
-    const m = member(p.name), mod = isMod(p), t = tail.has(p), f = t || mod || isFiber(p);
+    const m = member(p.name), mod = isMod(p), t = tail.has(p), f = t || mod || fib.get(p), sl = slot(p);
     const last = groups[groups.length - 1];
-    if (!last || last.member !== m || last.fiber !== f || last.mod !== mod || last.tail !== t) groups.push({ member: m, fiber: f, mod, tail: t, ports: [], first: !last || last.member !== m });
+    if (!last || last.member !== m || last.fiber !== f || last.mod !== mod || last.tail !== t || last.slot !== sl) groups.push({ member: m, fiber: f, mod, tail: t, slot: sl, ports: [], first: !last || last.member !== m });
     groups[groups.length - 1].ports.push(p);
   }
   const html = groups.map((g) => {
@@ -113,7 +129,7 @@ function leds(ports, stp, big, optics) {
     const cells = g.ports.map((p) => {
       const cls = !p.enabled ? "x" : p.loop ? "l" : blocking.has(p.name) ? "b" : p.up ? "u" : "";
       const tip = `Port ${p.name}${p.description ? " · " + p.description : ""}: ${!p.enabled ? "disabled" : p.up ? "up" : "down"}${p.speed ? " " + p.speed : ""}${p.vlan ? ", VLAN " + p.vlan : ""}${blocking.has(p.name) ? ", STP blocking" : ""}${p.loop ? ", loop detected" : ""}${opt[p.name]?.rx?.length ? `, Rx ${opt[p.name].rx.map(dbm).join("/")} dBm` : ""}${p.poeMw ? `, PoE ${(p.poeMw / 1000).toFixed(1)} W` : ""}${p.uplink ? ", uplink" : ""}${p.trunk ? ", " + I18N.tr("trunk") + " " + p.trunk : ""}`;
-      return `<i class="${cls}" title="${esc(tip)}"></i>`;
+      return `<i class="${cls}" title="${esc(tip)}" data-port="${esc(p.name)}" data-n="${esc(p.name.replace(/^.*\//, ""))}"></i>`;
     }).join("");
     const grp = `<span class="ledgrp" style="--r:${rows}" title="${g.mod ? "Module ports" : g.tail ? "Combo and SFP ports" : g.fiber ? "SFP ports" : ""}">${cells}</span>`;
     return stacked && g.first ? `${groups[0] === g ? "" : "</div></div>"}<div class="ledmember">${big ? `<span class="ledmlabel">Member ${esc(g.member)}</span>` : ""}<div class="ledrow">${grp}` : grp;
@@ -528,12 +544,39 @@ function switchMatches(v, q) {
 
 // ---------- switch list columns (issue #25) ----------
 
-// Size of the port panel on the Overview tab (issue #28), remembered on this computer.
+// Size of the port panel on the Overview and Ports tabs (issues #28, #37), and
+// whether port numbers show under the ports, remembered on this computer.
 function ledZoom() { return +swPref("sd-led-zoom", 1) || 1; }
 function setLedZoom(z) {
   swSave("sd-led-zoom", z);
   document.querySelectorAll(".ledzoom").forEach((e) => e.style.setProperty("--ledz", z));
-  document.querySelectorAll(".seg button").forEach((b) => b.classList.toggle("on", b.getAttribute("onclick") === `setLedZoom(${z})`));
+  document.querySelectorAll(".seg button[data-z]").forEach((b) => b.classList.toggle("on", +b.dataset.z === z));
+}
+function setLedNums(on) {
+  swSave("sd-led-nums", on);
+  document.querySelectorAll(".ledzoom").forEach((e) => e.classList.toggle("nums", on));
+}
+function ledPanel(snap, extra = "") {
+  const lz = ledZoom(), nums = !!swPref("sd-led-nums", false);
+  return `<div class="ledzoom${nums ? " nums" : ""}" style="--ledz:${lz}">${leds(snap.ports, snap.stp, true, snap.optics)}</div>
+    <div style="margin:8px 0 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">${ledKey(snap.ports)}${extra}<span class="grow" style="flex:1"></span>
+    <label class="check" style="font-size:13px" title="Show port numbers under the ports"><input type="checkbox" ${nums ? "checked" : ""} onchange="setLedNums(this.checked)"> Port numbers</label>
+    <span class="seg" title="Size of the port panel">${[[1, "S"], [1.4, "M"], [1.8, "L"], [2.3, "XL"]].map(([z, l]) => `<button data-z="${z}" class="${lz === z ? "on" : ""}" onclick="setLedZoom(${z})">${l}</button>`).join("")}</span></div>`;
+}
+// Clicking a port on the Ports tab's panel goes to its row in the table (#37).
+function goPortRow(name) {
+  let tr = document.querySelector(`#ptbody tr[data-port="${CSS.escape(name)}"]`);
+  if (!tr && S.pf) {
+    S.pf.q = S.pf.status = S.pf.speed = "";
+    document.querySelectorAll("#ptools input, #ptools select").forEach((e) => (e.value = ""));
+    portRows();
+    tr = document.querySelector(`#ptbody tr[data-port="${CSS.escape(name)}"]`);
+  }
+  if (!tr) return;
+  tr.scrollIntoView({ block: "center", behavior: "smooth" });
+  tr.classList.remove("flash");
+  void tr.offsetWidth;
+  tr.classList.add("flash");
 }
 
 // One short uptime format for every family (issue #27): "64d 19h", "5h 12m".
@@ -790,6 +833,9 @@ function updateDetailHead() {
 }
 
 function detailStatus(v) {
+  return detailState(v) + (v.unsaved && !v.disabled ? ` <span class="unsaved" title="SwitchDesk sent changes without saving them. They are lost if the switch restarts.">Unsaved changes<button class="btn small" onclick="saveConfig('${v.id}', this)">Save</button></span>` : "");
+}
+function detailState(v) {
   if (v.disabled) return `<span class="faint">Disabled</span>`;
   if (v.status.collecting) return `<span class="faint">Collecting…</span>`;
   if (!v.status.checked) return `<span class="faint">${S.settings?.checkMethod === "off" ? "Not checked" : "Checking…"}</span>`;
@@ -914,8 +960,7 @@ function tabOverview(d, snap) {
   const isS = snap.family === "aos-s";
   const env = snap.env || [];
   if (set.hardwarePhotos && f.model) setTimeout(() => frontPhoto(f.model), 0);
-  const lz = ledZoom();
-  return `<div class="ledzoom" style="--ledz:${lz}">${leds(snap.ports, st, true, snap.optics)}</div><div style="margin:8px 0 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">${ledKey(snap.ports)}<span class="seg" style="margin-left:auto" title="Size of the port panel">${[[1, "S"], [1.4, "M"], [1.8, "L"], [2.3, "XL"]].map(([z, l]) => `<button class="${lz === z ? "on" : ""}" onclick="setLedZoom(${z})">${l}</button>`).join("")}</span></div>
+  return `${ledPanel(snap)}
   <div id="frontphoto"></div>
   <div class="grid2">
     <section class="panel"><h2>Problems on this switch</h2>
@@ -994,7 +1039,7 @@ function tabPorts(snap) {
   if (S.pf?.id !== S.detail?.id) S.pf = { id: S.detail?.id, q: "", status: "", speed: "" };
   const f = S.pf;
   if (f.speed && !speeds.includes(f.speed)) f.speed = "";
-  return `${leds(p, snap.stp, true, snap.optics)}<div style="margin:8px 0 16px">${ledKey(p)}</div>${opticsPanel(snap)}<section class="panel">
+  return `<div onclick="const i=event.target.closest('i[data-port]');if(i)goPortRow(i.dataset.port)" class="ledclick">${ledPanel(snap)}</div>${opticsPanel(snap)}<section class="panel">
     <h2 id="ptools">Ports<span class="grow"></span>
       <input type="search" class="psearch" placeholder="Search port, name, MAC…" value="${esc(f.q)}" oninput="S.pf.q=this.value;portRows()">
       <select onchange="S.pf.status=this.value;portRows()"><option value="">Any status</option>${["Up", "Down", "Disabled"].map((v) => `<option ${f.status === v ? "selected" : ""}>${v}</option>`).join("")}</select>
@@ -1036,7 +1081,7 @@ function portRowsHTML(snap) {
     const mac = !ms.length ? "" : ms.length === 1
       ? `<a class="mono" onclick="macMenu(this,'${ms[0]}')">${esc(ms[0])}</a>`
       : `<a onclick="macList(this,'${esc(x.name)}')">${ms.length} MACs</a>`;
-    return `<tr><td class="mono">${esc(x.name)}</td>${name}<td class="${cls}"><span class="ledkey" style="color:inherit;font-size:inherit"><span><i class="${c}"></i>${label}</span></span></td>
+    return `<tr data-port="${esc(x.name)}"><td class="mono">${esc(x.name)}</td>${name}<td class="${cls}"><span class="ledkey" style="color:inherit;font-size:inherit"><span><i class="${c}"></i>${label}</span></span></td>
       <td>${esc(x.speed)}</td><td>${esc(x.type)}</td><td class="mono">${esc(memb[x.name] || x.vlan || "")}</td><td>${mac}</td></tr>`;
   }).join("");
 }
@@ -1080,6 +1125,7 @@ function macFormats(mac) {
     ["Dotted (Cisco)", quads.join(".")],
     ["HPE (AOS-S)", h.slice(0, 6) + "-" + h.slice(6)],
     ["Plain", h],
+    ["Plain, uppercase", h.toUpperCase()],
   ];
 }
 function macMenu(anchor, mac) {
@@ -1320,7 +1366,7 @@ async function openPortNames(focus) {
     ${ports.map((x) => `<tr><td class="mono">${esc(x.name)}</td><td class="faint">${esc(nb[x.name] || "")}</td>
       <td style="padding-top:4px;padding-bottom:4px"><input type="text" class="pn" data-p="${esc(x.name)}" maxlength="64" value="${esc(x.description || "")}" style="width:100%"${x.name === focus ? " autofocus" : ""}></td></tr>`).join("")}
     </tbody></table></div>
-    <div style="height:14px"></div><label class="check"><input type="checkbox" id="pnsave" checked> Save to startup config (write memory)</label>
+    <div style="height:14px"></div><label class="check"><input type="checkbox" id="pnsave" ${S.saveMem === false ? "" : "checked"} data-savemem> Save to startup config (write memory)</label>
     <div id="pnerr"></div></div>
     <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="pnprev">Review changes</button></div>`, true);
   const input = (p) => [...m.querySelectorAll("input.pn")].find((i) => i.dataset.p === p);
@@ -1376,7 +1422,7 @@ function openVLANEditor(id) {
     <div class="muted" style="font-size:13px">Click a port to cycle: untagged, tagged, not a member.</div>
     <div class="legend"><span><i style="background:var(--up)"></i>Untagged (access)</span><span><i style="background:var(--info)"></i>Tagged (trunk)</span></div>
     <div class="portpick" id="pp">${order.map((p) => `<button type="button" class="pp ${state[p]}" data-p="${esc(p)}">${esc(p)}${state[p] ? `<sup>${state[p]}</sup>` : ""}</button>`).join("")}</div>
-    <div style="height:14px"></div><label class="check"><input type="checkbox" id="vsave" checked> Save to startup config (write memory)</label>
+    <div style="height:14px"></div><label class="check"><input type="checkbox" id="vsave" ${S.saveMem === false ? "" : "checked"} data-savemem> Save to startup config (write memory)</label>
     <div id="verr"></div></div>
     <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="vprev">Review changes</button></div>`, true);
   $("#pp", m).addEventListener("click", (e) => {
@@ -1641,7 +1687,7 @@ function openRoleEditor(name) {
       <div class="portpick" id="rltag">${vlans.map((v) => `<button type="button" class="pp vl${tagged.has(v.id) ? " T" : ""}" data-v="${v.id}" title="${esc(v.name || "")}">${v.id}${v.name ? `<small>${esc(v.name)}</small>` : ""}</button>`).join("")}</div>
       ${was.tagged.filter((id) => !vlans.some((v) => v.id === id)).length ? `<div class="faint" style="font-size:12.5px;margin-top:6px">Also tagged, but not on this switch: ${esc(compress(was.tagged.filter((id) => !vlans.some((v) => v.id === id)).map(String)))}</div>` : ""}
     </div>
-    <div style="height:12px"></div><label class="check"><input type="checkbox" id="rlsave" checked> Save to startup config (write memory)</label>
+    <div style="height:12px"></div><label class="check"><input type="checkbox" id="rlsave" ${S.saveMem === false ? "" : "checked"} data-savemem> Save to startup config (write memory)</label>
     <div id="rlerr"></div></div>
     <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="rlprev">Review changes</button></div>`, true);
   const mode = () => $("#rlmode .on", m).dataset.v;
@@ -1773,7 +1819,7 @@ function openPortAccessEditor() {
       <div class="rolegrid">${ROLE_SLOTS.map(([k, l]) => `<label class="f"><span>${l}</span><select data-role="${k}"><option value="__keep">${keepRole(k)}</option><option value="">None</option>${roles.map((r) => `<option value="${esc(r.name)}">${esc(r.name)}${roleVLANText(r, snap) ? " · " + esc(roleVLANText(r, snap)) : ""}</option>`).join("")}</select></label>`).join("")}</div>` : ""}
     </div>
     <div id="pawarn" style="margin-top:12px"></div>
-    <div style="height:10px"></div><label class="check"><input type="checkbox" id="pasave" checked> Save to startup config (write memory)</label>
+    <div style="height:10px"></div><label class="check"><input type="checkbox" id="pasave" ${S.saveMem === false ? "" : "checked"} data-savemem> Save to startup config (write memory)</label>
     <div id="paerr"></div></div>
     <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="paprev">Review changes</button></div>`, true);
   const val = (k) => $(`.seg[data-k="${k}"] .on`, m).dataset.v;
@@ -1842,7 +1888,7 @@ function openRadiusEditor() {
       ${cx ? `<label class="f" style="flex:0 0 160px"><span>VRF</span><input type="text" id="rvrf" placeholder="default" spellcheck="false"></label>` : ""}</div>
     <label class="f"><span>Shared secret</span><input type="password" id="rkey" maxlength="64" autocomplete="new-password"></label>
     <label class="check"><input type="checkbox" id="rshow"> Show secret</label>
-    <div style="height:10px"></div><label class="check"><input type="checkbox" id="rsave" checked> Save to startup config (write memory)</label>
+    <div style="height:10px"></div><label class="check"><input type="checkbox" id="rsave" ${S.saveMem === false ? "" : "checked"} data-savemem> Save to startup config (write memory)</label>
     <div id="rerr"></div></div>
     <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="rprev">Review changes</button></div>`);
   $("#rshow", m).onchange = (e) => { $("#rkey", m).type = e.target.checked ? "text" : "password"; };
@@ -1878,12 +1924,33 @@ function removeRadius(host) {
 }
 
 // ---------- modals ----------
+// The "Save to startup config" box keeps its last state for the rest of the
+// session (#38): untick it once while renaming 20 ports, and tick it again on
+// the last one, or save from the switch page.
+document.addEventListener("change", (e) => { if (e.target.matches?.("input[data-savemem]")) S.saveMem = e.target.checked; });
+async function saveConfig(id, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    await call("SaveConfig", id);
+    toast(I18N.tr("Saved to startup config"));
+    S.dash = await call("GetDashboard");
+    if (S.detail?.id === id) loadDetail(id, true);
+  } catch (e) {
+    toast(e.message, true);
+    if (btn) btn.disabled = false;
+  }
+}
+
 function modal(html, wide) {
   closeModal();
   const v = document.createElement("div");
   v.className = "veil";
   v.innerHTML = `<div class="modal${wide ? " wide" : ""}" role="dialog">${html}</div>`;
-  v.addEventListener("click", (e) => { if (e.target === v || e.target.closest("[data-close]")) closeModal(); });
+  // only a click that starts and ends outside the dialog closes it: selecting
+  // text by dragging past the edge of a field ends on the backdrop too (#36)
+  let downOut = false;
+  v.addEventListener("mousedown", (e) => { downOut = e.target === v; });
+  v.addEventListener("click", (e) => { if ((e.target === v && downOut) || e.target.closest("[data-close]")) closeModal(); });
   document.body.appendChild(v);
   S.modalOpen = true;
   // [autofocus] picks the field to start in, e.g. the port that was clicked (#35)
@@ -1909,7 +1976,9 @@ function askConfirm(text, okLabel = "Delete", danger = true) {
       if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); done(false); }
       if (e.key === "Enter") { e.stopPropagation(); e.preventDefault(); done(true); }
     };
-    v.addEventListener("click", (e) => { if (e.target === v || e.target.closest("[data-no]")) done(false); else if (e.target.closest("[data-yes]")) done(true); });
+    let downOut = false;
+    v.addEventListener("mousedown", (e) => { downOut = e.target === v; });
+    v.addEventListener("click", (e) => { if ((e.target === v && downOut) || e.target.closest("[data-no]")) done(false); else if (e.target.closest("[data-yes]")) done(true); });
     document.addEventListener("keydown", key, true);
     document.body.appendChild(v);
     setTimeout(() => v.querySelector("[data-yes]")?.focus(), 30);
@@ -2172,37 +2241,73 @@ function renderMap() {
 
 // Devices hidden from the map (#33), by id, with the label to list them by.
 const mapHidden = () => swPref("sd-map-hidden", {});
+// whole kinds of devices hidden at once, e.g. every access point (#37)
+const mapHiddenKinds = () => swPref("sd-map-hidden-kinds", []);
+const HIDE_KINDS = [["ap", "Hide all access points"], ["external-switch", "Hide all other switches"], ["router", "Hide all routers and firewalls"]];
 function mapHiddenBtn() {
-  const n = Object.keys(mapHidden()).length;
-  return n ? `<button class="btn small" onclick="mapHiddenMenu(this)">Hidden (${n})</button>` : "";
+  const n = Object.keys(mapHidden()).length + mapHiddenKinds().length;
+  const undo = S.mapUndo ? `<button class="btn small" onclick="mapUndoShow()" title="Hide again what Show all brought back">Undo show all</button> ` : "";
+  return `${undo}<button class="btn small" onclick="mapHiddenMenu(this)">${n ? `Hidden (${n})` : "Hide…"}</button>`;
+}
+function mapRefreshHidden() {
+  const b = $("#maphidden");
+  if (b) b.innerHTML = mapHiddenBtn();
+  SDMap.reload();
 }
 function hideOnMap(id, label, hide) {
   const h = mapHidden();
   if (hide) h[id] = label; else delete h[id];
   swSave("sd-map-hidden", h);
-  if (hide) showMapCard(null);
-  const b = $("#maphidden");
-  if (b) b.innerHTML = mapHiddenBtn();
-  SDMap.reload();
+  if (hide) { showMapCard(null); S.mapUndo = null; }
+  mapRefreshHidden();
+}
+function hideKindOnMap(kind, hide) {
+  const k = mapHiddenKinds().filter((x) => x !== kind);
+  if (hide) { k.push(kind); S.mapUndo = null; }
+  swSave("sd-map-hidden-kinds", k);
+  mapRefreshHidden();
+}
+function mapUndoShow() {
+  if (!S.mapUndo) return;
+  swSave("sd-map-hidden", S.mapUndo.ids);
+  swSave("sd-map-hidden-kinds", S.mapUndo.kinds);
+  S.mapUndo = null;
+  mapRefreshHidden();
 }
 function mapHiddenMenu(btn) {
-  const h = mapHidden();
-  const menu = popMenu(btn, `<div class="faint" style="font-size:12px;padding:4px 8px 6px">Hidden from the map</div>` +
-    Object.entries(h).map(([id, label]) => `<div class="menuitem" data-unhide="${esc(id)}"><span>${esc(label || id)}</span><span class="faint">Show</span></div>`).join("") +
-    `<div style="padding:6px 8px 2px"><a data-unhide="*">Show all</a></div>`);
+  const h = mapHidden(), kinds = mapHiddenKinds();
+  const count = {};
+  for (const n of S.mapAll?.nodes || []) if (!n.managed) count[n.kind] = (count[n.kind] || 0) + 1;
+  const kindRows = HIDE_KINDS.filter(([k]) => count[k] || kinds.includes(k)).map(([k, label]) =>
+    `<label class="menuitem" style="justify-content:flex-start;gap:8px"><input type="checkbox" data-kind="${k}" ${kinds.includes(k) ? "checked" : ""}><span>${esc(label)}</span><span class="faint" style="margin-left:auto">${count[k] || 0}</span></label>`).join("");
+  const ids = Object.entries(h);
+  const menu = popMenu(btn, (kindRows ? `<div class="faint" style="font-size:12px;padding:4px 8px 6px">By type</div>${kindRows}` : "") +
+    (ids.length ? `<div class="faint" style="font-size:12px;padding:10px 8px 6px">Hidden one by one</div><div style="max-height:260px;overflow:auto">` +
+      ids.map(([id, label]) => `<div class="menuitem" data-unhide="${esc(id)}"><span>${esc(label || id)}</span><span class="faint">Show</span></div>`).join("") + "</div>" : "") +
+    (ids.length || kinds.length ? `<div style="padding:8px 8px 2px"><a data-unhide="*">Show all</a></div>` : "") +
+    (!kindRows && !ids.length ? `<div class="faint" style="font-size:12.5px;padding:4px 8px;max-width:260px">Select a device on the map and click Hide from map to leave it off.</div>` : ""));
+  menu.addEventListener("change", (e) => { const k = e.target.dataset.kind; if (k) hideKindOnMap(k, e.target.checked); });
   menu.addEventListener("click", (e) => {
     const u = e.target.closest("[data-unhide]");
     if (!u) return;
-    if (u.dataset.unhide === "*") { swSave("sd-map-hidden", {}); const b = $("#maphidden"); if (b) b.innerHTML = ""; SDMap.reload(); }
-    else hideOnMap(u.dataset.unhide, "", false);
+    if (u.dataset.unhide === "*") {
+      // Show all can be undone: hiding 80 devices one by one shouldn't be lost to one click
+      S.mapUndo = { ids: mapHidden(), kinds: mapHiddenKinds() };
+      swSave("sd-map-hidden", {});
+      swSave("sd-map-hidden-kinds", []);
+      mapRefreshHidden();
+    } else hideOnMap(u.dataset.unhide, "", false);
     menu.remove();
   });
 }
 
 // siteTopo keeps the site's switches, the devices they see, and the links between those
 function siteTopo(t) {
-  const hidden = mapHidden();
-  if (t && Object.keys(hidden).length) t = { ...t, nodes: t.nodes.filter((n) => !(n.id in hidden)), edges: t.edges.filter((e) => !(e.from in hidden) && !(e.to in hidden)) };
+  const hidden = mapHidden(), kinds = new Set(mapHiddenKinds());
+  if (t && (Object.keys(hidden).length || kinds.size)) {
+    const gone = new Set(t.nodes.filter((n) => n.id in hidden || (!n.managed && kinds.has(n.kind))).map((n) => n.id));
+    t = { ...t, nodes: t.nodes.filter((n) => !gone.has(n.id)), edges: t.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to)) };
+  }
   if (!S.site || !t) return t || { nodes: [], edges: [] };
   const mine = new Set(siteDash().switches.map((v) => v.id));
   const keep = new Set(mine);
@@ -2451,7 +2556,7 @@ function openNetVLAN(id) {
       <label class="f"><span>Name</span><input type="text" id="nvname" maxlength="32" value="${esc(common)}" placeholder="${isNew ? "" : "leave empty to keep each switch's name"}"></label></div>
     <div class="muted" style="font-size:13px;margin-bottom:8px">Tick the switches that should carry this VLAN. Ports stay as they are; set port membership on each switch's VLANs tab.</div>
     <table><thead><tr><th style="width:28px"><input type="checkbox" id="nvall" title="All switches that can be changed"></th><th>Switch</th><th>Now</th><th>Change</th></tr></thead><tbody id="nvrows"></tbody></table>
-    <div style="height:14px"></div><label class="check"><input type="checkbox" id="nvsave" checked> Save to startup config (write memory)</label>
+    <div style="height:14px"></div><label class="check"><input type="checkbox" id="nvsave" ${S.saveMem === false ? "" : "checked"} data-savemem> Save to startup config (write memory)</label>
     <div id="nverr"></div></div>
     <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="nvprev">Review changes</button></div>`, true);
   const vid = () => +$("#nvid", m).value;
@@ -2514,7 +2619,7 @@ function openNetVLANDelete(id) {
     ${sitesNote(data.map((s) => s.id))}
     <div class="muted" style="font-size:13px;margin-bottom:8px">Tick the switches to delete this VLAN from. Ports that carry it lose it.</div>
     <table><thead><tr><th style="width:28px"><input type="checkbox" id="ndall" title="All switches that can be changed"></th><th>Switch</th><th>Name</th><th>Ports</th></tr></thead><tbody id="ndrows"></tbody></table>
-    <div style="height:14px"></div><label class="check"><input type="checkbox" id="ndsave" checked> Save to startup config (write memory)</label>
+    <div style="height:14px"></div><label class="check"><input type="checkbox" id="ndsave" ${S.saveMem === false ? "" : "checked"} data-savemem> Save to startup config (write memory)</label>
     <div id="nderr"></div></div>
     <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn danger" id="ndprev">Review changes</button></div>`, true);
   const draw = () => {

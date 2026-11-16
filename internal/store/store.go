@@ -53,6 +53,9 @@ type Switch struct {
 	// FirmwareHold keeps the switch on its firmware: no update is started
 	// for it, by hand or automatically (issue #33).
 	FirmwareHold bool `json:"firmwareHold,omitempty"`
+	// Unsaved is set when SwitchDesk changed the running config without
+	// saving it (issue #38); cleared by a save or a reboot.
+	Unsaved bool `json:"unsaved,omitempty"`
 }
 
 type CloudRef struct {
@@ -378,6 +381,7 @@ func (s *Store) SaveSwitch(sw Switch) (Switch, error) {
 				// only SetLLDPNames and SetFirmwareHold change these
 				sw.LLDPNames = o.LLDPNames
 				sw.FirmwareHold = o.FirmwareHold
+				sw.Unsaved = o.Unsaved
 				sw.CreatedAt = o.CreatedAt
 				s.d.Switches[i] = sw
 				found = true
@@ -481,6 +485,19 @@ func (s *Store) SetFirmwareHold(ids []string, hold bool) error {
 		}
 	}
 	return s.saveLocked()
+}
+
+// SetUnsaved records whether the switch has changes SwitchDesk made that
+// aren't saved to its startup config.
+func (s *Store) SetUnsaved(id string, unsaved bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.d.Switches {
+		if s.d.Switches[i].ID == id && s.d.Switches[i].Unsaved != unsaved {
+			s.d.Switches[i].Unsaved = unsaved
+			s.saveLocked()
+		}
+	}
 }
 
 // SetDisabled pauses or resumes the given switches.

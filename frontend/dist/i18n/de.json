@@ -1137,6 +1137,20 @@
     "Wait between reboots (seconds)": "Wartezeit zwischen Neustarts (Sekunden)",
     "Waiting {0} before the next reboot": "Warte {0} vor dem nächsten Neustart",
     "When several switches are updated with a reboot, those furthest from the core go first, one at a time. After a switch is back, SwitchDesk waits this long before the next one restarts, so spanning tree can settle. If a switch doesn't come back properly, the reboots still waiting stop.": "Werden mehrere Switches mit Neustart aktualisiert, kommen die vom Core am weitesten entfernten zuerst, einer nach dem anderen. Ist ein Switch zurück, wartet SwitchDesk so lange, bevor der nächste neu startet, damit sich Spanning Tree stabilisiert. Kommt ein Switch nicht ordnungsgemäß zurück, werden die noch wartenden Neustarts gestoppt.",
-    "Stopped: {0} didn't come back properly.": "Gestoppt: {0} ist nicht ordnungsgemäß zurückgekommen."
+    "Stopped: {0} didn't come back properly.": "Gestoppt: {0} ist nicht ordnungsgemäß zurückgekommen.",
+    "By type": "Nach Typ",
+    "Hidden one by one": "Einzeln ausgeblendet",
+    "Hide again what Show all brought back": "Wieder ausblenden, was „Alle einblenden“ zurückgeholt hat",
+    "Hide all access points": "Alle Access Points ausblenden",
+    "Hide all other switches": "Alle anderen Switches ausblenden",
+    "Hide all routers and firewalls": "Alle Router und Firewalls ausblenden",
+    "Hide…": "Ausblenden…",
+    "Plain, uppercase": "Ohne Trennzeichen, Großbuchstaben",
+    "Port numbers": "Portnummern",
+    "Saved to startup config": "In der Startkonfiguration gespeichert",
+    "Select a device on the map and click Hide from map to leave it off.": "Wählen Sie ein Gerät auf der Karte und klicken Sie auf „Auf der Karte ausblenden“.",
+    "Show port numbers under the ports": "Portnummern unter den Ports anzeigen",
+    "SwitchDesk sent changes without saving them. They are lost if the switch restarts.": "SwitchDesk hat Änderungen gesendet, ohne sie zu speichern. Sie gehen verloren, wenn der Switch neu startet.",
+    "Undo show all": "„Alle einblenden“ rückgängig"
   }
 }

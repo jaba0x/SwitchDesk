@@ -506,3 +506,15 @@ tr:hover .ib.hold, .ib.hold:focus-visible { opacity: .55; }
 .ib.hold.on { opacity: 1; color: var(--warn); }
 .ib.hold svg { width: 13px; height: 13px; }
 .panel > h2 .fwsearch { width: 220px; }
+
+/* port numbers under the ports, and the Ports tab's panel jumping to a row (#37) */
+.ledzoom.nums .leds.big i { position: relative; margin-bottom: calc(13px * var(--ledz, 1)); }
+.ledzoom.nums .leds.big i::after { content: attr(data-n); position: absolute; top: calc(100% + 2px); left: 50%; transform: translateX(-50%); font: 500 calc(9px * var(--ledz, 1)) / 1 var(--mono); color: var(--faint); white-space: nowrap; }
+.ledclick .leds i[data-port] { cursor: pointer; }
+.ledclick .leds i[data-port]:hover { outline: 1.5px solid var(--accent); outline-offset: 1px; }
+@keyframes rowflash { from { background: rgba(143,179,255,.28); } to { background: transparent; } }
+tr.flash > td { animation: rowflash 1.6s ease-out; }
+
+/* changes sent without write memory (#38) */
+.unsaved { display: inline-flex; align-items: center; gap: 8px; margin-left: 10px; padding: 2px 4px 2px 10px; border-radius: 6px; background: rgba(240,180,80,.14); color: var(--warn); font-size: 13px; }
+.unsaved .btn { padding: 2px 10px; }

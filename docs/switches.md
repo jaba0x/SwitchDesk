@@ -51,7 +51,9 @@ Bridge and root MAC and priority, this switch's role, topology changes, and ever
 
 A large faceplate laid out like the hardware: copper ports, SFP ports and module ports (`A1`…) are separate blocks, and each member of a stacked switch (2930M, 3810, VSF on 2930F and 6300) gets its own row. Which ports are SFP cages comes from the model's hardware list (from the NetBox device type library), so an empty SFP cage is drawn as one. Then its colour key, and a table with each port's name, status (Up, Down or Disabled), speed, type and VLAN membership (`20u` is untagged in VLAN 20, `30t` tagged in VLAN 30). The name is the one set on the switch: `name "..."` on AOS-S, `description` on AOS-CX. Hover a port on any faceplate to see it too, for example "Port 3 · Printer-2nd-floor".
 
-Above the table, a search box finds ports by number, name, status, speed, VLAN or MAC address, and two lists show only ports with one status (Up, Down, Disabled) or one speed. The **MAC** column shows the address learned on the port, or how many when there are several; click one to copy it in the format you need: colon (Aruba, Linux), hyphen (Windows), dotted (Cisco), HPE `xxxxxx-xxxxxx`, or plain. Click a port's name to copy it.
+The port panel above the table works like the one on **Overview**: **S M L XL** change its size and **Port numbers** prints each port's number under it. Click a port on the panel to jump to its row in the table.
+
+Above the table, a search box finds ports by number, name, status, speed, VLAN or MAC address, and two lists show only ports with one status (Up, Down, Disabled) or one speed. The **MAC** column shows the address learned on the port, or how many when there are several; click one to copy it in the format you need: colon (Aruba, Linux), hyphen (Windows), dotted (Cisco), HPE `xxxxxx-xxxxxx`, or plain in lower or upper case. Click a port's name to copy it.
 
 To rename ports, click **Edit names** above the table, or double-click a name in it (a port without a name opens the editor with one click). The editor opens at the port you clicked. Every port is listed with the device LLDP or CDP sees on it. Type the names, or click **Fill from LLDP** to name ports after their neighbors. It only fills ports that have no name yet, or whose name came from LLDP before and whose neighbor has changed; a name you typed is never replaced. **Review changes** shows the commands before anything is sent. Names can be up to 64 characters, without `"`, `?` or `\`. Instant On switches are renamed in the Instant On app or on their web page.
 
@@ -97,6 +99,10 @@ Run `show`, `ping` and `traceroute` commands on the switch. Anything else is ref
 ### Raw output
 
 The exact output of every command SwitchDesk ran in the last reading. If something on the other tabs looks wrong, this shows what the switch actually said.
+
+### Unsaved changes
+
+Every change dialog has **Save to startup config (write memory)**, ticked by default. Its last state is kept until SwitchDesk is closed, so when renaming many ports one at a time you can untick it once and save at the end. A switch with changes SwitchDesk sent without saving shows **Unsaved changes** next to its name, with a **Save** button that runs `write memory`. The note goes away when the config is saved, or when the switch restarts (and loses those changes). Changes made outside SwitchDesk aren't tracked.
 
 ## Ports
 

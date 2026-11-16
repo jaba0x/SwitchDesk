@@ -414,6 +414,9 @@ func (a *App) SetFirmwareHold(ids []string, hold bool) error {
 	return nil
 }
 
+// SaveConfig runs write memory on the switch.
+func (a *App) SaveConfig(id string) error { return a.mgr.SaveConfig(id) }
+
 func (a *App) RefreshPortClients(id string) ([]aruba.PortClient, error) {
 	return a.mgr.RefreshPortClients(id)
 }

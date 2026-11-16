@@ -472,6 +472,7 @@ func (m *Manager) collect(id string) {
 		st.TopologyDelta = snap.STP.TopologyChanges - prev.STP.TopologyChanges
 	}
 	noteUserChanges(st, prev, &snap)
+	rebooted := prev != nil && aruba.UptimeSeconds(snap.Facts.Uptime) > 0 && aruba.UptimeSeconds(snap.Facts.Uptime) < aruba.UptimeSeconds(prev.Facts.Uptime)
 	m.snaps[id] = &snap
 	st.LastCollect = time.Now()
 	st.CollectError, st.AuthFailed, st.HostKeyChanged = "", false, false
@@ -479,6 +480,9 @@ func (m *Manager) collect(id string) {
 		st.CollectError = strings.Join(snap.Errors, "; ")
 	}
 	m.mu.Unlock()
+	if rebooted && sw.Unsaved {
+		m.st.SetUnsaved(id, false) // the switch restarted from its startup config
+	}
 
 	if m.ctx.Err() != nil {
 		return
@@ -826,6 +830,38 @@ func (m *Manager) withSession(id string, timeout time.Duration, fn func(ctx cont
 }
 
 // RunCommand executes one read-only command from the console.
+// noteApplied keeps track of changes sent without "write memory" (issue #38):
+// the switch page then shows them as unsaved, with a Save button.
+func (m *Manager) noteApplied(id string, cmds []string, res aruba.ApplyResult) {
+	saved := len(cmds) > 0 && cmds[len(cmds)-1] == "write memory"
+	switch {
+	case res.OK && saved:
+		m.st.SetUnsaved(id, false)
+	case len(res.Transcript) > 0:
+		m.st.SetUnsaved(id, true)
+	}
+	m.changed()
+}
+
+// SaveConfig writes the running config to the startup config.
+func (m *Manager) SaveConfig(id string) error {
+	err := m.withSession(id, 2*time.Minute, func(ctx context.Context, s *sshx.Session, _ aruba.Family) error {
+		res := aruba.ApplyCommands(ctx, s, []string{"write memory"})
+		if !res.OK {
+			if res.Error != "" {
+				return errors.New(res.Error)
+			}
+			return errors.New("the switch didn't accept write memory")
+		}
+		return nil
+	})
+	if err == nil {
+		m.st.SetUnsaved(id, false)
+		m.changed()
+	}
+	return err
+}
+
 func (m *Manager) RunCommand(id, cmd string) (string, error) {
 	if !aruba.ReadOnlyAllowed(cmd) {
 		return "", errors.New("only show, ping and traceroute commands are allowed in the console")
@@ -869,6 +905,7 @@ func (m *Manager) ApplyVLAN(id string, ch aruba.VLANChange) (aruba.ApplyResult, 
 		res = aruba.ApplyCommands(ctx, s, cmds)
 		return nil
 	})
+	m.noteApplied(id, cmds, res)
 	if err != nil {
 		return res, err
 	}
@@ -922,6 +959,7 @@ func (m *Manager) ApplyPortAccess(id string, ch aruba.PortAccessChange) (aruba.A
 		res = aruba.ApplyCommands(ctx, s, cmds)
 		return nil
 	})
+	m.noteApplied(id, cmds, res)
 	// the switch echoes what it gets, so the secret is in the transcript too
 	res.Transcript = aruba.MaskSecret(res.Transcript, ch)
 	res.Error = strings.Join(aruba.MaskSecret([]string{res.Error}, ch), "")
