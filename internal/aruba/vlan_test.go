@@ -2,6 +2,7 @@ package aruba
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -45,5 +46,26 @@ func TestAfterChange(t *testing.T) {
 	got = AfterChange(cur, VLANChange{Action: "update", ID: 20, AddUntagged: []string{"4"}, AddTagged: []string{"24"}})
 	if !reflect.DeepEqual(got[1].Untagged, []string{"4"}) || !reflect.DeepEqual(got[1].Tagged, []string{"24"}) {
 		t.Fatalf("ports added again are listed twice: %+v", got[1])
+	}
+}
+
+// Issue #38: several VLANs deleted in one session.
+func TestDeleteSeveralVLANs(t *testing.T) {
+	cur := []VLAN{{ID: 1}, {ID: 10}, {ID: 20}, {ID: 30}}
+	got, err := BuildVLANCommands(FamilyAOSS, VLANChange{Action: "delete", IDs: []int{20, 10}}, cur)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"configure terminal", "no vlan 20", "no vlan 10", "end"}; strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %v", got)
+	}
+	for _, ids := range [][]int{{1, 10}, {10, 10}, {40}} {
+		if _, err := BuildVLANCommands(FamilyAOSCX, VLANChange{Action: "delete", IDs: ids, Save: true}, cur); err == nil {
+			t.Errorf("accepted %v", ids)
+		}
+	}
+	after := AfterChange(cur, VLANChange{Action: "delete", IDs: []int{10, 30}})
+	if len(after) != 2 || after[0].ID != 1 || after[1].ID != 20 {
+		t.Fatalf("after %v", after)
 	}
 }

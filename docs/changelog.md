@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.22
+
+From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#38](https://github.com/jaba0x/SwitchDesk/issues/38), [#39](https://github.com/jaba0x/SwitchDesk/issues/39), [#41](https://github.com/jaba0x/SwitchDesk/issues/41), [#42](https://github.com/jaba0x/SwitchDesk/issues/42) and [#43](https://github.com/jaba0x/SwitchDesk/issues/43):
+
+- **Site tabs** on the Dashboard, Switches, Ports, VLANs, Clients and Firmware pages, when sites are in use (#42).
+- **Site & tags for many switches:** select switches and set or clear their site, add tags or remove tags (#43).
+- **The switch header and tabs stay at the top** while scrolling, folding the details line away; the pin turns it off (#41).
+- **Clients:** the search stays in view and only the table scrolls (#41).
+- **Logs tab:** search and severity filter (#41).
+- **Delete several VLANs at once** on a switch's VLANs tab, and deleting a VLAN now asks about saving to startup config and is tracked as unsaved when not saved (#38).
+- **Settings → Ask before opening more than** sets when Web or SSH for many switches asks first; 0 never asks (#39).
+
 ## 1.0.21
 
 From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#39](https://github.com/jaba0x/SwitchDesk/issues/39) and [#40](https://github.com/jaba0x/SwitchDesk/issues/40):

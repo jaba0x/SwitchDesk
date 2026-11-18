@@ -17,13 +17,45 @@ type VLANChange struct {
 	AddTagged   []string `json:"addTagged"`
 	AddUntagged []string `json:"addUntagged"`
 	RemovePorts []string `json:"removePorts"`
-	Save        bool     `json:"save"`
+	// IDs deletes several VLANs in one go (issue #38); ID is ignored then.
+	IDs  []int `json:"ids,omitempty"`
+	Save bool  `json:"save"`
+}
+
+// deleting lists the VLANs a delete removes.
+func (c VLANChange) deleting() []int {
+	if c.Action != "delete" {
+		return nil
+	}
+	if len(c.IDs) > 0 {
+		return c.IDs
+	}
+	return []int{c.ID}
 }
 
 var safeName = regexp.MustCompile(`^[A-Za-z0-9 _.\-]{1,32}$`)
 var safePort = regexp.MustCompile(`^((\d+/){0,2}[A-Za-z]{0,3}\d+|lag\d+|Trk\d+)$`)
 
 func (c VLANChange) validate(current []VLAN) error {
+	if c.Action == "delete" {
+		seen := map[int]bool{}
+		for _, id := range c.deleting() {
+			if id < 1 || id > 4094 {
+				return fmt.Errorf("VLAN ID must be 1-4094")
+			}
+			if id == 1 {
+				return fmt.Errorf("VLAN 1 can't be deleted")
+			}
+			if seen[id] {
+				return fmt.Errorf("VLAN %d is listed twice", id)
+			}
+			seen[id] = true
+			if !hasVLAN(current, id) && len(current) > 0 {
+				return fmt.Errorf("VLAN %d doesn't exist on this switch", id)
+			}
+		}
+		return nil
+	}
 	if c.ID < 1 || c.ID > 4094 {
 		return fmt.Errorf("VLAN ID must be 1-4094")
 	}
@@ -60,6 +92,15 @@ func (c VLANChange) validate(current []VLAN) error {
 	return nil
 }
 
+func hasVLAN(vlans []VLAN, id int) bool {
+	for _, v := range vlans {
+		if v.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
 // BuildVLANCommands returns the exact CLI lines that will be sent.
 func BuildVLANCommands(f Family, c VLANChange, current []VLAN) ([]string, error) {
 	if err := c.validate(current); err != nil {
@@ -72,7 +113,9 @@ func BuildVLANCommands(f Family, c VLANChange, current []VLAN) ([]string, error)
 	switch f {
 	case FamilyAOSCX:
 		if c.Action == "delete" {
-			cmds = append(cmds, fmt.Sprintf("no vlan %d", c.ID))
+			for _, id := range c.deleting() {
+				cmds = append(cmds, fmt.Sprintf("no vlan %d", id))
+			}
 			break
 		}
 		cmds = append(cmds, fmt.Sprintf("vlan %d", c.ID))
@@ -95,7 +138,9 @@ func BuildVLANCommands(f Family, c VLANChange, current []VLAN) ([]string, error)
 		}
 	default: // AOS-S
 		if c.Action == "delete" {
-			cmds = append(cmds, fmt.Sprintf("no vlan %d", c.ID))
+			for _, id := range c.deleting() {
+				cmds = append(cmds, fmt.Sprintf("no vlan %d", id))
+			}
 			break
 		}
 		cmds = append(cmds, fmt.Sprintf("vlan %d", c.ID))
@@ -152,13 +197,17 @@ func AfterChange(vlans []VLAN, c VLANChange) []VLAN {
 		return m
 	}
 	untagged, removed := set(c.AddUntagged), set(c.RemovePorts)
+	gone := map[int]bool{}
+	for _, id := range c.deleting() {
+		gone[id] = true
+	}
 	var out []VLAN
 	found := false
 	for _, v := range vlans {
+		if gone[v.ID] {
+			continue
+		}
 		if v.ID == c.ID {
-			if c.Action == "delete" {
-				continue
-			}
 			found = true
 			if c.Name != "" {
 				v.Name = c.Name

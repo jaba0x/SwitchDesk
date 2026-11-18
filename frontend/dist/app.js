@@ -40,6 +40,7 @@ const ICON = {
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
   port: '<svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1.5"/><path d="M8 18v-4h8v4M10 14v-3h4v3"/></svg>',
   lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  pin: '<svg viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7"/></svg>',
   edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
 };
@@ -284,7 +285,17 @@ function wireSiteField(m) {
 }
 
 // the site name next to a page title, so it's clear the page is narrowed
-const siteSub = () => (S.site ? `<span class="sub sitesub">${esc(siteLabel())}</span>` : "");
+// With sites in use, the global pages also get a row of site tabs (#42): the
+// same choice as the sidebar's Site list, one click away.
+function siteSub(tabs = true) {
+  const names = siteNames();
+  if (!tabs || !names.length) return S.site ? `<span class="sub sitesub">${esc(siteLabel())}</span>` : "";
+  const all = S.dash?.switches || [];
+  const count = (v) => all.filter((x) => (v === NO_SITE ? !siteOf(x) : siteOf(x) === v)).length;
+  const none = all.some((v) => !siteOf(v));
+  const list = [["", "All sites", all.length], ...names.map((n) => [n, n, count(n)]), ...(none ? [[NO_SITE, "No site", count(NO_SITE)]] : [])];
+  return `<div class="sitetabs">${list.map(([v, l, n]) => `<button class="${S.site === v ? "on" : ""}" data-site="${esc(v)}" onclick="setSite(this.dataset.site)">${esc(l)}<span class="n">${n}</span></button>`).join("")}</div>`;
+}
 function setSite(v) {
   S.site = v;
   try { localStorage.setItem("sd.site", v); } catch {}
@@ -415,7 +426,8 @@ async function refreshData() {
     const v = S.dash?.switches.find((x) => x.id === S.detail.id);
     const fresh = v?.summary?.collectedAt && v.summary.collectedAt !== S.detail.summary?.collectedAt;
     // typing in the Ports search: only its rows are redrawn, so the box keeps focus
-    if (S.tab === "ports" && document.activeElement?.closest?.("#ptools")) call("GetSwitch", S.route[1]).then((d) => { S.detail = d; portRows(); }).catch(() => {});
+    if (S.tab === "logs" && document.activeElement?.closest?.("#ltools")) call("GetSwitch", S.route[1]).then((d) => { S.detail = d; logRows(); }).catch(() => {});
+    else if (S.tab === "ports" && document.activeElement?.closest?.("#ptools")) call("GetSwitch", S.route[1]).then((d) => { S.detail = d; portRows(); }).catch(() => {});
     else if (live || (fresh && !["console", "config"].includes(S.tab))) loadDetail(S.route[1], true);
     updateDetailHead();
   }
@@ -738,6 +750,7 @@ function renderSwitches(soft) {
   const bar = n ? `<div class="selbar"><b>${n} selected</b><span class="grow"></span>
       <button class="btn small" onclick="openMany([...S.sel], 'web')" title="Open each selected switch's web interface in the browser">${ICON.globe}Web</button>
       <button class="btn small" onclick="openMany([...S.sel], 'ssh')" title="Open an SSH session to each selected switch">${ICON.term}SSH</button>
+      <button class="btn small" onclick="openSiteTags([...S.sel])" title="Set or clear the site, add or remove tags">Site &amp; tags</button>
       <button class="btn small" onclick="refreshSel()">${ICON.refresh}Collect now</button>
       <button class="btn small" onclick="openUpgradeDialog([...S.sel])">${ICON.up}Update firmware</button>
       <button class="btn small" onclick="setDisabled([...S.sel], true)">${ICON.pause}Disable</button>
@@ -761,6 +774,50 @@ function renderSwitches(soft) {
     <div id="selbar">${bar}</div>
     <div class="panel" id="swtable">${d.total ? table : emptyList()}</div></div>`;
   wireColumnDrag();
+}
+
+// Site and tags for all selected switches at once (#43).
+function openSiteTags(ids) {
+  const vs = ids.map((id) => S.dash.switches.find((v) => v.id === id)).filter(Boolean);
+  const tags = new Map();
+  for (const v of vs) for (const t of v.tags || []) {
+    const k = t.toLowerCase();
+    tags.set(k, { name: tags.get(k)?.name || t, n: (tags.get(k)?.n || 0) + 1 });
+  }
+  const sites = [...new Set(vs.map(siteOf))];
+  const now = sites.length === 1 ? (sites[0] ? `<span>Their site now:</span> <b>${esc(sites[0])}</b>` : "None has a site.") : `They are on ${sites.length} different sites.`;
+  const m = modal(`<h2>Site and tags <span class="faint" style="font-weight:400">${switchesWord(vs.length)}</span></h2><div class="body">
+    <div class="muted" style="font-size:13px;margin-bottom:8px">${now}</div>
+    <div class="seg" style="margin-bottom:10px" id="stmode"><button class="on" data-m="keep">Keep the site</button><button data-m="set">Set the site</button><button data-m="clear">Clear the site</button></div>
+    <div id="stsite" hidden>${siteField(sites.length === 1 ? sites[0] : "")}</div>
+    <label class="f" style="margin-top:6px"><span>Add tags</span><input type="text" id="sttags" placeholder="core, building A" autocomplete="off"></label>
+    ${tags.size ? `<div class="f"><span>Remove tags</span><div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px">${[...tags.values()].map((t) => `<label class="check"><input type="checkbox" data-rm="${esc(t.name)}"> ${esc(t.name)} <span class="faint">${t.n === vs.length ? "all" : t.n}</span></label>`).join("")}</div></div>` : ""}
+    <div id="sterr"></div></div>
+    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="stok">Apply</button></div>`);
+  let mode = "keep";
+  wireSiteField(m);
+  $("#stmode", m).onclick = (e) => {
+    const b = e.target.closest("button[data-m]");
+    if (!b) return;
+    mode = b.dataset.m;
+    m.querySelectorAll("#stmode button").forEach((x) => x.classList.toggle("on", x === b));
+    $("#stsite", m).hidden = mode !== "set";
+    if (mode === "set") $("#ss", m).focus();
+  };
+  $("#stok", m).onclick = async () => {
+    const site = mode === "set" ? $("#ss", m).value.trim() : "";
+    if (mode === "set" && !site) { $("#sterr", m).innerHTML = `<div class="msg err">Type a site, or choose Clear the site.</div>`; return; }
+    const e = { setSite: mode !== "keep", site, addTags: splitTags($("#sttags", m).value), removeTags: [...m.querySelectorAll("input[data-rm]:checked")].map((i) => i.dataset.rm) };
+    if (mode === "keep" && !e.addTags.length && !e.removeTags.length) { closeModal(); return; }
+    try {
+      const n = await call("EditSwitches", ids, e);
+      closeModal();
+      toast(n ? `Updated ${n === 1 ? nameOf(ids[0]) : switchesWord(n)}` : "Nothing changed");
+      S.dash = await call("GetDashboard");
+      renderSide();
+      route();
+    } catch (err) { $("#sterr", m).innerHTML = `<div class="msg err">${esc(err.message)}</div>`; }
+  };
 }
 
 function emptyList() {
@@ -878,7 +935,9 @@ function renderDetail(soft) {
   if (d.status.authFailed && d.cloud) banners.push(`<div class="banner"><div class="grow"><b>Instant On sign-in failed.</b> ${esc(d.status.collectError)}</div><button class="btn" data-go="#/settings">Open settings</button></div>`);
   else if (d.status.authFailed) banners.push(`<div class="banner"><div class="grow"><b>Login failed.</b> ${esc(d.status.collectError)}. Fix the credentials, then collect again.</div><button class="btn" onclick="openSwitchModal(S.detail)">Edit switch</button></div>`);
   $("#main").innerHTML = `<div class="page">
+    <div class="dtop${swPref("sd-pin-head", true) ? " pinned" : ""}">
     <div class="head"><button class="btn small" onclick="goBack()" title="Back">${ICON.back}</button><h1>${esc(name)}</h1><span id="detail-status">${detailStatus(d)}</span><span class="grow"></span>
+      <button class="ib pin" onclick="togglePinHead()" title="Keep this header and the tabs at the top while scrolling">${ICON.pin}</button>
       ${d.cloud ? "" : `<button class="btn" onclick="openWeb('${d.id}')" title="Open the switch's web interface in your browser">${ICON.globe}Web</button>`}
       ${d.cloud || d.web ? "" : `<button class="btn" onclick="openSSH('${d.id}')" title="Open in your SSH client">${ICON.term}SSH</button>`}
       ${d.disabled ? "" : `<button class="btn" onclick="collectOne(this)">${ICON.refresh}Collect now</button>`}
@@ -889,7 +948,7 @@ function renderDetail(soft) {
       ${d.site ? `<span>Site <b>${esc(d.site)}</b></span>` : ""}
       ${s ? `<span class="faint">Collected ${ago(s.collectedAt)}${snap?.duration ? ` in ${snap.duration}` : ""}</span>` : ""}</div>
     ${banners.join("")}
-    <div class="tabs">${tabs}</div>
+    <div class="tabs">${tabs}</div></div>
     <div id="tabbody">${body}</div></div>`;
   afterTab();
 }
@@ -1209,9 +1268,11 @@ function compress(ports) {
 function tabVLANs(d, snap) {
   const v = snap.vlans || [];
   const canEdit = snap.family !== "instant-on";
-  return `<section class="panel"><h2>VLANs<span class="grow"></span>${canEdit ? `<button class="btn small primary" onclick="openVLANEditor()">${ICON.plus}New VLAN</button>` : `<span class="faint" style="font-weight:400;font-size:13px">Instant On VLANs are changed ${d.web ? "on the switch's web page" : "in the Instant On app or portal"}</span>`}</h2>
-    ${v.length ? `<table><thead><tr><th class="num">ID</th><th>Name</th><th>IP address</th><th>Untagged</th><th>Tagged</th><th></th></tr></thead><tbody>
-    ${v.map((x) => `<tr${canEdit ? ` class="click" title="Double-click to edit" ondblclick="clearTimeout(S.clk);openVLANEditor(${x.id})"` : ""}><td class="num mono">${x.id}</td><td class="pname" title="Click to copy" onclick="if(this.textContent)delayCopy(this.textContent)">${esc(x.name)}</td><td class="mono">${esc(x.ip)}</td><td class="mono">${esc(compress(x.untagged))}</td><td class="mono">${esc(compress(x.tagged))}</td>
+  if (S.vselFor !== d.id) { S.vsel = new Set(); S.vselFor = d.id; }
+  for (const id of S.vsel) if (!v.some((x) => x.id === id)) S.vsel.delete(id);
+  return `<section class="panel"><h2>VLANs<span id="vselbar" style="font-weight:400;font-size:13px;display:flex;gap:8px;align-items:center;margin-left:14px">${vlanSelBar()}</span><span class="grow"></span>${canEdit ? `<button class="btn small primary" onclick="openVLANEditor()">${ICON.plus}New VLAN</button>` : `<span class="faint" style="font-weight:400;font-size:13px">Instant On VLANs are changed ${d.web ? "on the switch's web page" : "in the Instant On app or portal"}</span>`}</h2>
+    ${v.length ? `<table><thead><tr>${canEdit ? `<th class="cb"></th>` : ""}<th class="num">ID</th><th>Name</th><th>IP address</th><th>Untagged</th><th>Tagged</th><th></th></tr></thead><tbody>
+    ${v.map((x) => `<tr${canEdit ? ` class="click" title="Double-click to edit" ondblclick="clearTimeout(S.clk);openVLANEditor(${x.id})"` : ""}>${canEdit ? `<td class="cb">${x.id !== 1 ? `<input type="checkbox" ${S.vsel.has(x.id) ? "checked" : ""} onclick="event.stopPropagation()" onchange="vlanSel(${x.id}, this.checked)" title="Select to delete several VLANs at once">` : ""}</td>` : ""}<td class="num mono">${x.id}</td><td class="pname" title="Click to copy" onclick="if(this.textContent)delayCopy(this.textContent)">${esc(x.name)}</td><td class="mono">${esc(x.ip)}</td><td class="mono">${esc(compress(x.untagged))}</td><td class="mono">${esc(compress(x.tagged))}</td>
       <td style="white-space:nowrap;text-align:right">${canEdit ? `<button class="btn small" onclick="openVLANEditor(${x.id})">Edit</button> ${x.id !== 1 ? `<button class="btn small danger" onclick="deleteVLAN(${x.id})">Delete</button>` : ""}` : ""}</td></tr>`).join("")}
     </tbody></table>` : `<div class="empty">No VLANs found in the configuration.</div>`}</section>`;
 }
@@ -1228,10 +1289,27 @@ function tabNeighbors(snap) {
     }).join("")}</tbody></table>` : `<div class="empty"><h3>No LLDP or CDP neighbors</h3><p>Make sure LLDP is enabled on this switch and its peers.</p></div>`}</section>`;
 }
 
+const LOG_SEV = { E: ["Error", "critical"], M: ["Major", "critical"], W: ["Warning", "warning"], I: ["Info", ""], D: ["Debug", ""] };
 function tabLogs(snap) {
   const l = snap.logs || [];
-  const sev = { E: ["Error", "critical"], M: ["Major", "critical"], W: ["Warning", "warning"], I: ["Info", ""], D: ["Debug", ""] };
-  return `<section class="panel">${l.length ? `<table><tbody>${l.map((x) => `<tr><td style="width:84px">${sev[x.severity]?.[1] ? `<span class="sev ${sev[x.severity][1]}">${sev[x.severity][0]}</span>` : `<span class="faint">${sev[x.severity]?.[0] || x.severity}</span>`}</td><td class="mono" style="user-select:text">${esc(x.text)}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">No log lines collected.</div>`}</section>`;
+  if (S.lf?.id !== S.detail?.id) S.lf = { id: S.detail?.id, q: "", sev: "" };
+  const present = Object.keys(LOG_SEV).filter((k) => l.some((x) => x.severity === k));
+  return `<section class="panel">${l.length ? `<h2 id="ltools">Log<span class="grow"></span>
+      <input type="search" class="psearch" placeholder="Search the log, e.g. a port or word" value="${esc(S.lf.q)}" oninput="S.lf.q=this.value;logRows()">
+      <select onchange="S.lf.sev=this.value;logRows()"><option value="">Any severity</option>${present.map((k) => `<option value="${k}" ${S.lf.sev === k ? "selected" : ""}>${LOG_SEV[k][0]}</option>`).join("")}</select></h2>
+    <table><tbody id="logbody">${logRowsHTML(l)}</tbody></table>` : `<div class="empty">No log lines collected.</div>`}</section>`;
+}
+// The Logs tab's search (#41): words in any order, all of them on the line.
+function logRowsHTML(l) {
+  const f = S.lf || {};
+  const words = (f.q || "").toLowerCase().split(/\s+/).filter(Boolean);
+  const rows = l.filter((x) => (!f.sev || x.severity === f.sev) && words.every((w) => x.text.toLowerCase().includes(w)));
+  if (!rows.length) return `<tr><td class="faint" style="text-align:center;padding:18px">No log line matches</td></tr>`;
+  return rows.map((x) => `<tr><td style="width:84px">${LOG_SEV[x.severity]?.[1] ? `<span class="sev ${LOG_SEV[x.severity][1]}">${LOG_SEV[x.severity][0]}</span>` : `<span class="faint">${LOG_SEV[x.severity]?.[0] || x.severity}</span>`}</td><td class="mono" style="user-select:text">${esc(x.text)}</td></tr>`).join("");
+}
+function logRows() {
+  const b = $("#logbody");
+  if (b && S.detail?.snapshot) b.innerHTML = logRowsHTML(S.detail.snapshot.logs || []);
 }
 
 let cfgView = { name: "", text: "", compare: "", search: "" };
@@ -1462,17 +1540,40 @@ function openVLANEditor(id) {
   };
 }
 
+// One VLAN, or the ones ticked on the VLANs tab, deleted in one session (#38).
+// The save box follows the rest of the session, and an unsaved delete shows up
+// as Unsaved changes on the switch.
 function deleteVLAN(id) {
-  const ch = { action: "delete", id, save: true };
-  call("PreviewVLAN", S.detail.id, ch).then((cmds) => confirmCommands(ch, cmds)).catch((e) => toast(e.message, true));
+  const ids = id ? [id] : [...(S.vsel || [])];
+  if (!ids.length) return;
+  const m = modal(`<h2>Delete ${ids.length === 1 ? `VLAN ${ids[0]}` : `${ids.length} VLANs`}</h2><div class="body">
+    <p class="muted" style="margin-top:0"><span>Deleting a VLAN removes it from every port of the switch.</span> <b style="color:var(--text)">VLAN ${ids.join(", ")}</b></p>
+    <label class="check"><input type="checkbox" id="vdsave" ${S.saveMem === false ? "" : "checked"} data-savemem> Save to startup config (write memory)</label><div id="vderr"></div></div>
+    <div class="foot"><span class="grow"></span><button class="btn" data-close>Cancel</button><button class="btn primary" id="vdnext">Review commands</button></div>`);
+  $("#vdnext", m).onclick = async () => {
+    const ch = ids.length === 1 ? { action: "delete", id: ids[0], save: $("#vdsave", m).checked } : { action: "delete", id: ids[0], ids, save: $("#vdsave", m).checked };
+    try {
+      const cmds = await call("PreviewVLAN", S.detail.id, ch);
+      closeModal();
+      if (S.vsel) S.vsel.clear();
+      confirmCommands(ch, cmds);
+    } catch (e) { $("#vderr", m).innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+  };
 }
+function vlanSel(id, on) {
+  S.vsel ||= new Set();
+  on ? S.vsel.add(id) : S.vsel.delete(id);
+  const b = $("#vselbar");
+  if (b) b.innerHTML = vlanSelBar();
+}
+const vlanSelBar = () => (S.vsel?.size ? `<b>${S.vsel.size} selected</b> <button class="btn small danger" onclick="deleteVLAN()">${ICON.trash}Delete ${S.vsel.size === 1 ? "VLAN" : `${S.vsel.size} VLANs`}</button> <button class="btn small" onclick="S.vsel.clear();$('#tabbody').innerHTML=tabBody('vlans',S.detail,S.detail.snapshot)">Clear</button>` : "");
 
 // note is optional HTML shown as a warning above the commands.
 function confirmCommands(ch, cmds, method = "ApplyVLAN", note = "") {
   const name = S.detail.name || S.detail.summary?.hostname || S.detail.host;
   const glob = ch.globalDot1x ?? ch.globalMacAuth;
-  const apply = ch.action === "delete" ? "Delete VLAN" : ch.removeServer ? "Remove server" : ch.deleteRole ? "Delete role" : glob !== undefined ? (glob ? "Turn on" : "Turn off") : "Apply to switch";
-  const title = ch.action === "delete" ? `Delete VLAN ${ch.id}` : ch.removeServer ? `Remove RADIUS server ${esc(ch.removeServer)}` : ch.deleteRole ? `Delete role ${esc(ch.deleteRole)}`
+  const apply = ch.action === "delete" ? (ch.ids?.length > 1 ? "Delete VLANs" : "Delete VLAN") : ch.removeServer ? "Remove server" : ch.deleteRole ? "Delete role" : glob !== undefined ? (glob ? "Turn on" : "Turn off") : "Apply to switch";
+  const title = ch.action === "delete" ? (ch.ids?.length > 1 ? `Delete ${ch.ids.length} VLANs` : `Delete VLAN ${ch.id}`) : ch.removeServer ? `Remove RADIUS server ${esc(ch.removeServer)}` : ch.deleteRole ? `Delete role ${esc(ch.deleteRole)}`
     : glob !== undefined ? `Turn ${ch.globalDot1x !== undefined ? "802.1X" : "MAC authentication"} ${glob ? "on" : "off"} for the switch` : "Review changes";
   const m = modal(`<h2>${title}</h2><div class="body">
     <p class="muted" style="margin-top:0">These lines will be sent to <b style="color:var(--text)">${esc(name)}</b>. Sending stops at the first line the switch rejects${ch.save ? ", and nothing is saved to startup config in that case" : ""}.</p>
@@ -2223,7 +2324,7 @@ async function openBulkModal() {
 function renderMap() {
   $("#main").innerHTML = `<div class="page full"><div class="mapwrap">
     <canvas id="map"></canvas>
-    <div class="maptools"><h1>Network map</h1>${siteSub()}
+    <div class="maptools"><h1>Network map</h1>${siteSub(false)}
       <button class="btn small" onclick="SDMap.fit()">Fit to window</button>
       <button class="btn small" onclick="SDMap.relayout()">Arrange again</button>
       <label class="check btn small"><input type="checkbox" ${S.showEndpoints ? "checked" : ""} onchange="S.showEndpoints=this.checked;SDMap.reload()"> Phones and hosts</label>
@@ -2384,12 +2485,27 @@ async function openSSH(id) {
 async function openMany(ids, what) {
   const vs = ids.map((id) => (S.dash?.switches || []).find((v) => v.id === id)).filter((v) => v && v.host && !v.cloud && !(what === "ssh" && v.web));
   if (!vs.length) { toast(what === "ssh" ? "None of these switches is reached over SSH" : "None of these switches has a web interface", true); return; }
-  if (vs.length > 10 && !(await askConfirm(what === "ssh" ? `Open ${vs.length} SSH sessions?` : `Open ${vs.length} browser tabs?`, "Open", false))) return;
+  const ask = +S.settings?.bulkOpenAsk || 10; // 0 is the default; -1 never asks
+  if (ask > 0 && vs.length > ask && !(await askConfirm(what === "ssh" ? `Open ${vs.length} SSH sessions?` : `Open ${vs.length} browser tabs?`, "Open", false))) return;
   for (const v of vs) {
     what === "ssh" ? await openSSH(v.id) : openWeb(v.id);
     await new Promise((r) => setTimeout(r, 250));
   }
 }
+
+// The switch header and its tabs stay at the top while scrolling (#41). Once
+// the page scrolls, the line with model, software and uptime folds away to
+// leave room for the table; the pin turns this off.
+function togglePinHead() {
+  const on = !swPref("sd-pin-head", true);
+  swSave("sd-pin-head", on);
+  document.querySelector(".dtop")?.classList.toggle("pinned", on);
+}
+document.addEventListener("scroll", (e) => {
+  const t = e.target;
+  if (t.id !== "main") return;
+  document.querySelector(".dtop")?.classList.toggle("stuck", t.scrollTop > 40);
+}, true);
 
 // ---------- clients: where is this MAC plugged in? ----------
 
@@ -2428,7 +2544,7 @@ async function renderClients() {
       <td class="num">${esc(h.vlan || "")}</td>
       <td>${h.edge ? `<span class="ok">Edge port</span>${h.others ? ` <span class="faint">${h.others} more on this port</span>` : ""}` : `<span class="faint">Uplink to ${esc(h.uplink)}</span>`}</td>
       <td class="num faint">${h.seen > 1 ? h.seen : ""}</td></tr>`);
-    $("#macres").innerHTML = `<div class="panel"><table><thead><tr><th>MAC address</th><th>Switch</th><th>Port</th><th class="num">VLAN</th><th>Where</th><th class="num" title="Switches that learned this address">Seen on</th></tr></thead><tbody>${rows.join("")}</tbody></table>
+    $("#macres").innerHTML = `<div class="panel"><div class="fwscroll" style="max-height:calc(100vh - 330px)"><table><thead><tr><th>MAC address</th><th>Switch</th><th>Port</th><th class="num">VLAN</th><th>Where</th><th class="num" title="Switches that learned this address">Seen on</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
       <div class="faint" style="padding:10px 16px;font-size:12.5px">${hits.length > LIMIT ? `Showing ${LIMIT} of ${hits.length} addresses. Type to narrow the list.` : `${hits.length} of ${all.length} addresses`}</div></div>`;
   };
   $("#macq").addEventListener("input", list);
@@ -2781,7 +2897,8 @@ async function renderSettings() {
       <div class="row"><label class="f"><span>SSH client for the SSH button</span><select id="sshk" onchange="sshClientHint()">
           <option value="">Automatic (this computer's terminal)</option>
           ${(S.sshClients || []).map((c) => `<option value="${esc(c.id)}" ${sshPick(set) === c.id ? "selected" : ""}>${esc(c.name)}${c.found ? "" : " (not found)"}</option>`).join("")}
-          <option value="custom" ${sshPick(set) === "custom" ? "selected" : ""}>Custom command</option></select></label><span></span></div>
+          <option value="custom" ${sshPick(set) === "custom" ? "selected" : ""}>Custom command</option></select></label>
+        <label class="f" title="Web and SSH for several selected switches ask first when there are more than this. 0 never asks."><span>Ask before opening more than</span><input type="number" id="boa" min="0" max="500" value="${set.bulkOpenAsk < 0 ? 0 : +set.bulkOpenAsk || 10}"></label></div>
       <label class="f" id="sshcw" style="margin-bottom:4px;${sshPick(set) === "custom" ? "" : "display:none"}"><span>Command</span><input type="text" id="sshc" class="mono" value="${esc(set.sshCommand || "")}" placeholder="putty.exe -ssh {dest} -P {port}"></label>
       <p class="faint mono" id="sshhint" style="font-size:12px;margin:0 0 4px"></p>
       <p class="faint" style="font-size:12.5px;margin:0 0 18px">{host}, {port}, {user}, {dest} (user@host), {url} (ssh://…) and {name} are filled in for each switch. The password is never passed on.</p>
@@ -2800,7 +2917,7 @@ async function renderSettings() {
         <div class="row" style="max-width:360px"><label class="f"><span>Window starts</span><input type="text" id="ws" class="mono" value="${esc(set.windowStart)}" placeholder="02:00"></label>
           <label class="f"><span>Window ends</span><input type="text" id="we" class="mono" value="${esc(set.windowEnd)}" placeholder="05:00"></label></div>
         <div class="row" style="max-width:360px;margin-top:4px"><label class="f"><span>Wait between reboots (seconds)</span><input type="number" id="rp" min="0" max="3600" value="${+set.rebootPause || 0}"></label><span></span></div>
-        <p class="faint" style="font-size:12.5px;margin:0">When several switches are updated with a reboot, those furthest from the core go first, one at a time. After a switch is back, SwitchDesk waits this long before the next one restarts, so spanning tree can settle. If a switch doesn't come back properly, the reboots still waiting stop.</p></div>
+        <p class="faint" style="font-size:12.5px;margin:0 0 14px">When several switches are updated with a reboot, those furthest from the core go first, one at a time. After a switch is back, SwitchDesk waits this long before the next one restarts, so spanning tree can settle. If a switch doesn't come back properly, the reboots still waiting stop.</p></div>
       <button class="btn primary" onclick="saveSettings()">Save settings</button></div></section>
     <section class="panel" style="margin-top:18px"><h2>App password<span class="grow"></span>${lk.enabled ? `<span class="okchip sev" style="font-weight:400">On</span>` : `<span class="faint" style="font-weight:400;font-size:13px">Off</span>`}</h2><div class="body">
       <p class="muted" style="font-size:13px;margin:0 0 12px">Optional. With a password, SwitchDesk asks for it when it starts, and the saved switch passwords can't be read without it, not even from the data folder. Without one, anyone who can use this computer account can open SwitchDesk.</p>
@@ -3060,7 +3177,7 @@ function checkMethodHint() {
 
 async function saveSettings() {
   try {
-    await call("SaveSettings", { ...S.settings, checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, autoPortNames: $("#apn").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), rebootPause: Math.max(0, +$("#rp").value || 0), lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
+    await call("SaveSettings", { ...S.settings, checkMethod: $("#cm").value, pingInterval: +$("#pi").value, collectInterval: +$("#ci").value, parallel: +$("#pa").value, keepBackups: +$("#kb").value, cpuWarn: +$("#cw").value, memWarn: +$("#mw").value, ignoreSnmp: $("#is").checked, hardwarePhotos: $("#hp").checked, autoPortNames: $("#apn").checked, firmwareAuto: $("input[name=fa]:checked").value, windowStart: $("#ws").value.trim(), windowEnd: $("#we").value.trim(), rebootPause: Math.max(0, +$("#rp").value || 0), bulkOpenAsk: +$("#boa").value > 0 ? Math.round(+$("#boa").value) : -1, lockAfter: S.settings.lockAfter || 0, language: S.settings.language || "", sshClient: $("#sshk").value, sshCommand: $("#sshc").value.trim(), uiFont: $("#uif").value, uiScale: +$("#uiz").value });
     S.settings = await call("GetSettings");
     toast("Settings saved");
   } catch (e) { toast(e.message, true); }

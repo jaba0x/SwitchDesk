@@ -126,6 +126,9 @@ type Settings struct {
 	// RebootPause is how long, in seconds, a firmware update waits after a
 	// switch is back before the next switch reboots (issue #34).
 	RebootPause int `json:"rebootPause"`
+	// BulkOpenAsk: opening Web or SSH for more switches than this asks first
+	// (issue #39). 0 means the default of 10, -1 never asks.
+	BulkOpenAsk int `json:"bulkOpenAsk"`
 }
 
 func DefaultSettings() Settings {
@@ -514,6 +517,55 @@ func (s *Store) SetDisabled(ids []string, disabled bool) error {
 		}
 	}
 	return s.saveLocked()
+}
+
+// BulkEdit changes the site and tags of several switches at once (issue #43).
+type BulkEdit struct {
+	SetSite    bool     `json:"setSite"` // Site replaces the switches' site; "" clears it
+	Site       string   `json:"site"`
+	AddTags    []string `json:"addTags"`
+	RemoveTags []string `json:"removeTags"` // matched without regard to case
+}
+
+// EditSwitches applies e to the given switches and says how many changed.
+func (s *Store) EditSwitches(ids []string, e BulkEdit) (int, error) {
+	site := strings.Join(strings.Fields(e.Site), " ")
+	if len(site) > 64 {
+		return 0, errors.New("a site name can be 64 characters at most")
+	}
+	drop := map[string]bool{}
+	for _, t := range e.RemoveTags {
+		drop[strings.ToLower(strings.Join(strings.Fields(t), " "))] = true
+	}
+	add := NormalizeTags(e.AddTags)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	want := map[string]bool{}
+	for _, id := range ids {
+		want[id] = true
+	}
+	n := 0
+	for i := range s.d.Switches {
+		sw := &s.d.Switches[i]
+		if !want[sw.ID] {
+			continue
+		}
+		before := sw.Site + "\x00" + strings.Join(sw.Tags, "\x00")
+		if e.SetSite {
+			sw.Site = site
+		}
+		var tags []string
+		for _, t := range sw.Tags {
+			if !drop[strings.ToLower(t)] {
+				tags = append(tags, t)
+			}
+		}
+		sw.Tags = NormalizeTags(append(tags, add...))
+		if sw.Site+"\x00"+strings.Join(sw.Tags, "\x00") != before {
+			n++
+		}
+	}
+	return n, s.saveLocked()
 }
 
 func (s *Store) DeleteSwitch(id string) error {

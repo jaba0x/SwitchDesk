@@ -18,7 +18,8 @@ Uptime is shown the same short way for every switch, such as `64d 19h`; hover it
 
 **Select switches** with the checkboxes (the header one selects everything shown). A bar appears with actions for all of them:
 
-- **Web** and **SSH** open the web interface, or an SSH session, for each of them. More than ten asks first.
+- **Web** and **SSH** open the web interface, or an SSH session, for each of them. More than ten asks first; **Settings → Ask before opening more than** changes that number, and 0 never asks.
+- **Site & tags** sets one site for all of them or clears it, adds tags, and removes tags you tick, leaving their other tags alone.
 - **Collect now** reads them immediately.
 - **Update firmware** opens the [update dialog](firmware.md#update-switches).
 - **Disable** pauses them: no checks, no SSH, no alerts. They keep their last data and stay greyed out until you **Enable** them again. Handy for a switch that's being replaced or is on the bench.
@@ -27,6 +28,8 @@ Uptime is shown the same short way for every switch, such as `64d 19h`; hover it
 The small buttons at the end of each row open the switch's web interface or an SSH session, and do the same for a single switch: update (when there's something newer), disable or enable, and delete.
 
 ## The switch page
+
+With sites in use, the Switches, Ports, VLANs, Clients, Firmware and Dashboard pages show a row of site tabs under the title: **All sites**, each site with its number of switches, and **No site**. A tab does the same as the **Site** list in the sidebar.
 
 Click a switch to open it. The header shows its address, family, model, software, uptime and when it was read. **Collect now**, **Disable** and **Edit** are on the right.
 
@@ -100,6 +103,12 @@ Run `show`, `ping` and `traceroute` commands on the switch. Anything else is ref
 ### Raw output
 
 The exact output of every command SwitchDesk ran in the last reading. If something on the other tabs looks wrong, this shows what the switch actually said.
+
+The switch header and its tabs stay at the top while you scroll; once the page scrolls, the line with model, software and uptime folds away to leave room. The pin next to **Web** turns this off.
+
+The **Logs** tab has a search box (all words must be on the line, e.g. `port 12`) and a severity filter.
+
+On the **VLANs** tab, tick several VLANs and click **Delete** in the bar above the table to remove them in one session. Deleting asks whether to save to startup config, like every other change.
 
 ### Unsaved changes
 

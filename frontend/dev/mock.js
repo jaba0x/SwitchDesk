@@ -222,7 +222,7 @@ password manager`;
       { id: "j1", switchName: "acc-2930-f1", from: "WC.16.11.0015", to: "WC.16.11.0021", reboot: true, state: "running", progress: 0.42, step: "Copying WC_16_11_0021.swi to the secondary bank from 10.10.1.50", log: ["23:41:02  Reading firmware banks", "23:41:03  Primary WC.16.11.0015, secondary WC.16.10.0012, running from primary", "23:41:03  Copying WC_16_11_0021.swi to the secondary bank from 10.10.1.50"] },
       { id: "j2", switchName: "acc-2930-f2", from: "WC.16.11.0015", to: "WC.16.11.0021", reboot: false, auto: true, state: "staged", step: "Ready: WC.16.11.0021 boots on the next restart" },
       { id: "j3", switchName: "core-cx-01", from: "FL.10.12.1010", to: "FL.10.13.1000", reboot: true, state: "done", step: "Updated to FL.10.13.1000" }],
-    StartUpgrade: async (ids) => ids.map((id) => ({ id })), ClearFinishedUpgrades: async () => {}, OpenFirmwareFolder: async () => {}, SetDisabled: async () => {}, SaveConfig: async () => {}, SetFirmwareHold: async (ids, hold) => { for (const v of dash.switches) if (ids.includes(v.id)) v.firmwareHold = hold; }, DeleteSwitches: async () => {}, OpenDataFolder: async () => {},
+    StartUpgrade: async (ids) => ids.map((id) => ({ id })), ClearFinishedUpgrades: async () => {}, OpenFirmwareFolder: async () => {}, SetDisabled: async () => {}, EditSwitches: async (ids) => ids.length, SaveConfig: async () => {}, SetFirmwareHold: async (ids, hold) => { for (const v of dash.switches) if (ids.includes(v.id)) v.firmwareHold = hold; }, DeleteSwitches: async () => {}, OpenDataFolder: async () => {},
   } } };
   window.runtime = { EventsOn: () => {} };
 })();

@@ -417,6 +417,15 @@ func (a *App) SetFirmwareHold(ids []string, hold bool) error {
 // SaveConfig runs write memory on the switch.
 func (a *App) SaveConfig(id string) error { return a.mgr.SaveConfig(id) }
 
+// EditSwitches sets or clears the site and adds or removes tags on several switches.
+func (a *App) EditSwitches(ids []string, e store.BulkEdit) (int, error) {
+	n, err := a.st.EditSwitches(ids, e)
+	if err == nil {
+		a.emit("")
+	}
+	return n, err
+}
+
 func (a *App) RefreshPortClients(id string) ([]aruba.PortClient, error) {
 	return a.mgr.RefreshPortClients(id)
 }

@@ -528,3 +528,22 @@ tr.flash > td { animation: rowflash 1.6s ease-out; }
 .vlmx.panning { cursor: grabbing; user-select: none; }
 /* disabled ports in the Switches table (#40) */
 .offn { color: var(--warn); }
+
+/* site tabs on the global pages (#42) */
+.head:has(.sitetabs) { flex-wrap: wrap; row-gap: 14px; }
+.sitetabs { order: 99; flex-basis: 100%; display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); --wails-draggable: no-drag; }
+.sitetabs button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 6px 12px 8px; font: inherit; font-size: 13.5px; cursor: pointer; margin-bottom: -1px; }
+.sitetabs button:hover { color: var(--text); }
+.sitetabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+.sitetabs .n { margin-left: 6px; font-size: 11.5px; color: var(--faint); }
+
+/* switch header and tabs pinned while scrolling (#41) */
+.dtop.pinned { position: sticky; top: 0; z-index: 6; background: var(--base); margin: calc(-22px - var(--top)) -28px 0; padding: calc(var(--top) + 22px) 28px 0; }
+.dtop.pinned .tabs { margin-bottom: 0; }
+.dtop:not(.pinned) .tabs { margin-bottom: 18px; }
+.dtop.pinned + #tabbody { padding-top: 18px; }
+.dtop.pinned.stuck { padding-top: calc(var(--top) + 12px); box-shadow: 0 6px 12px -8px rgba(0,0,0,.5); }
+.dtop.pinned.stuck .head { margin-bottom: 8px; }
+.dtop.pinned.stuck .idline, .dtop.pinned.stuck .banner { display: none; }
+.ib.pin { opacity: .45; }
+.dtop.pinned .ib.pin { opacity: 1; color: var(--accent); }
