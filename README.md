@@ -7,35 +7,66 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/jaba0x/SwitchDesk/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jaba0x/SwitchDesk?style=flat-square&color=4cc38a&label=release"></a>
+  <a href="https://github.com/jaba0x/SwitchDesk/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/jaba0x/SwitchDesk/total?style=flat-square&color=1b212b"></a>
   <img alt="macOS" src="https://img.shields.io/badge/macOS-universal-1b212b?style=flat-square&logo=apple&logoColor=white">
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1b212b?style=flat-square&logo=windows&logoColor=white">
   <img alt="Go" src="https://img.shields.io/badge/Go-1.23+-1b212b?style=flat-square&logo=go&logoColor=white">
   <img alt="Wails" src="https://img.shields.io/badge/Wails-v2-1b212b?style=flat-square">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.0.22-4cc38a?style=flat-square">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-1b212b?style=flat-square"></a>
+  <a href="https://github.com/jaba0x/SwitchDesk/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/jaba0x/SwitchDesk?style=flat-square&color=e3b341&logo=github"></a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/jaba0x/SwitchDesk/releases/latest"><b>⬇️ Download</b></a> ·
   <a href="https://jaba0x.github.io/SwitchDesk/"><b>Website</b></a> ·
   <a href="https://jaba0x.github.io/SwitchDesk/docs/"><b>Documentation</b></a> ·
-  <a href="https://github.com/jaba0x/SwitchDesk/releases/latest"><b>Download</b></a> ·
-  <a href="https://github.com/jaba0x/SwitchDesk/discussions"><b>Discussions</b></a> ·
-  <a href="CODE_SIGNING_POLICY.md"><b>Code signing policy</b></a>
+  <a href="https://jaba0x.github.io/SwitchDesk/docs/changelog/"><b>What's new</b></a> ·
+  <a href="https://github.com/jaba0x/SwitchDesk/discussions"><b>Discussions</b></a>
 </p>
 
 <p align="center">
-  <img src="docs/dashboard.png" alt="SwitchDesk dashboard" width="900">
+  <img src="docs/readme/dashboard.png" alt="SwitchDesk dashboard" width="900">
 </p>
 
-## Why
+<table>
+  <tr>
+    <td align="center" width="25%">🔌<br><b>Plain SSH</b><br><sub>No agents, no SNMP setup, no server. Your laptop and the switches.</sub></td>
+    <td align="center" width="25%">🚨<br><b>Problems first</b><br><sub>Offline switches, STP trouble, weak security and failing optics, sorted by severity.</sub></td>
+    <td align="center" width="25%">🗺️<br><b>Map and ports</b><br><sub>LLDP/CDP network map, every port of every switch, where each MAC is plugged in.</sub></td>
+    <td align="center" width="25%">🛠️<br><b>Changes you review</b><br><sub>VLANs, port names, 802.1X and firmware, with every command shown before it's sent.</sub></td>
+  </tr>
+</table>
 
-Every morning I want to know the same things about the switch network: is everything up, did anything change overnight, is spanning tree still sane, and which port goes where. Clicking through web UIs one switch at a time is slow, and a full NMS is a lot to run for a few dozen switches. SwitchDesk reads the switches over plain SSH and keeps everything on your machine. It started with a few dozen switches and is used on networks of several hundred.
+## 💡 Why
 
-## Features
+Every morning I want to know the same things about the switch network: is everything up, did anything change overnight, is spanning tree still sane, and which port goes where. Clicking through web UIs one switch at a time is slow, and a full NMS is a lot to run for a few dozen switches. SwitchDesk reads the switches over plain SSH and keeps everything on your machine. It started with a few dozen switches and is used on networks of several hundred, across several sites.
 
-### Dashboard
+## 📸 Tour
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/readme/switch.png" alt="A switch, with its faceplate and problems" width="440"><br><sub><b>Every switch in detail.</b> A faceplate that follows the hardware, its problems, firmware banks, spanning tree and stack.</sub></td>
+    <td width="50%"><img src="docs/readme/map.png" alt="Network map" width="440"><br><sub><b>Network map.</b> Built from LLDP and CDP, laid out from the spanning-tree root, blocked and down links marked.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/readme/switch-ports.png" alt="Ports tab with the MAC copy menu" width="440"><br><sub><b>Ports.</b> Search and filter, optical levels, the MAC on each port, copied in the format you need.</sub></td>
+    <td><img src="docs/readme/port-names.png" alt="Port name editor" width="440"><br><sub><b>Port names.</b> Rename ports in one list, or fill them from the LLDP neighbors.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/readme/vlans.png" alt="VLAN matrix" width="440"><br><sub><b>VLANs across the network.</b> Which switch carries which VLAN, with names that don't match flagged.</sub></td>
+    <td><img src="docs/readme/firmware.png" alt="Firmware page" width="440"><br><sub><b>Firmware.</b> Both banks, the library, and updates that reboot one switch at a time, edge first.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/readme/clients.png" alt="Clients page" width="440"><br><sub><b>Clients.</b> Every MAC address once, at the port it's plugged into.</sub></td>
+    <td><img src="docs/readme/switches.png" alt="Switch list" width="440"><br><sub><b>Switch list.</b> Sites, tags, columns you pick, and actions for many switches at once.</sub></td>
+  </tr>
+</table>
+
+## ✨ Features
+
+### 🚨 Dashboard and problems
 Online and offline counts, a problem list sorted by severity, and every switch drawn as a faceplate with one LED per port. Green is up, grey is down, a slashed outline is disabled, amber means spanning tree is blocking it. The faceplates follow the hardware: copper, SFP and module ports sit in separate blocks, and each member of a stack gets its own row.
-
-### Problems it catches
 
 | Area | Checks |
 |---|---|
@@ -48,51 +79,40 @@ Online and offline counts, a problem list sorted by severity, and every switch d
 | Optics | SFP/QSFP receive power out of range, against the optic's own levels (AOS-CX) or its recent alarms (AOS-S) |
 | Logs | Major and error events in the recent log, ports flapping |
 
-### Every switch, in detail
+### 🔍 Every switch, in detail
+System facts, a management-access checklist, spanning tree (bridge, root, port roles and states), ports with their names, MAC addresses and optical levels for SFPs, VLANs, LLDP and CDP neighbors, logs with search, the running config, and the raw output of every command it ran. Config copies are saved whenever the config changes, and any two can be compared side by side. A console runs `show`, `ping` and `traceroute`, and nothing else. The header and tabs stay at the top while you scroll.
 
-<p align="center">
-  <img src="docs/switch.png" alt="Switch page" width="900">
-</p>
+**Web** opens a switch's own web interface in your browser. **SSH** opens it in your own terminal, or in the client you pick in Settings: PuTTY, MobaXterm, SecureCRT, Windows Terminal, iTerm2 and others, or a command of your own. Select several switches and open them all at once.
 
-System facts, a management-access checklist, spanning tree (bridge, root, port roles and states), ports with their configured names and optical levels for SFPs, VLANs, LLDP and CDP neighbors, logs, the running config, and the raw output of every command it ran. Config copies are saved whenever the config changes, and any two can be compared side by side. A console runs `show`, `ping` and `traceroute`, and nothing else.
+### 🔌 Ports and clients
+- **Ports tab:** search by port, name, VLAN or MAC, filter by status and speed, and click a port on the faceplate to jump to its row. Click a MAC to copy it as colon, hyphen, Cisco dotted, HPE or plain.
+- **Port names:** rename ports in one list, or fill empty ones from the device LLDP sees on them. Names you typed are never overwritten, and an optional setting keeps LLDP names up to date on its own.
+- **Ports page:** every port of every switch in one searchable list.
+- **Clients:** type a MAC address and get the switch and the edge port, with the uplinks along the path told apart from it.
 
-**Web** opens a switch's own web interface in your browser. **SSH** opens it in your own terminal, or in the client you pick in Settings: PuTTY, MobaXterm, SecureCRT, Windows Terminal, iTerm2 and others, or a command of your own.
-
-**Clients** finds where a device is plugged in: type a MAC address and get the switch and the edge port, with the uplinks along the path told apart from it.
-
-### VLANs without the CLI
-Create, rename and delete VLANs, and set port membership by clicking ports through untagged, tagged and off. Before anything is sent you see the exact commands. Sending stops at the first line the switch rejects, and `write memory` only runs when every line before it went through.
+### 🧩 VLANs without the CLI
+Create, rename and delete VLANs, and set port membership by clicking ports through untagged, tagged and off. Before anything is sent you see the exact commands. Sending stops at the first line the switch rejects, and `write memory` only runs when every line before it went through. Leave it out, and the switch shows **Unsaved changes** with a **Save** button until you save.
 
 A network-wide matrix shows which switch carries which VLAN and flags names that don't match between switches. From there you can rename, add or remove a VLAN on many switches at once, and review every switch's commands before anything is sent.
 
-### Port access (802.1X and MAC authentication)
-On AOS-S and AOS-CX, add or remove RADIUS servers and turn 802.1X and MAC authentication on or off per port, with the client limit and re-authentication period. On AOS-S you pick the VLAN for clients that don't log in. On AOS-CX you create local roles with their VLAN and choose per port which role a client gets after a login, after a rejected login, while RADIUS can't be reached and before a login. AOS-CX also lists the connected clients from `show port-access clients detail`: port, MAC address, user, IP address, login method, status, role and the VLAN the client was put in, read at each collection or with Refresh. Ports that link to another switch or an access point are marked, and you're warned before turning on a login there. Shared secrets never appear on screen, in the command preview or in the transcript.
+### 🔐 Port access (802.1X and MAC authentication)
+On AOS-S and AOS-CX, add or remove RADIUS servers and turn 802.1X and MAC authentication on or off per port, with the client limit and re-authentication period. On AOS-S you pick the VLAN for clients that don't log in. On AOS-CX you create local roles with their VLAN and choose per port which role a client gets after a login, after a rejected login, while RADIUS can't be reached and before a login. AOS-CX also lists the connected clients from `show port-access clients detail`: port, MAC address, user, IP address, login method, status, role and the VLAN the client was put in. Ports that link to another switch or an access point are marked, and you're warned before turning on a login there. Shared secrets never appear on screen, in the command preview or in the transcript.
 
-### Languages
-The interface comes in English and German so far, and every language is welcome. Translations are plain JSON files that anyone can write or fix without building anything: drop one into the data folder and pick it in Settings. See [Translating SwitchDesk](https://jaba0x.github.io/SwitchDesk/docs/translating/), and claim your language in [#17](https://github.com/jaba0x/SwitchDesk/issues/17). Even a half-finished file helps, since anything left empty stays in English.
+### 🗺️ Network map
+Built from LLDP and CDP and laid out top-down from the spanning-tree root. Drag switches wherever you like and the layout is kept. Blocked links are dashed amber, down links red. Firewalls, access points and switches you don't manage get their own shapes. Phones and hosts stay hidden until you turn them on, and you can hide single devices or all access points at once. Hover a switch to see port numbers on its links, double-click to open it.
 
-### Optional app password
-Off by default. Turn it on in Settings and SwitchDesk asks for a password when it starts. The saved switch passwords can't be read without it, not even from the data folder. The window can also lock itself after some idle time.
+### 🏢 Sites, tags and the switch list
+Search by name, address, site, model or software, or by state: `offline`, `disabled`, `problem`. Words combine, so `acc offline` finds offline access switches. Press `/` to jump to the search box. Pick the columns, drag them around and resize them. Tick switches to collect, disable, enable or delete them together, give them a site or tags, or open them all in the browser or SSH.
 
-### Network map
+Give switches a site and every page gets site tabs: the dashboard, switch list, network map, ports, VLANs, clients and firmware narrow to that site's switches, so a VLAN added or renamed there only reaches that site. That matters when VLAN 2 is voice on one site and production on another.
 
-<p align="center">
-  <img src="docs/map.png" alt="Network map" width="900">
-</p>
+### ⬆️ Firmware updates
+Each switch shows the version it runs, what's in its primary and secondary bank, and whether your firmware library has something newer for its platform. **Update** copies the image into the spare bank (the running version stays in the other one as a fallback), sets it as the boot default, saves the config and reboots, then checks that the switch came back on the new version. Or choose **copy only** and reboot whenever suits you.
 
-Built from LLDP and CDP and laid out top-down from the spanning-tree root. Drag switches wherever you like and the layout is kept. Blocked links are dashed amber, down links red. Firewalls, access points and switches you don't manage get their own shapes. Phones and hosts stay hidden until you turn them on. Hover a switch to see port numbers on its links, double-click to open it.
+Pick several switches and they're updated one at a time, bottom-up: the ones furthest from the core first, the core last. If a switch doesn't come back properly, the reboots still waiting stop. A lock keeps a switch on the version it runs.
 
-### Status checks
-Between full reads, SwitchDesk checks that each switch is still up, and Settings decides how. By default it opens a TCP connection to port 22 and closes it straight away. That works over most VPN and zero trust setups, but the switch logs every check as an SSH connection, which fills the log on a busy network. Switch the check to ping and no SSH connections are made, as long as ICMP reaches the switches. Turn it off and a switch's status only changes when it's read. With the read interval at 0 as well, SwitchDesk connects only when you click **Collect now**.
-
-### Switch list
-Search by name, address, site, model or software, or by state: `offline`, `disabled`, `problem`. Words combine, so `acc offline` finds offline access switches. Press `/` to jump to the search box. Tick switches to collect, disable, enable or delete them together, or use the small buttons at the end of each row. A disabled switch keeps its last data but isn't checked, read or alerted on until you enable it again.
-
-### Sites
-Give switches a site, and a site picker appears at the top of the sidebar. Picking one narrows the dashboard, switch list, network map, VLANs and firmware pages to that site's switches, so a VLAN added or renamed there only reaches that site. That matters when VLAN 2 is voice on one site and production on another. With all sites shown, the multi-switch VLAN dialogs label each switch with its site and warn when a change spans several. The choice is remembered, and new switches get the selected site filled in.
-
-### Firmware updates
-Each switch shows the version it runs, what's in its primary and secondary bank, and whether your firmware library has something newer for its platform. **Update** copies the image into the spare bank (the running version stays in the other one as a fallback), sets it as the boot default, saves the config and reboots, then checks that the switch came back on the new version. Pick several switches and they're updated one at a time. Or choose **copy only** and reboot whenever suits you.
+<details>
+<summary>How the image gets to the switch</summary>
 
 On AOS-S, SwitchDesk uploads the image to the switch over SSH (SFTP, or SCP on older firmware). The switch never has to connect back to your computer, so this works over a VPN or zero trust access. For the upload it turns on `ip ssh filetransfer`, which also switches off the switch's TFTP client and server, and afterwards it puts those settings back the way they were.
 
@@ -103,8 +123,18 @@ Only if the upload is refused does the switch pull the image from SwitchDesk ove
 HPE only offers firmware downloads after you sign in, so you fill the library yourself. Add `.swi` files you downloaded, or paste a download link from the HPE Networking Support Portal and SwitchDesk fetches it. Images are matched to switches by platform code (WC, YA, KB, FL, PL…), read from the file name or the image itself.
 
 **Automatic mode** (Settings) can copy new firmware to every switch's spare bank as soon as it lands in the library, or also install it by rebooting one switch at a time inside a maintenance window you set.
+</details>
 
-## Supported switches
+### ⏱️ Status checks
+Between full reads, SwitchDesk checks that each switch is still up, and Settings decides how. By default it opens a TCP connection to port 22 and closes it straight away. That works over most VPN and zero trust setups, but the switch logs every check as an SSH connection, which fills the log on a busy network. Switch the check to ping and no SSH connections are made, as long as ICMP reaches the switches. Turn it off and a switch's status only changes when it's read. With the read interval at 0 as well, SwitchDesk connects only when you click **Collect now**.
+
+### 🔒 Optional app password
+Off by default. Turn it on in Settings and SwitchDesk asks for a password when it starts. The saved switch passwords can't be read without it, not even from the data folder. The window can also lock itself after some idle time.
+
+### 🌍 Languages
+The interface comes in English and German so far, and every language is welcome. Translations are plain JSON files that anyone can write or fix without building anything: drop one into the data folder and pick it in Settings. See [Translating SwitchDesk](https://jaba0x.github.io/SwitchDesk/docs/translating/), and claim your language in [#17](https://github.com/jaba0x/SwitchDesk/issues/17). Even a half-finished file helps, since anything left empty stays in English.
+
+## 🧰 Supported switches
 
 | Family | Models | Support |
 |---|---|---|
@@ -116,7 +146,7 @@ AOS-CX and AOS-S switches only need SSH, plus LLDP if you want the map. Instant 
 
 If your model isn't listed or reads wrong, open an [issue](https://github.com/jaba0x/SwitchDesk/issues/new) with the model number, its firmware version and the output of `show version`. When a reading fails, paste the message SwitchDesk shows too. It names the command or page that failed.
 
-## Install
+## 📦 Install
 
 Download the latest build from **[Releases](https://github.com/jaba0x/SwitchDesk/releases/latest)**. Each release lists SHA-256 checksums and carries a signed build attestation; see the [code signing policy](CODE_SIGNING_POLICY.md) and the [privacy policy](PRIVACY.md). Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
@@ -151,13 +181,13 @@ SwitchDesk checks GitHub for a newer release when it starts and every few hours 
 
 The **build** workflow publishes a release with both downloads attached. Push a tag like `v0.2.0`, or run the workflow from the Actions tab and enter a version.
 
-## Getting started
+## 🚀 Getting started
 
 1. **Add a switch** with its address and credentials. **Test connection** shows the hostname and switch family before you save.
 2. **Add many** takes one address per line, `name, address` pairs, or ranges such as `10.0.1.20-10.0.1.40`.
 3. The first read starts right away. After that, each switch's SSH port is checked every 30 seconds and each switch is re-read every 15 minutes. In Settings you can change both, check with ping instead, or turn the checks off.
 
-## Your data
+## 💾 Your data
 
 Everything stays on your computer, in one folder.
 
@@ -177,11 +207,11 @@ To move to another computer, use Settings → Data → Export. It writes a singl
 
 SSH host keys are pinned on first connect. If a switch later presents a different key, SwitchDesk stops connecting to it until you confirm on the switch page.
 
-## Documentation
+## 📚 Documentation
 
 The full guide is at **[jaba0x.github.io/SwitchDesk/docs](https://jaba0x.github.io/SwitchDesk/docs/)**: install, first steps, every screen, firmware updates, moving your data, and troubleshooting. It's built with MkDocs from the `docs/` folder. The landing page at [jaba0x.github.io/SwitchDesk](https://jaba0x.github.io/SwitchDesk/) is plain HTML in `web/`. Both are published on every push.
 
-## Development
+## 🧑‍💻 Development
 
 ```sh
 go test ./internal/...
@@ -206,7 +236,7 @@ tools/i18n         collects the interface text into frontend/dist/i18n/en.json
 
 The parsers are tested against sample output from AOS-S and AOS-CX. When a switch prints something they misread, the **Raw output** tab shows exactly what came back. That output makes a good test case.
 
-## Author
+## 👋 Author
 
 <a href="https://clihero.com">
   <picture>
@@ -217,9 +247,11 @@ The parsers are tested against sample output from AOS-S and AOS-CX. When a switc
 
 Built by **Jaba Macharashvili**. More of my infra, homelab and hardware projects are on [clihero.com](https://clihero.com).
 
-## Credits
+## 🙏 Credits
 
-Thanks to [Arne Naessens](https://github.com/ArneNaessens) for mass VLAN editing, port access, the site filter, the disabled-port display and the `ntp server-name` fix, and to everyone who reports issues or helps translate.
+Thanks to [Arne Naessens](https://github.com/ArneNaessens) for mass VLAN editing, port access, the site filter, the disabled-port display and the `ntp server-name` fix, to [@JasonZhang0320](https://github.com/JasonZhang0320) for a long run of ideas and bug reports from multi-site networks, and to everyone who reports issues or helps translate.
+
+If SwitchDesk saves you time, a ⭐ on the repo helps others find it.
 
 SwitchDesk is released under the [MIT License](LICENSE). [Code signing policy](CODE_SIGNING_POLICY.md) · [Privacy policy](PRIVACY.md) · [Code of conduct](CODE_OF_CONDUCT.md)
 
