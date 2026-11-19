@@ -87,7 +87,7 @@ func TestHTTPRedirectIsNotPlain(t *testing.T) {
 
 	probeTimeout = 3 * time.Second
 	for port, want := range map[string]string{redir: "redirect", page: "open", elsewhere: "open"} {
-		if got := probeHTTP("127.0.0.1", port); got != want {
+		if got, _ := probeHTTP("127.0.0.1", port); got != want {
 			t.Errorf("port %s: %s, want %s", port, got, want)
 		}
 	}
@@ -99,5 +99,26 @@ func TestHTTPRedirectIsNotPlain(t *testing.T) {
 	applyPortProbes(&snap, "127.0.0.1")
 	if snap.Security.HTTPPlain || snap.Security.HTTPPort != "redirect" {
 		t.Fatalf("redirect-only port 80 still flagged: %+v", snap.Security)
+	}
+}
+
+// Issue #18 again: switches' web servers aren't strict about HTTP. Newer Go
+// refused their redirect, so it counted as plain HTTP once more.
+func TestHTTPOnlyRedirectsLenient(t *testing.T) {
+	for raw, want := range map[string]bool{
+		"HTTP/1.1 302 Found\r\nLocation: https://10.0.0.2/\r\n\r\n":                                                           true,
+		"HTTP/1.0 301 Moved\nlocation:https://10.0.0.2:443/index.html\nServer : eHTTP v2.0\n\n":                               true,
+		"HTTP/1.1 302 Found\r\nContent-Length: abc\r\nLocation:   HTTPS://sw/\r\n\r\n":                                        true,
+		"HTTP/1.1 200 OK\r\n\r\n<html><head><meta http-equiv=\"refresh\" content=\"0; URL=https://10.0.0.2/\"></head></html>": true,
+		"HTTP/1.1 200 OK\r\n\r\n<script>location.replace('https://sw/')</script>":                                             true,
+		"HTTP/1.1 302 Found\r\nLocation: /login.html\r\n\r\n":                                                                 false,
+		"HTTP/1.1 200 OK\r\n\r\n<form action=login><input type=password></form>":                                              false,
+		"HTTP/1.1 200 OK\r\n\r\n<script>location.href='https://x/'</script><form>":                                            false,
+		"garbage": false,
+		"":        false,
+	} {
+		if got := httpOnlyRedirects(raw); got != want {
+			t.Errorf("%q: %v, want %v", raw, got, want)
+		}
 	}
 }

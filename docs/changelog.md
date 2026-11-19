@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.23
+
+- **Fixed: "Plain HTTP web management is enabled" came back** on AOS-S switches whose port 80 only redirects to HTTPS ([#18](https://github.com/jaba0x/SwitchDesk/issues/18), reported again by [@mattgrimley](https://github.com/mattgrimley)). SwitchDesk now reads the answer from port 80 as plain text, so a web server that doesn't follow HTTP to the letter can't turn a redirect into a warning. A page that only forwards to `https://` counts as a redirect too, and what port 80 answered is shown on the **Raw output** tab as *HTTP probe (port 80)*.
+
 ## 1.0.22
 
 From [@JasonZhang0320](https://github.com/JasonZhang0320) in [#38](https://github.com/jaba0x/SwitchDesk/issues/38), [#39](https://github.com/jaba0x/SwitchDesk/issues/39), [#41](https://github.com/jaba0x/SwitchDesk/issues/41), [#42](https://github.com/jaba0x/SwitchDesk/issues/42) and [#43](https://github.com/jaba0x/SwitchDesk/issues/43):

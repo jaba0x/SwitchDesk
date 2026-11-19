@@ -1,10 +1,10 @@
 package core
 
 import (
-	"bufio"
 	"errors"
+	"io"
 	"net"
-	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -36,32 +36,71 @@ func probePort(host, port string) string {
 // interface apart from one that only redirects to HTTPS. With
 // "no web-management plaintext", AOS-S still answers on port 80 but only to
 // send the browser to https://, so that's "redirect", not "open" (issue #18).
-func probeHTTP(host, port string) string {
+// It also returns the start of what port 80 answered, for the Raw output tab.
+func probeHTTP(host, port string) (string, string) {
 	st := probePort(host, port)
 	if st != "open" {
-		return st
+		return st, ""
 	}
 	c, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), probeTimeout)
 	if err != nil {
-		return st
+		return st, ""
 	}
 	defer c.Close()
 	c.SetDeadline(time.Now().Add(probeTimeout))
-	req, _ := http.NewRequest("GET", "http://"+host+"/", nil)
-	req.Header.Set("User-Agent", "SwitchDesk")
-	req.Header.Set("Connection", "close")
-	if req.Write(c) != nil {
-		return st
+	hostHdr := host
+	if strings.Contains(host, ":") {
+		hostHdr = "[" + host + "]"
 	}
-	resp, err := http.ReadResponse(bufio.NewReader(c), req)
-	if err != nil {
-		return st
+	if _, err := io.WriteString(c, "GET / HTTP/1.1\r\nHost: "+hostHdr+"\r\nUser-Agent: SwitchDesk\r\nAccept: */*\r\nConnection: close\r\n\r\n"); err != nil {
+		return st, ""
 	}
-	resp.Body.Close()
-	if resp.StatusCode >= 300 && resp.StatusCode < 400 && strings.HasPrefix(strings.ToLower(resp.Header.Get("Location")), "https://") {
-		return "redirect"
+	// Read the answer as plain text instead of with net/http: the small web
+	// servers on switches don't always follow HTTP to the letter (bare line
+	// feeds, odd header spacing), and newer Go versions reject such answers,
+	// which brought the false warning of issue #18 back.
+	raw, _ := io.ReadAll(io.LimitReader(c, 16<<10))
+	if httpOnlyRedirects(string(raw)) {
+		return "redirect", string(raw)
 	}
-	return st
+	return st, string(raw)
+}
+
+var (
+	statusLineRe = regexp.MustCompile(`(?i)^HTTP/\d(?:\.\d)?\s+(\d{3})`)
+	// <meta http-equiv="refresh" content="0;url=https://..."> or
+	// location.href / location.replace("https://...") in a script
+	softRedirectRe = regexp.MustCompile(`(?is)(http-equiv\s*=\s*["']?refresh[^>]*url\s*=\s*["']?\s*https://|location(?:\.href)?\s*=\s*["']https://|location\.replace\(\s*["']https://)`)
+	loginFormRe    = regexp.MustCompile(`(?i)<form|type\s*=\s*["']?password`)
+)
+
+// httpOnlyRedirects says whether an answer from port 80 only sends the
+// browser on to HTTPS: a 3xx with an https:// Location, or a page that does
+// nothing but forward to https:// (no login form of its own).
+func httpOnlyRedirects(raw string) bool {
+	head, body := raw, ""
+	for _, sep := range []string{"\r\n\r\n", "\n\n"} {
+		if i := strings.Index(raw, sep); i >= 0 {
+			head, body = raw[:i], raw[i+len(sep):]
+			break
+		}
+	}
+	lines := strings.Split(strings.ReplaceAll(head, "\r", ""), "\n")
+	m := statusLineRe.FindStringSubmatch(strings.TrimSpace(lines[0]))
+	if m == nil {
+		return false
+	}
+	code := m[1]
+	if code[0] == '3' {
+		for _, l := range lines[1:] {
+			k, v, ok := strings.Cut(l, ":")
+			if ok && strings.EqualFold(strings.TrimSpace(k), "location") {
+				return strings.HasPrefix(strings.ToLower(strings.TrimSpace(v)), "https://")
+			}
+		}
+		return false
+	}
+	return code == "200" && softRedirectRe.MatchString(body) && !loginFormRe.MatchString(body)
 }
 
 // applyPortProbes checks Telnet (23) and plain HTTP (80) directly. What the
@@ -69,12 +108,22 @@ func probeHTTP(host, port string) string {
 // wasn't read, or a setting changed since, no longer raises a false alarm.
 func applyPortProbes(s *aruba.Snapshot, host string) {
 	var wg sync.WaitGroup
-	var telnet, web string
+	var telnet, web, answer string
 	wg.Add(2)
 	go func() { defer wg.Done(); telnet = probePort(host, telnetPortNum) }()
-	go func() { defer wg.Done(); web = probeHTTP(host, httpPortNum) }()
+	go func() { defer wg.Done(); web, answer = probeHTTP(host, httpPortNum) }()
 	wg.Wait()
 	s.Security.TelnetPort, s.Security.HTTPPort = telnet, web
+	if answer != "" {
+		// what port 80 said, so a wrong verdict can be checked in Raw output
+		if s.Raw == nil {
+			s.Raw = map[string]string{}
+		}
+		if len(answer) > 2000 {
+			answer = answer[:2000] + "\n…"
+		}
+		s.Raw["HTTP probe (port 80)"] = answer
+	}
 	s.Security.TelnetEnabled = telnet == "open"
 	if s.Family == aruba.FamilyAOSS {
 		s.Security.HTTPPlain = web == "open"
