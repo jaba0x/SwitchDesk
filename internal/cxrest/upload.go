@@ -4,6 +4,7 @@
 package cxrest
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,6 +16,8 @@ import (
 	"net/textproto"
 	"net/url"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,8 +33,9 @@ var ErrNoREST = errors.New("the switch's REST API didn't answer on HTTPS")
 type Client struct {
 	Base string // https://host[:port]
 	HTTP *http.Client
-	pre  string // /rest/v10.xx
-	csrf string // returned by login on releases that use it
+	pre  string   // /rest/v10.xx
+	alts []string // the other REST versions the switch offers, newest first
+	csrf string   // returned by login on releases that use it
 }
 
 // New returns a client for base. Switches use self-signed certificates, so
@@ -109,13 +113,17 @@ func (c *Client) version(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("%w (%v)", ErrNoREST, err)
 	}
-	var v struct {
-		Latest struct {
-			Prefix string `json:"prefix"`
-		} `json:"latest"`
+	var v map[string]struct {
+		Prefix string `json:"prefix"`
 	}
-	if resp.StatusCode == 200 && json.NewDecoder(resp.Body).Decode(&v) == nil && strings.HasPrefix(v.Latest.Prefix, "/rest/") {
-		c.pre = v.Latest.Prefix
+	if resp.StatusCode == 200 && json.NewDecoder(resp.Body).Decode(&v) == nil && strings.HasPrefix(v["latest"].Prefix, "/rest/") {
+		c.pre = v["latest"].Prefix
+		for k, x := range v {
+			if k != "latest" && strings.HasPrefix(x.Prefix, "/rest/") && x.Prefix != c.pre {
+				c.alts = append(c.alts, x.Prefix)
+			}
+		}
+		sort.Slice(c.alts, func(i, j int) bool { return versionLess(c.alts[j], c.alts[i]) })
 		return nil
 	}
 	if resp.StatusCode == 404 || resp.StatusCode == 200 {
@@ -165,37 +173,114 @@ func (c *Client) Logout(ctx context.Context) {
 
 // Upload sends the image to bank and returns once the switch has written and
 // checked it. progress reports bytes sent.
+//
+// The request carries a Content-Length, like a browser's or curl's upload:
+// AOS-CX 10.16 answers a chunked upload with "400 Bad Request" (issue #46).
+// If the switch still says 400 and the file can be read again, the upload is
+// retried on the older REST versions the switch offers.
 func (c *Client) Upload(ctx context.Context, bank, name string, file io.Reader, size int64, progress func(sent, total int64)) error {
-	pr, pw := io.Pipe()
-	mw := multipart.NewWriter(pw)
-	go func() {
-		h := textproto.MIMEHeader{}
-		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="fileupload"; filename=%q`, filepath.Base(name)))
-		h.Set("Content-Type", "application/octet-stream")
-		part, err := mw.CreatePart(h)
-		if err == nil {
-			_, err = io.Copy(part, &counter{r: file, total: size, fn: progress})
+	err := c.upload(ctx, c.pre, bank, name, file, size, progress)
+	seeker, canRewind := file.(io.Seeker)
+	for _, pre := range c.alts {
+		var bad *badRequest
+		if !errors.As(err, &bad) || !canRewind {
+			break
 		}
-		if err == nil {
-			err = mw.Close()
+		if _, serr := seeker.Seek(0, io.SeekStart); serr != nil {
+			break
 		}
-		pw.CloseWithError(err)
-	}()
-	req, err := http.NewRequestWithContext(ctx, "POST", c.Base+c.pre+"/firmware?image="+url.QueryEscape(bank), pr)
+		if e := c.upload(ctx, pre, bank, name, file, size, progress); e == nil {
+			return nil
+		} else if !errors.As(e, &bad) {
+			return e
+		}
+	}
+	return err
+}
+
+type badRequest struct{ text string }
+
+func (e *badRequest) Error() string { return e.text }
+
+func (c *Client) upload(ctx context.Context, pre, bank, name string, file io.Reader, size int64, progress func(sent, total int64)) error {
+	h := textproto.MIMEHeader{}
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="fileupload"; filename="%s"`, strings.ReplaceAll(filepath.Base(name), `"`, "")))
+	h.Set("Content-Type", "application/octet-stream")
+	var body io.Reader
+	var length int64 = -1
+	var ctype string
+	if size > 0 {
+		// the multipart framing around the file is known up front, so the
+		// whole length can be sent
+		var head, tail bytes.Buffer
+		mw := multipart.NewWriter(&head)
+		if _, err := mw.CreatePart(h); err != nil {
+			return err
+		}
+		ctype = mw.FormDataContentType()
+		prefix := append([]byte(nil), head.Bytes()...)
+		head.Reset()
+		mw2 := multipart.NewWriter(&tail)
+		mw2.SetBoundary(mw.Boundary())
+		mw2.Close()
+		body = io.MultiReader(bytes.NewReader(prefix), &counter{r: io.LimitReader(file, size), total: size, fn: progress}, &tail)
+		length = int64(len(prefix)) + size + int64(tail.Len())
+	} else {
+		pr, pw := io.Pipe()
+		mw := multipart.NewWriter(pw)
+		ctype = mw.FormDataContentType()
+		go func() {
+			part, err := mw.CreatePart(h)
+			if err == nil {
+				_, err = io.Copy(part, &counter{r: file, total: size, fn: progress})
+			}
+			if err == nil {
+				err = mw.Close()
+			}
+			pw.CloseWithError(err)
+		}()
+		body = pr
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", c.Base+pre+"/firmware?image="+url.QueryEscape(bank), body)
 	if err != nil {
 		return err
 	}
+	if length >= 0 {
+		req.ContentLength = length
+	}
 	c.headers(req)
-	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("Content-Type", ctype)
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return fmt.Errorf("uploading over HTTPS: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == 400 {
+		return &badRequest{fmt.Sprintf("the switch didn't accept the image (HTTP 400 on %s): %s", strings.TrimPrefix(pre, "/rest/"), bodyText(resp))}
+	}
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("the switch didn't accept the image (HTTP %d): %s", resp.StatusCode, bodyText(resp))
 	}
 	return nil
+}
+
+// versionLess orders /rest/v10.09 before /rest/v10.13, and v1 before both.
+func versionLess(a, b string) bool {
+	num := func(p string) []int {
+		var out []int
+		for _, f := range strings.FieldsFunc(strings.TrimPrefix(p, "/rest/v"), func(r rune) bool { return r == '.' }) {
+			n, _ := strconv.Atoi(f)
+			out = append(out, n)
+		}
+		return out
+	}
+	x, y := num(a), num(b)
+	for i := 0; i < len(x) && i < len(y); i++ {
+		if x[i] != y[i] {
+			return x[i] < y[i]
+		}
+	}
+	return len(x) < len(y)
 }
 
 type counter struct {

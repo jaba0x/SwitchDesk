@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.24
+
+- **Fixed: firmware upload over HTTPS failed on AOS-CX 10.16** with `HTTP 400: Bad Request` ([#46](https://github.com/jaba0x/SwitchDesk/issues/46), reported by [@pkmasters](https://github.com/pkmasters)). The upload now tells the switch its size up front (a `Content-Length`, like a browser or curl) instead of streaming it in chunks. If the switch still answers 400, SwitchDesk tries the older REST API versions the switch offers before falling back to TFTP.
+
 ## 1.0.23
 
 - **Fixed: "Plain HTTP web management is enabled" came back** on AOS-S switches whose port 80 only redirects to HTTPS ([#18](https://github.com/jaba0x/SwitchDesk/issues/18), reported again by [@mattgrimley](https://github.com/mattgrimley)). SwitchDesk now reads the answer from port 80 as plain text, so a web server that doesn't follow HTTP to the letter can't turn a redirect into a warning. A page that only forwards to `https://` counts as a redirect too, and what port 80 answered is shown on the **Raw output** tab as *HTTP probe (port 80)*.

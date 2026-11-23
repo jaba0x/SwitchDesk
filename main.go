@@ -20,7 +20,7 @@ import (
 var assets embed.FS
 
 // Version is set at build time with -ldflags "-X main.Version=..."
-var Version = "1.0.23"
+var Version = "1.0.24"
 
 func main() {
 	app := NewApp()
